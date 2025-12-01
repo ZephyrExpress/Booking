@@ -24,13 +24,13 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .hidden-screen { display: none; }
+        .hidden-screen { display: none !important; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
 
-    <!-- Navbar -->
-    <nav class="bg-blue-800 text-white shadow-md p-4 flex justify-between items-center hidden" id="navbar">
+    <!-- Navbar (Visible only after login) -->
+    <nav class="bg-blue-800 text-white shadow-md p-4 flex justify-between items-center hidden-screen" id="navbar">
         <span class="font-bold text-lg">Shipment Portal</span>
         <div class="flex items-center gap-4">
             <span class="text-sm opacity-90">User: <span id="navUser" class="font-semibold"></span></span>
@@ -41,6 +41,11 @@
     <!-- LOGIN SCREEN -->
     <div id="loginScreen" class="flex-grow flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border-t-4 border-blue-600">
+            <!-- Logo for Login Screen -->
+            <div class="flex justify-center mb-4">
+                <!-- IMPORTANT: Upload a file named 'logo.png' to your GitHub repository -->
+                <img src="logo.png" onerror="this.src='https://via.placeholder.com/150x50?text=Upload+logo.png'" alt="Company Logo" class="h-16 object-contain">
+            </div>
             <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Staff Login</h2>
             <form id="loginForm" class="space-y-4">
                 <div>
@@ -60,8 +65,15 @@
 
     <!-- MAIN APP SCREEN (Hidden by default) -->
     <div id="appScreen" class="hidden-screen max-w-7xl mx-auto p-4 md:p-8 w-full">
+        
         <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
-            <h1 class="text-2xl font-bold mb-6 text-blue-700 border-b pb-2">New Shipment Entry</h1>
+            
+            <!-- Logo Area above Form -->
+            <div class="flex items-center justify-between border-b pb-4 mb-6">
+                <!-- IMPORTANT: Upload a file named 'logo.png' to your GitHub repository -->
+                <img src="logo.png" onerror="this.src='https://via.placeholder.com/150x50?text=Upload+logo.png'" alt="Company Logo" class="h-16 object-contain">
+                <h1 class="text-2xl font-bold text-blue-700">New Shipment Entry</h1>
+            </div>
 
             <form id="shipmentForm" class="space-y-6">
                 <!-- Section 1: Main Details -->
@@ -99,9 +111,18 @@
                             <option value="">Loading...</option>
                         </select>
                     </div>
-                    <div>
+                    
+                    <!-- Box Controls -->
+                    <div class="bg-blue-50 p-2 rounded border border-blue-100">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Total Boxes</label>
                         <input type="number" id="totalBoxes" min="1" required class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Enter count">
+                    </div>
+
+                    <!-- LIVE CALCULATED FIELD -->
+                    <div class="bg-green-50 p-2 rounded border border-green-100">
+                        <label class="block text-sm font-bold text-green-700 mb-1">Total Chargeable Weight</label>
+                        <input type="text" id="totalChargeableWeight" readonly value="0.00" class="w-full p-2 border border-green-300 bg-white rounded font-bold text-green-800 focus:outline-none">
+                        <p class="text-xs text-green-600 mt-1">Updates automatically</p>
                     </div>
                 </div>
 
@@ -119,15 +140,16 @@
                             <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0 shadow-sm z-10">
                                 <tr>
                                     <th class="px-4 py-3 bg-gray-100">Box No.</th>
-                                    <th class="px-4 py-3 bg-gray-100">Weight (Kg)</th>
+                                    <th class="px-4 py-3 bg-gray-100">Actual Weight (Kg)</th>
                                     <th class="px-4 py-3 bg-gray-100">Length (cm)</th>
                                     <th class="px-4 py-3 bg-gray-100">Breadth (cm)</th>
                                     <th class="px-4 py-3 bg-gray-100">Height (cm)</th>
+                                    <th class="px-4 py-3 bg-gray-100 text-right">Chg. Weight</th>
                                 </tr>
                             </thead>
                             <tbody id="boxTableBody">
                                 <tr>
-                                    <td colspan="5" class="px-4 py-6 text-center text-gray-400">
+                                    <td colspan="6" class="px-4 py-6 text-center text-gray-400">
                                         Enter "Total Boxes" and click "Generate Rows"
                                     </td>
                                 </tr>
@@ -176,6 +198,7 @@
         const appScreen = document.getElementById('appScreen');
         const navbar = document.getElementById('navbar');
         const navUser = document.getElementById('navUser');
+        const totalChargeableInput = document.getElementById('totalChargeableWeight');
         
         let currentUser = localStorage.getItem('shipmentUser');
 
@@ -185,7 +208,9 @@
             if (currentUser) {
                 showApp(currentUser);
             } else {
-                loginScreen.classList.remove('hidden');
+                loginScreen.classList.remove('hidden-screen');
+                appScreen.classList.add('hidden-screen');
+                navbar.classList.add('hidden-screen');
             }
         });
 
@@ -200,9 +225,6 @@
             btn.disabled = true;
             btn.innerHTML = '<div class="spinner"></div> Checking...';
 
-            // We use 'no-cors' workaround isn't ideal for login feedback, 
-            // but standard fetch usually works if the script returns proper JSON.
-            // If CORS blocks it, we might need a workaround, but try this first.
             fetch(WEB_APP_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: 'login', username: user, password: pass })
@@ -231,9 +253,10 @@
             currentUser = username;
             navUser.textContent = username;
             
+            // Hide login, show app
             loginScreen.classList.add('hidden-screen');
             appScreen.classList.remove('hidden-screen');
-            navbar.classList.remove('hidden');
+            navbar.classList.remove('hidden-screen');
             
             // Load Dropdowns only after login
             loadDropdowns();
@@ -293,15 +316,54 @@
                 tr.className = "border-b hover:bg-gray-50";
                 tr.innerHTML = `
                     <td class="px-4 py-2 font-medium">${i}</td>
-                    <td class="px-4 py-2"><input type="number" step="0.01" class="w-full p-1 border rounded" name="weight_${i}" required></td>
-                    <td class="px-4 py-2"><input type="number" step="0.1" class="w-full p-1 border rounded" name="len_${i}" required></td>
-                    <td class="px-4 py-2"><input type="number" step="0.1" class="w-full p-1 border rounded" name="bre_${i}" required></td>
-                    <td class="px-4 py-2"><input type="number" step="0.1" class="w-full p-1 border rounded" name="hei_${i}" required></td>
+                    <td class="px-4 py-2"><input type="number" step="0.01" min="0" class="w-full p-1 border rounded weight-input" name="weight_${i}" required></td>
+                    <td class="px-4 py-2"><input type="number" step="0.1" min="0" class="w-full p-1 border rounded dim-input" name="len_${i}" required></td>
+                    <td class="px-4 py-2"><input type="number" step="0.1" min="0" class="w-full p-1 border rounded dim-input" name="bre_${i}" required></td>
+                    <td class="px-4 py-2"><input type="number" step="0.1" min="0" class="w-full p-1 border rounded dim-input" name="hei_${i}" required></td>
+                    <td class="px-4 py-2 text-right font-mono text-xs text-gray-500 row-total">0.00</td>
                 `;
                 fragment.appendChild(tr);
             }
             boxTableBody.appendChild(fragment);
+            updateTotalChargeableWeight(); // Reset to 0
         });
+
+        // --- LIVE CALCULATION LOGIC ---
+        // Listen for input changes in the entire table (Event Delegation)
+        boxTableBody.addEventListener('input', (e) => {
+            if (e.target.tagName === 'INPUT') {
+                updateTotalChargeableWeight();
+            }
+        });
+
+        function updateTotalChargeableWeight() {
+            let totalChargeable = 0;
+            const rows = boxTableBody.querySelectorAll('tr');
+
+            rows.forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                if (inputs.length < 4) return; // Skip if not a valid row
+
+                const weight = parseFloat(inputs[0].value) || 0;
+                const length = parseFloat(inputs[1].value) || 0;
+                const breadth = parseFloat(inputs[2].value) || 0;
+                const height = parseFloat(inputs[3].value) || 0;
+
+                // Formula: Vol Weight = (L*B*H)/5000
+                const volWeight = (length * breadth * height) / 5000;
+                
+                // Chargeable = Max(Actual, Vol)
+                const rowChargeable = Math.max(weight, volWeight);
+
+                // Update row hint (optional, but helpful for user)
+                const displayCell = row.querySelector('.row-total');
+                if(displayCell) displayCell.textContent = rowChargeable.toFixed(2);
+
+                totalChargeable += rowChargeable;
+            });
+
+            totalChargeableInput.value = totalChargeable.toFixed(2);
+        }
 
         // Submit Form
         document.getElementById('shipmentForm').addEventListener('submit', (e) => {
@@ -317,8 +379,8 @@
             btn.innerHTML = '<div class="spinner"></div> Sending...';
 
             const formData = {
-                action: 'submit', // Tell GAS this is a submission
-                username: currentUser, // Send the logged-in user
+                action: 'submit', 
+                username: currentUser, 
                 awb: document.getElementById('awb').value,
                 date: document.getElementById('date').value,
                 type: document.getElementById('type').value,
@@ -355,8 +417,9 @@
                 if (data.result === 'success') {
                     showModal("Success", "Shipment Saved!");
                     e.target.reset();
-                    boxTableBody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Enter "Total Boxes" and click "Generate Rows"</td></tr>';
+                    boxTableBody.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Enter "Total Boxes" and click "Generate Rows"</td></tr>';
                     document.getElementById('date').valueAsDate = new Date();
+                    updateTotalChargeableWeight(); // Reset calculation
                 } else {
                     showModal("Error", data.message);
                 }
