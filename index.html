@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipment Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .box-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #3498db;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .hidden-screen { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-blue-800 text-white shadow-md p-4 flex justify-between items-center hidden" id="navbar">
+        <span class="font-bold text-lg">Shipment Portal</span>
+        <div class="flex items-center gap-4">
+            <span class="text-sm opacity-90">User: <span id="navUser" class="font-semibold"></span></span>
+            <button onclick="logout()" class="text-xs bg-blue-700 hover:bg-blue-600 px-3 py-1 rounded border border-blue-500">Logout</button>
+        </div>
+    </nav>
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="flex-grow flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border-t-4 border-blue-600">
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Staff Login</h2>
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input type="text" id="loginUser" required class="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="loginPass" required class="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded transition flex justify-center items-center gap-2">
+                    <span>Login</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP SCREEN (Hidden by default) -->
+    <div id="appScreen" class="hidden-screen max-w-7xl mx-auto p-4 md:p-8 w-full">
+        <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
+            <h1 class="text-2xl font-bold mb-6 text-blue-700 border-b pb-2">New Shipment Entry</h1>
+
+            <form id="shipmentForm" class="space-y-6">
+                <!-- Section 1: Main Details -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">AWB Number (Unique)</label>
+                        <input type="text" id="awb" required class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ex: 123456">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Shipment Date</label>
+                        <input type="date" id="date" required class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Shipment Type</label>
+                        <select id="type" required class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="Dox">Dox</option>
+                            <option value="Ndox">Ndox</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Network Type</label>
+                        <select id="network" required class="w-full p-2 border border-gray-300 rounded bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Client Code</label>
+                        <select id="client" required class="w-full p-2 border border-gray-300 rounded bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Destination</label>
+                        <select id="destination" required class="w-full p-2 border border-gray-300 rounded bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Total Boxes</label>
+                        <input type="number" id="totalBoxes" min="1" required class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Enter count">
+                    </div>
+                </div>
+
+                <!-- Section 2: Box Details -->
+                <div class="mt-8">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-lg font-semibold text-gray-700">Box Details</h2>
+                        <button type="button" id="generateBtn" class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700 transition">
+                            Generate Rows
+                        </button>
+                    </div>
+                    
+                    <div class="box-container relative">
+                        <table class="w-full text-sm text-left text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0 shadow-sm z-10">
+                                <tr>
+                                    <th class="px-4 py-3 bg-gray-100">Box No.</th>
+                                    <th class="px-4 py-3 bg-gray-100">Weight (Kg)</th>
+                                    <th class="px-4 py-3 bg-gray-100">Length (cm)</th>
+                                    <th class="px-4 py-3 bg-gray-100">Breadth (cm)</th>
+                                    <th class="px-4 py-3 bg-gray-100">Height (cm)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="boxTableBody">
+                                <tr>
+                                    <td colspan="5" class="px-4 py-6 text-center text-gray-400">
+                                        Enter "Total Boxes" and click "Generate Rows"
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Section 3: Extra Charges -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Extra Charges</label>
+                        <select id="extraCharges" class="w-full p-2 border border-gray-300 rounded bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-4">
+                    <button type="submit" id="submitBtn" class="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded shadow flex items-center justify-center gap-2 transition">
+                        <span>Submit Shipment</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div id="modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+            <h3 id="modalTitle" class="text-xl font-bold mb-2"></h3>
+            <p id="modalMsg" class="text-gray-600 mb-6"></p>
+            <button onclick="closeModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // ******************************************************
+        // CONFIGURATION: WEB APP URL
+        // ******************************************************
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec"; 
+        // ******************************************************
+
+        const loginScreen = document.getElementById('loginScreen');
+        const appScreen = document.getElementById('appScreen');
+        const navbar = document.getElementById('navbar');
+        const navUser = document.getElementById('navUser');
+        
+        let currentUser = localStorage.getItem('shipmentUser');
+
+        // --- INIT ---
+        window.addEventListener('load', () => {
+            // Check if already logged in
+            if (currentUser) {
+                showApp(currentUser);
+            } else {
+                loginScreen.classList.remove('hidden');
+            }
+        });
+
+        // --- LOGIN LOGIC ---
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const user = document.getElementById('loginUser').value;
+            const pass = document.getElementById('loginPass').value;
+            const btn = document.getElementById('loginBtn');
+
+            // UI Loading
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Checking...';
+
+            // We use 'no-cors' workaround isn't ideal for login feedback, 
+            // but standard fetch usually works if the script returns proper JSON.
+            // If CORS blocks it, we might need a workaround, but try this first.
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'login', username: user, password: pass })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Login</span>';
+                
+                if (data.result === 'success') {
+                    localStorage.setItem('shipmentUser', data.username);
+                    showApp(data.username);
+                } else {
+                    showModal("Login Failed", data.message);
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Login</span>';
+                console.error(err);
+                showModal("Error", "Connection failed. Please check internet or credentials.");
+            });
+        });
+
+        function showApp(username) {
+            currentUser = username;
+            navUser.textContent = username;
+            
+            loginScreen.classList.add('hidden-screen');
+            appScreen.classList.remove('hidden-screen');
+            navbar.classList.remove('hidden');
+            
+            // Load Dropdowns only after login
+            loadDropdowns();
+            
+            // Set Date
+            document.getElementById('date').valueAsDate = new Date();
+        }
+
+        function logout() {
+            localStorage.removeItem('shipmentUser');
+            location.reload();
+        }
+
+        // --- MAIN APP LOGIC ---
+        function loadDropdowns() {
+            fetch(WEB_APP_URL)
+                .then(response => response.json())
+                .then(data => {
+                    populateSelect('network', data.networks);
+                    populateSelect('client', data.clients);
+                    populateSelect('destination', data.destinations);
+                    populateSelect('extraCharges', data.extraCharges);
+                })
+                .catch(err => console.log("Dropdown load error", err));
+        }
+
+        function populateSelect(id, items) {
+            const select = document.getElementById(id);
+            if(select.options.length > 1) return; // Prevent double load
+            
+            select.innerHTML = '<option value="">Select...</option>';
+            if(items && items.length > 0) {
+                items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item;
+                    option.textContent = item;
+                    select.appendChild(option);
+                });
+            }
+        }
+
+        // Generate Rows
+        const boxTableBody = document.getElementById('boxTableBody');
+        document.getElementById('generateBtn').addEventListener('click', () => {
+            const count = parseInt(document.getElementById('totalBoxes').value);
+            if (!count || count < 1) {
+                alert("Please enter valid number");
+                return;
+            }
+            if (count > 500 && !confirm(`Generate ${count} rows? This may be slow.`)) return;
+
+            boxTableBody.innerHTML = ''; 
+            const fragment = document.createDocumentFragment();
+
+            for (let i = 1; i <= count; i++) {
+                const tr = document.createElement('tr');
+                tr.className = "border-b hover:bg-gray-50";
+                tr.innerHTML = `
+                    <td class="px-4 py-2 font-medium">${i}</td>
+                    <td class="px-4 py-2"><input type="number" step="0.01" class="w-full p-1 border rounded" name="weight_${i}" required></td>
+                    <td class="px-4 py-2"><input type="number" step="0.1" class="w-full p-1 border rounded" name="len_${i}" required></td>
+                    <td class="px-4 py-2"><input type="number" step="0.1" class="w-full p-1 border rounded" name="bre_${i}" required></td>
+                    <td class="px-4 py-2"><input type="number" step="0.1" class="w-full p-1 border rounded" name="hei_${i}" required></td>
+                `;
+                fragment.appendChild(tr);
+            }
+            boxTableBody.appendChild(fragment);
+        });
+
+        // Submit Form
+        document.getElementById('shipmentForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            if (boxTableBody.rows.length === 0 || boxTableBody.rows[0].cells.length < 2) {
+                showModal("Error", "Please click 'Generate Rows' first.");
+                return;
+            }
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Sending...';
+
+            const formData = {
+                action: 'submit', // Tell GAS this is a submission
+                username: currentUser, // Send the logged-in user
+                awb: document.getElementById('awb').value,
+                date: document.getElementById('date').value,
+                type: document.getElementById('type').value,
+                network: document.getElementById('network').value,
+                client: document.getElementById('client').value,
+                destination: document.getElementById('destination').value,
+                totalBoxes: document.getElementById('totalBoxes').value,
+                extraCharges: document.getElementById('extraCharges').value,
+                boxes: []
+            };
+
+            const rows = boxTableBody.querySelectorAll('tr');
+            rows.forEach((row, index) => {
+                const inputs = row.querySelectorAll('input');
+                if (inputs.length > 0) {
+                    formData.boxes.push({
+                        no: index + 1,
+                        weight: inputs[0].value,
+                        length: inputs[1].value,
+                        breath: inputs[2].value,
+                        height: inputs[3].value
+                    });
+                }
+            });
+
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify(formData)
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Submit Shipment</span>';
+                if (data.result === 'success') {
+                    showModal("Success", "Shipment Saved!");
+                    e.target.reset();
+                    boxTableBody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Enter "Total Boxes" and click "Generate Rows"</td></tr>';
+                    document.getElementById('date').valueAsDate = new Date();
+                } else {
+                    showModal("Error", data.message);
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Submit Shipment</span>';
+                console.error(err);
+                showModal("Error", "Failed to submit.");
+            });
+        });
+
+        function showModal(title, msg) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMsg').textContent = msg;
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('modal').classList.add('flex');
+            
+            const titleElem = document.getElementById('modalTitle');
+            if (title === "Success") titleElem.className = "text-xl font-bold mb-2 text-green-600";
+            else if (title.includes("Error") || title.includes("Failed")) titleElem.className = "text-xl font-bold mb-2 text-red-600";
+            else titleElem.className = "text-xl font-bold mb-2 text-gray-800";
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('modal').classList.remove('flex');
+        }
+    </script>
+</body>
+</html>
