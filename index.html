@@ -43,8 +43,10 @@
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border-t-4 border-blue-600">
             <!-- Logo for Login Screen -->
             <div class="flex justify-center mb-4">
-                <!-- IMPORTANT: Upload a file named 'logo.png' to your GitHub repository -->
-                <img src="logo.png" onerror="this.src='https://via.placeholder.com/150x50?text=Upload+logo.png'" alt="Company Logo" class="h-10 object-contain">
+                <!-- Auto-fallback logo handling -->
+                <img id="loginLogo" src="logo.png" 
+                     onerror="handleLogoError(this)" 
+                     alt="Company Logo" class="h-10 object-contain">
             </div>
             <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Staff Login</h2>
             <form id="loginForm" class="space-y-4">
@@ -70,8 +72,10 @@
             
             <!-- Logo Area above Form -->
             <div class="flex items-center justify-between border-b pb-4 mb-6">
-                <!-- IMPORTANT: Upload a file named 'logo.png' to your GitHub repository -->
-                <img src="logo.png" onerror="this.src='https://via.placeholder.com/150x50?text=Upload+logo.png'" alt="Company Logo" class="h-10 object-contain">
+                <!-- Auto-fallback logo handling -->
+                <img id="appLogo" src="logo.png" 
+                     onerror="handleLogoError(this)"
+                     alt="Company Logo" class="h-10 object-contain">
                 <h1 class="text-2xl font-bold text-blue-700">New Shipment Entry</h1>
             </div>
 
@@ -214,6 +218,20 @@
             }
         });
 
+        // --- LOGO ERROR HANDLING ---
+        function handleLogoError(img) {
+            // Try different case variations if file not found
+            if (img.src.endsWith('logo.png')) {
+                img.src = 'Logo.png'; // Try Capital L
+            } else if (img.src.endsWith('Logo.png')) {
+                img.src = 'LOGO.png'; // Try All Caps
+            } else {
+                // Fallback if none work
+                img.onerror = null; // Stop looping
+                img.src = 'https://via.placeholder.com/150x50?text=Logo+Missing';
+            }
+        }
+
         // --- LOGIN LOGIC ---
         document.getElementById('loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -225,12 +243,22 @@
             btn.disabled = true;
             btn.innerHTML = '<div class="spinner"></div> Checking...';
 
+            // Safety timeout: Reset button if request hangs for > 15s
+            const safetyTimeout = setTimeout(() => {
+                if(btn.disabled) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>Login</span>';
+                    showModal("Timeout", "Server took too long. Check connection.");
+                }
+            }, 15000);
+
             fetch(WEB_APP_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: 'login', username: user, password: pass })
             })
             .then(res => res.json())
             .then(data => {
+                clearTimeout(safetyTimeout);
                 btn.disabled = false;
                 btn.innerHTML = '<span>Login</span>';
                 
@@ -242,6 +270,7 @@
                 }
             })
             .catch(err => {
+                clearTimeout(safetyTimeout);
                 btn.disabled = false;
                 btn.innerHTML = '<span>Login</span>';
                 console.error(err);
@@ -272,15 +301,32 @@
 
         // --- MAIN APP LOGIC ---
         function loadDropdowns() {
+            // Safety timeout to prevent "Loading..." from sticking forever
+            const dropdownTimeout = setTimeout(() => {
+                ['network', 'client', 'destination', 'extraCharges'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && el.value === "") {
+                        el.innerHTML = '<option value="">Failed to load. Refresh?</option>';
+                    }
+                });
+            }, 8000); // 8 seconds timeout
+
             fetch(WEB_APP_URL)
                 .then(response => response.json())
                 .then(data => {
+                    clearTimeout(dropdownTimeout);
                     populateSelect('network', data.networks);
                     populateSelect('client', data.clients);
                     populateSelect('destination', data.destinations);
                     populateSelect('extraCharges', data.extraCharges);
                 })
-                .catch(err => console.log("Dropdown load error", err));
+                .catch(err => {
+                    clearTimeout(dropdownTimeout);
+                    console.log("Dropdown load error", err);
+                    ['network', 'client', 'destination', 'extraCharges'].forEach(id => {
+                         document.getElementById(id).innerHTML = '<option value="">Error loading</option>';
+                    });
+                });
         }
 
         function populateSelect(id, items) {
@@ -378,6 +424,15 @@
             btn.disabled = true;
             btn.innerHTML = '<div class="spinner"></div> Sending...';
 
+            // Safety timeout: Reset button if request hangs for > 20s
+            const safetyTimeout = setTimeout(() => {
+                if(btn.disabled) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>Submit Shipment</span>';
+                    showModal("Timeout", "Submission took too long. Check internet.");
+                }
+            }, 20000);
+
             const formData = {
                 action: 'submit', 
                 username: currentUser, 
@@ -412,6 +467,7 @@
             })
             .then(res => res.json())
             .then(data => {
+                clearTimeout(safetyTimeout);
                 btn.disabled = false;
                 btn.innerHTML = '<span>Submit Shipment</span>';
                 if (data.result === 'success') {
@@ -425,6 +481,7 @@
                 }
             })
             .catch(err => {
+                clearTimeout(safetyTimeout);
                 btn.disabled = false;
                 btn.innerHTML = '<span>Submit Shipment</span>';
                 console.error(err);
@@ -440,7 +497,7 @@
             
             const titleElem = document.getElementById('modalTitle');
             if (title === "Success") titleElem.className = "text-xl font-bold mb-2 text-green-600";
-            else if (title.includes("Error") || title.includes("Failed")) titleElem.className = "text-xl font-bold mb-2 text-red-600";
+            else if (title.includes("Error") || title.includes("Failed") || title === "Timeout") titleElem.className = "text-xl font-bold mb-2 text-red-600";
             else titleElem.className = "text-xl font-bold mb-2 text-gray-800";
         }
 
