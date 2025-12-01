@@ -25,6 +25,20 @@
             100% { transform: rotate(360deg); }
         }
         .hidden-screen { display: none !important; }
+        
+        /* Custom Checkbox Style */
+        .checkbox-wrapper label {
+            display: flex;
+            align-items: center;
+            padding: 4px 0;
+            cursor: pointer;
+        }
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            accent-color: #2563eb;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
@@ -41,12 +55,8 @@
     <!-- LOGIN SCREEN -->
     <div id="loginScreen" class="flex-grow flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border-t-4 border-blue-600">
-            <!-- Logo for Login Screen -->
             <div class="flex justify-center mb-4">
-                <!-- Auto-fallback logo handling -->
-                <img id="loginLogo" src="logo.png" 
-                     onerror="handleLogoError(this)" 
-                     alt="Company Logo" class="h-10 object-contain">
+                <img id="loginLogo" src="logo.png" onerror="handleLogoError(this)" alt="Company Logo" class="h-10 object-contain">
             </div>
             <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Staff Login</h2>
             <form id="loginForm" class="space-y-4">
@@ -70,12 +80,9 @@
         
         <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
             
-            <!-- Logo Area above Form -->
+            <!-- Logo Area -->
             <div class="flex items-center justify-between border-b pb-4 mb-6">
-                <!-- Auto-fallback logo handling -->
-                <img id="appLogo" src="logo.png" 
-                     onerror="handleLogoError(this)"
-                     alt="Company Logo" class="h-10 object-contain">
+                <img id="appLogo" src="logo.png" onerror="handleLogoError(this)" alt="Company Logo" class="h-10 object-contain">
                 <h1 class="text-2xl font-bold text-blue-700">New Shipment Entry</h1>
             </div>
 
@@ -162,13 +169,14 @@
                     </div>
                 </div>
 
-                <!-- Section 3: Extra Charges -->
+                <!-- Section 3: Extra Charges (Multi-Select) -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Extra Charges</label>
-                        <select id="extraCharges" class="w-full p-2 border border-gray-300 rounded bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="">Loading...</option>
-                        </select>
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Extra Charges (Select Multiple)</label>
+                        <div id="extraChargesContainer" class="w-full p-3 border border-gray-300 rounded bg-gray-50 focus:outline-none h-40 overflow-y-auto checkbox-wrapper grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <span class="text-gray-400 text-sm">Loading options...</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Scroll to see more options. Check all that apply.</p>
                     </div>
                 </div>
 
@@ -206,9 +214,7 @@
         
         let currentUser = localStorage.getItem('shipmentUser');
 
-        // --- INIT ---
         window.addEventListener('load', () => {
-            // Check if already logged in
             if (currentUser) {
                 showApp(currentUser);
             } else {
@@ -218,38 +224,28 @@
             }
         });
 
-        // --- LOGO ERROR HANDLING ---
+        // --- LOGO HANDLING ---
         function handleLogoError(img) {
-            // Try different case variations if file not found
-            if (img.src.endsWith('logo.png')) {
-                img.src = 'Logo.png'; // Try Capital L
-            } else if (img.src.endsWith('Logo.png')) {
-                img.src = 'LOGO.png'; // Try All Caps
-            } else {
-                // Fallback if none work
-                img.onerror = null; // Stop looping
+            if (img.src.endsWith('logo.png')) img.src = 'Logo.png';
+            else if (img.src.endsWith('Logo.png')) img.src = 'LOGO.png';
+            else {
+                img.onerror = null;
                 img.src = 'https://via.placeholder.com/150x50?text=Logo+Missing';
             }
         }
 
-        // --- LOGIN LOGIC ---
+        // --- LOGIN ---
         document.getElementById('loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const user = document.getElementById('loginUser').value;
             const pass = document.getElementById('loginPass').value;
             const btn = document.getElementById('loginBtn');
 
-            // UI Loading
             btn.disabled = true;
             btn.innerHTML = '<div class="spinner"></div> Checking...';
 
-            // Safety timeout: Reset button if request hangs for > 15s
             const safetyTimeout = setTimeout(() => {
-                if(btn.disabled) {
-                    btn.disabled = false;
-                    btn.innerHTML = '<span>Login</span>';
-                    showModal("Timeout", "Server took too long. Check connection.");
-                }
+                if(btn.disabled) { btn.disabled = false; btn.innerHTML = '<span>Login</span>'; showModal("Timeout", "Server took too long."); }
             }, 15000);
 
             fetch(WEB_APP_URL, {
@@ -261,7 +257,6 @@
                 clearTimeout(safetyTimeout);
                 btn.disabled = false;
                 btn.innerHTML = '<span>Login</span>';
-                
                 if (data.result === 'success') {
                     localStorage.setItem('shipmentUser', data.username);
                     showApp(data.username);
@@ -273,24 +268,17 @@
                 clearTimeout(safetyTimeout);
                 btn.disabled = false;
                 btn.innerHTML = '<span>Login</span>';
-                console.error(err);
-                showModal("Error", "Connection failed. Please check internet or credentials.");
+                showModal("Error", "Connection failed.");
             });
         });
 
         function showApp(username) {
             currentUser = username;
             navUser.textContent = username;
-            
-            // Hide login, show app
             loginScreen.classList.add('hidden-screen');
             appScreen.classList.remove('hidden-screen');
             navbar.classList.remove('hidden-screen');
-            
-            // Load Dropdowns only after login
             loadDropdowns();
-            
-            // Set Date
             document.getElementById('date').valueAsDate = new Date();
         }
 
@@ -299,17 +287,17 @@
             location.reload();
         }
 
-        // --- MAIN APP LOGIC ---
+        // --- DROPDOWNS ---
         function loadDropdowns() {
-            // Safety timeout to prevent "Loading..." from sticking forever
             const dropdownTimeout = setTimeout(() => {
-                ['network', 'client', 'destination', 'extraCharges'].forEach(id => {
+                ['network', 'client', 'destination'].forEach(id => {
                     const el = document.getElementById(id);
-                    if (el && el.value === "") {
-                        el.innerHTML = '<option value="">Failed to load. Refresh?</option>';
-                    }
+                    if (el && el.value === "") el.innerHTML = '<option value="">Failed. Refresh?</option>';
                 });
-            }, 8000); // 8 seconds timeout
+                // Handle extra charges container error
+                const ecContainer = document.getElementById('extraChargesContainer');
+                if(ecContainer.innerText.includes('Loading')) ecContainer.innerHTML = '<span class="text-red-500 text-sm">Failed to load options</span>';
+            }, 8000);
 
             fetch(WEB_APP_URL)
                 .then(response => response.json())
@@ -318,21 +306,17 @@
                     populateSelect('network', data.networks);
                     populateSelect('client', data.clients);
                     populateSelect('destination', data.destinations);
-                    populateSelect('extraCharges', data.extraCharges);
+                    populateCheckboxes('extraChargesContainer', data.extraCharges);
                 })
                 .catch(err => {
                     clearTimeout(dropdownTimeout);
-                    console.log("Dropdown load error", err);
-                    ['network', 'client', 'destination', 'extraCharges'].forEach(id => {
-                         document.getElementById(id).innerHTML = '<option value="">Error loading</option>';
-                    });
+                    console.error(err);
                 });
         }
 
         function populateSelect(id, items) {
             const select = document.getElementById(id);
-            if(select.options.length > 1) return; // Prevent double load
-            
+            if(select.options.length > 1) return;
             select.innerHTML = '<option value="">Select...</option>';
             if(items && items.length > 0) {
                 items.forEach(item => {
@@ -344,15 +328,32 @@
             }
         }
 
-        // Generate Rows
+        function populateCheckboxes(id, items) {
+            const container = document.getElementById(id);
+            container.innerHTML = ''; // Clear loading text
+            
+            if (!items || items.length === 0) {
+                container.innerHTML = '<span class="text-gray-400 text-sm">No extra charges available</span>';
+                return;
+            }
+
+            items.forEach(item => {
+                const label = document.createElement('label');
+                label.className = "flex items-center space-x-2 p-1 hover:bg-gray-100 rounded cursor-pointer";
+                label.innerHTML = `
+                    <input type="checkbox" value="${item}" class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                    <span class="text-sm text-gray-700">${item}</span>
+                `;
+                container.appendChild(label);
+            });
+        }
+
+        // --- TABLE LOGIC ---
         const boxTableBody = document.getElementById('boxTableBody');
         document.getElementById('generateBtn').addEventListener('click', () => {
             const count = parseInt(document.getElementById('totalBoxes').value);
-            if (!count || count < 1) {
-                alert("Please enter valid number");
-                return;
-            }
-            if (count > 500 && !confirm(`Generate ${count} rows? This may be slow.`)) return;
+            if (!count || count < 1) { alert("Invalid number"); return; }
+            if (count > 500 && !confirm(`Generate ${count} rows?`)) return;
 
             boxTableBody.innerHTML = ''; 
             const fragment = document.createDocumentFragment();
@@ -362,24 +363,20 @@
                 tr.className = "border-b hover:bg-gray-50";
                 tr.innerHTML = `
                     <td class="px-4 py-2 font-medium">${i}</td>
-                    <td class="px-4 py-2"><input type="number" step="0.01" min="0" class="w-full p-1 border rounded weight-input" name="weight_${i}" required></td>
-                    <td class="px-4 py-2"><input type="number" step="0.1" min="0" class="w-full p-1 border rounded dim-input" name="len_${i}" required></td>
-                    <td class="px-4 py-2"><input type="number" step="0.1" min="0" class="w-full p-1 border rounded dim-input" name="bre_${i}" required></td>
-                    <td class="px-4 py-2"><input type="number" step="0.1" min="0" class="w-full p-1 border rounded dim-input" name="hei_${i}" required></td>
+                    <td class="px-4 py-2"><input type="number" step="0.01" min="0" class="w-full p-1 border rounded" name="weight_${i}" required></td>
+                    <td class="px-4 py-2"><input type="number" step="0.1" min="0" class="w-full p-1 border rounded" name="len_${i}" required></td>
+                    <td class="px-4 py-2"><input type="number" step="0.1" min="0" class="w-full p-1 border rounded" name="bre_${i}" required></td>
+                    <td class="px-4 py-2"><input type="number" step="0.1" min="0" class="w-full p-1 border rounded" name="hei_${i}" required></td>
                     <td class="px-4 py-2 text-right font-mono text-xs text-gray-500 row-total">0.00</td>
                 `;
                 fragment.appendChild(tr);
             }
             boxTableBody.appendChild(fragment);
-            updateTotalChargeableWeight(); // Reset to 0
+            updateTotalChargeableWeight();
         });
 
-        // --- LIVE CALCULATION LOGIC ---
-        // Listen for input changes in the entire table (Event Delegation)
         boxTableBody.addEventListener('input', (e) => {
-            if (e.target.tagName === 'INPUT') {
-                updateTotalChargeableWeight();
-            }
+            if (e.target.tagName === 'INPUT') updateTotalChargeableWeight();
         });
 
         function updateTotalChargeableWeight() {
@@ -388,30 +385,24 @@
 
             rows.forEach(row => {
                 const inputs = row.querySelectorAll('input');
-                if (inputs.length < 4) return; // Skip if not a valid row
-
+                if (inputs.length < 4) return;
                 const weight = parseFloat(inputs[0].value) || 0;
                 const length = parseFloat(inputs[1].value) || 0;
                 const breadth = parseFloat(inputs[2].value) || 0;
                 const height = parseFloat(inputs[3].value) || 0;
 
-                // Formula: Vol Weight = (L*B*H)/5000
                 const volWeight = (length * breadth * height) / 5000;
-                
-                // Chargeable = Max(Actual, Vol)
                 const rowChargeable = Math.max(weight, volWeight);
 
-                // Update row hint (optional, but helpful for user)
                 const displayCell = row.querySelector('.row-total');
                 if(displayCell) displayCell.textContent = rowChargeable.toFixed(2);
-
                 totalChargeable += rowChargeable;
             });
 
             totalChargeableInput.value = totalChargeable.toFixed(2);
         }
 
-        // Submit Form
+        // --- SUBMIT ---
         document.getElementById('shipmentForm').addEventListener('submit', (e) => {
             e.preventDefault();
             
@@ -420,17 +411,17 @@
                 return;
             }
 
+            // GATHER CHECKBOXES
+            const selectedCharges = Array.from(document.querySelectorAll('#extraChargesContainer input:checked'))
+                                         .map(cb => cb.value)
+                                         .join(', ');
+
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
             btn.innerHTML = '<div class="spinner"></div> Sending...';
 
-            // Safety timeout: Reset button if request hangs for > 20s
             const safetyTimeout = setTimeout(() => {
-                if(btn.disabled) {
-                    btn.disabled = false;
-                    btn.innerHTML = '<span>Submit Shipment</span>';
-                    showModal("Timeout", "Submission took too long. Check internet.");
-                }
+                if(btn.disabled) { btn.disabled = false; btn.innerHTML = '<span>Submit Shipment</span>'; showModal("Timeout", "Check internet connection."); }
             }, 20000);
 
             const formData = {
@@ -443,7 +434,7 @@
                 client: document.getElementById('client').value,
                 destination: document.getElementById('destination').value,
                 totalBoxes: document.getElementById('totalBoxes').value,
-                extraCharges: document.getElementById('extraCharges').value,
+                extraCharges: selectedCharges, // Send string of checked items
                 boxes: []
             };
 
@@ -473,9 +464,11 @@
                 if (data.result === 'success') {
                     showModal("Success", "Shipment Saved!");
                     e.target.reset();
+                    // Clear checkboxes
+                    document.querySelectorAll('#extraChargesContainer input:checked').forEach(cb => cb.checked = false);
                     boxTableBody.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Enter "Total Boxes" and click "Generate Rows"</td></tr>';
                     document.getElementById('date').valueAsDate = new Date();
-                    updateTotalChargeableWeight(); // Reset calculation
+                    updateTotalChargeableWeight();
                 } else {
                     showModal("Error", data.message);
                 }
@@ -484,7 +477,6 @@
                 clearTimeout(safetyTimeout);
                 btn.disabled = false;
                 btn.innerHTML = '<span>Submit Shipment</span>';
-                console.error(err);
                 showModal("Error", "Failed to submit.");
             });
         });
@@ -497,7 +489,7 @@
             
             const titleElem = document.getElementById('modalTitle');
             if (title === "Success") titleElem.className = "text-xl font-bold mb-2 text-green-600";
-            else if (title.includes("Error") || title.includes("Failed") || title === "Timeout") titleElem.className = "text-xl font-bold mb-2 text-red-600";
+            else if (title === "Error" || title === "Timeout") titleElem.className = "text-xl font-bold mb-2 text-red-600";
             else titleElem.className = "text-xl font-bold mb-2 text-gray-800";
         }
 
