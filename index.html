@@ -108,7 +108,7 @@
     </div>
 
     <!-- ADMIN PANEL (Hidden) -->
-    <div id="adminPanel" class="fixed inset-0 bg-gray-900 bg-opacity-90 hidden-screen items-center justify-center z-50 overflow-y-auto">
+    <div id="adminPanel" class="fixed inset-0 bg-gray-900 bg-opacity-90 hidden-screen items-center justify-center z-50 overflow-y-auto" style="display:none;">
         <div class="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full m-4">
             <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-xl font-bold text-gray-800">Admin: Manage Dropdowns</h3>
@@ -139,7 +139,13 @@
     </div>
 
     <!-- Notification Modal -->
-    <div id="modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden items-center justify-center z-50"><div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center"><h3 id="modalTitle" class="text-xl font-bold mb-2"></h3><p id="modalMsg" class="text-gray-600 mb-6"></p><button onclick="closeModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">OK</button></div></div>
+    <div id="modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden items-center justify-center z-50" style="display:none;">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+            <h3 id="modalTitle" class="text-xl font-bold mb-2"></h3>
+            <p id="modalMsg" class="text-gray-600 mb-6"></p>
+            <button onclick="closeModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">OK</button>
+        </div>
+    </div>
 
     <script>
         // ******************************************************
@@ -239,8 +245,15 @@
         // --- Admin Functions ---
         function toggleAdminPanel() {
             const p = document.getElementById('adminPanel');
-            p.classList.toggle('hidden-screen');
-            p.classList.toggle('flex');
+            const isHidden = p.style.display === 'none' || p.classList.contains('hidden-screen');
+            
+            if (isHidden) {
+                p.style.display = 'flex';
+                p.classList.remove('hidden-screen');
+            } else {
+                p.style.display = 'none';
+                p.classList.add('hidden-screen');
+            }
         }
 
         function manageData(actionType) {
@@ -338,7 +351,7 @@
             }).catch(e => { btn.disabled = false; showModal("Error", "Failed"); });
         });
 
-        // Easter Egg: Konami Code (Up, Up, Down, Down, Left, Right, Left, Right, B, A)
+        // Easter Egg: Konami Code
         let keys = []; const konami = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
         window.addEventListener('keydown', (e) => {
             keys.push(e.key);
@@ -352,8 +365,19 @@
             if(clickCount === 5) { alert("Stop poking the logo! 🤕"); clickCount = 0; }
         }
 
-        function showModal(t, m) { document.getElementById('modalTitle').textContent = t; document.getElementById('modalMsg').textContent = m; document.getElementById('modal').classList.remove('hidden'); document.getElementById('modal').classList.add('flex'); }
-        function closeModal() { document.getElementById('modal').classList.add('hidden'); document.getElementById('modal').classList.remove('flex'); }
+        function showModal(t, m) { 
+            document.getElementById('modalTitle').textContent = t; 
+            document.getElementById('modalMsg').textContent = m; 
+            const modal = document.getElementById('modal');
+            modal.style.display = 'flex';
+            modal.classList.remove('hidden'); 
+        }
+        
+        function closeModal() { 
+            const modal = document.getElementById('modal');
+            modal.style.display = 'none';
+            modal.classList.add('hidden'); 
+        }
     </script>
 </body>
 </html>
