@@ -3,50 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shipment Portal</title>
+    <title>SHIPMENT INBOUND PORTAL</title>
+    <!-- Favicon Configuration -->
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tom Select for Searchable Dropdowns -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <style>
-        .box-container {
-            max-height: 500px;
-            overflow-y: auto;
-            border: 1px solid #e2e8f0;
-            border-radius: 0.5rem;
-        }
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 3px solid #3498db;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        .box-container { max-height: 500px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 0.5rem; }
+        .spinner { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #3498db; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .hidden-screen { display: none !important; }
-        
-        /* Custom Checkbox Style */
-        .checkbox-wrapper label {
-            display: flex;
-            align-items: center;
-            padding: 4px 0;
-            cursor: pointer;
-        }
-        .checkbox-wrapper input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            margin-right: 8px;
-            accent-color: #2563eb;
-        }
+        .ts-control { border-radius: 0.375rem; padding: 0.5rem; border-color: #d1d5db; }
+        .checkbox-wrapper label { display: flex; align-items: center; padding: 4px 0; cursor: pointer; }
+        .checkbox-wrapper input[type="checkbox"] { width: 16px; height: 16px; margin-right: 8px; accent-color: #2563eb; }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col font-sans">
 
-    <!-- Navbar (Visible only after login) -->
+    <!-- Navbar -->
     <nav class="bg-blue-800 text-white shadow-md p-4 flex justify-between items-center hidden-screen" id="navbar">
-        <span class="font-bold text-lg">Shipment Portal</span>
+        <span class="font-bold text-lg uppercase tracking-wide">SHIPMENT INBOUND PORTAL</span>
         <div class="flex items-center gap-4">
+            <button id="adminBtn" onclick="toggleAdminPanel()" class="hidden text-xs bg-yellow-500 hover:bg-yellow-600 text-black font-bold px-3 py-1 rounded">Admin</button>
             <span class="text-sm opacity-90">User: <span id="navUser" class="font-semibold"></span></span>
             <button onclick="logout()" class="text-xs bg-blue-700 hover:bg-blue-600 px-3 py-1 rounded border border-blue-500">Logout</button>
         </div>
@@ -56,47 +38,33 @@
     <div id="loginScreen" class="flex-grow flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border-t-4 border-blue-600">
             <div class="flex justify-center mb-4">
-                <img id="loginLogo" src="logo.png" onerror="handleLogoError(this)" alt="Company Logo" class="h-10 object-contain">
+                <img id="loginLogo" src="logo.png" onerror="handleLogoError(this)" alt="Company Logo" class="h-12 object-contain">
             </div>
-            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">Staff Login</h2>
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800 uppercase">Staff Login</h2>
             <form id="loginForm" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                    <input type="text" id="loginUser" required class="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" id="loginPass" required class="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-                <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded transition flex justify-center items-center gap-2">
-                    <span>Login</span>
-                </button>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Username</label><input type="text" id="loginUser" required class="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Password</label><input type="password" id="loginPass" required class="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded transition flex justify-center items-center gap-2"><span>Login</span></button>
             </form>
         </div>
     </div>
 
-    <!-- MAIN APP SCREEN (Hidden by default) -->
+    <!-- MAIN APP SCREEN -->
     <div id="appScreen" class="hidden-screen max-w-7xl mx-auto p-4 md:p-8 w-full">
-        
-        <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
+        <div class="bg-white rounded-xl shadow-lg p-6 md:p-8 relative">
             
-            <!-- Logo Area -->
-            <div class="flex items-center justify-between border-b pb-4 mb-6">
-                <img id="appLogo" src="logo.png" onerror="handleLogoError(this)" alt="Company Logo" class="h-10 object-contain">
-                <h1 class="text-2xl font-bold text-blue-700">New Shipment Entry</h1>
+            <!-- Logo Center -->
+            <div class="flex justify-center mb-6 border-b pb-4">
+                <img id="appLogo" src="logo.png" onerror="handleLogoError(this)" alt="Company Logo" class="h-16 object-contain cursor-pointer" onclick="triggerEasterEgg()">
             </div>
+            
+            <h1 class="text-2xl font-bold text-center text-blue-700 mb-8 uppercase tracking-wider">New Shipment Entry</h1>
 
             <form id="shipmentForm" class="space-y-6">
-                <!-- Section 1: Main Details -->
+                <!-- Section 1 -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">AWB Number (Unique)</label>
-                        <input type="text" id="awb" required class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ex: 123456">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Shipment Date</label>
-                        <input type="date" id="date" required class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">AWB Number</label><input type="text" id="awb" required class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ex: 123456"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Shipment Date</label><input type="date" id="date" required class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"></div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Shipment Type</label>
                         <select id="type" required class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
@@ -104,100 +72,74 @@
                             <option value="Ndox">Ndox</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Network Type</label>
-                        <select id="network" required class="w-full p-2 border border-gray-300 rounded bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="">Loading...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Client Code</label>
-                        <select id="client" required class="w-full p-2 border border-gray-300 rounded bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="">Loading...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Destination</label>
-                        <select id="destination" required class="w-full p-2 border border-gray-300 rounded bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
-                            <option value="">Loading...</option>
-                        </select>
-                    </div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Network Type</label><select id="network" required class="w-full p-2 border rounded"><option value="">Loading...</option></select></div>
                     
-                    <!-- Box Controls -->
-                    <div class="bg-blue-50 p-2 rounded border border-blue-100">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Total Boxes</label>
-                        <input type="number" id="totalBoxes" min="1" required class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Enter count">
-                    </div>
-
-                    <!-- LIVE CALCULATED FIELD -->
-                    <div class="bg-green-50 p-2 rounded border border-green-100">
-                        <label class="block text-sm font-bold text-green-700 mb-1">Total Chargeable Weight</label>
-                        <input type="text" id="totalChargeableWeight" readonly value="0.00" class="w-full p-2 border border-green-300 bg-white rounded font-bold text-green-800 focus:outline-none">
-                        <p class="text-xs text-green-600 mt-1">Updates automatically</p>
-                    </div>
+                    <!-- Searchable Fields -->
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Client Code</label><select id="client" required placeholder="Search Client..."></select></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Destination</label><select id="destination" required placeholder="Search Destination..."></select></div>
+                    
+                    <div class="bg-blue-50 p-2 rounded border border-blue-100"><label class="block text-sm font-medium text-gray-700 mb-1">Total Boxes</label><input type="number" id="totalBoxes" min="1" required class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                    <div class="bg-green-50 p-2 rounded border border-green-100"><label class="block text-sm font-bold text-green-700 mb-1">Total Chargeable Weight</label><input type="text" id="totalChargeableWeight" readonly value="0.00" class="w-full p-2 border border-green-300 bg-white rounded font-bold text-green-800 focus:outline-none"></div>
                 </div>
 
-                <!-- Section 2: Box Details -->
+                <!-- Section 2: Boxes -->
                 <div class="mt-8">
-                    <div class="flex justify-between items-center mb-2">
-                        <h2 class="text-lg font-semibold text-gray-700">Box Details</h2>
-                        <button type="button" id="generateBtn" class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700 transition">
-                            Generate Rows
-                        </button>
-                    </div>
-                    
-                    <div class="box-container relative">
-                        <table class="w-full text-sm text-left text-gray-500">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0 shadow-sm z-10">
-                                <tr>
-                                    <th class="px-4 py-3 bg-gray-100">Box No.</th>
-                                    <th class="px-4 py-3 bg-gray-100">Actual Weight (Kg)</th>
-                                    <th class="px-4 py-3 bg-gray-100">Length (cm)</th>
-                                    <th class="px-4 py-3 bg-gray-100">Breadth (cm)</th>
-                                    <th class="px-4 py-3 bg-gray-100">Height (cm)</th>
-                                    <th class="px-4 py-3 bg-gray-100 text-right">Chg. Weight</th>
-                                </tr>
-                            </thead>
-                            <tbody id="boxTableBody">
-                                <tr>
-                                    <td colspan="6" class="px-4 py-6 text-center text-gray-400">
-                                        Enter "Total Boxes" and click "Generate Rows"
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <div class="flex justify-between items-center mb-2"><h2 class="text-lg font-semibold text-gray-700">Box Details</h2><button type="button" id="generateBtn" class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700 transition">Generate Rows</button></div>
+                    <div class="box-container relative"><table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0 shadow-sm z-10"><tr><th class="px-4 py-3">Box No.</th><th class="px-4 py-3">Actual Weight (Kg)</th><th class="px-4 py-3">Length (cm)</th><th class="px-4 py-3">Breadth (cm)</th><th class="px-4 py-3">Height (cm)</th><th class="px-4 py-3 text-right">Chg. Weight</th></tr></thead><tbody id="boxTableBody"><tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Enter "Total Boxes" and click "Generate Rows"</td></tr></tbody></table></div>
                 </div>
 
-                <!-- Section 3: Extra Charges (Multi-Select) -->
+                <!-- Section 3: Extra Charges -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t">
                     <div class="md:col-span-3">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Extra Charges (Select Multiple)</label>
-                        <div id="extraChargesContainer" class="w-full p-3 border border-gray-300 rounded bg-gray-50 focus:outline-none h-40 overflow-y-auto checkbox-wrapper grid grid-cols-1 md:grid-cols-3 gap-2">
-                            <span class="text-gray-400 text-sm">Loading options...</span>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">Scroll to see more options. Check all that apply.</p>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Extra Charges (Multi-Select)</label>
+                        <div id="extraChargesContainer" class="w-full p-3 border border-gray-300 rounded bg-gray-50 focus:outline-none h-32 overflow-y-auto checkbox-wrapper grid grid-cols-2 md:grid-cols-4 gap-2"><span>Loading...</span></div>
                     </div>
                 </div>
 
-                <!-- Submit Button -->
-                <div class="pt-4">
-                    <button type="submit" id="submitBtn" class="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded shadow flex items-center justify-center gap-2 transition">
-                        <span>Submit Shipment</span>
-                    </button>
+                <!-- Remarks -->
+                <div class="pt-4 border-t">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Extra Charges Remarks (if applicable)</label>
+                    <textarea id="extraRemarks" rows="2" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Any details about extra charges..."></textarea>
                 </div>
+
+                <div class="pt-4"><button type="submit" id="submitBtn" class="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded shadow flex items-center justify-center gap-2 transition"><span>Submit Shipment</span></button></div>
             </form>
         </div>
     </div>
 
-    <!-- Notification Modal -->
-    <div id="modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden items-center justify-center z-50">
-        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
-            <h3 id="modalTitle" class="text-xl font-bold mb-2"></h3>
-            <p id="modalMsg" class="text-gray-600 mb-6"></p>
-            <button onclick="closeModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">OK</button>
+    <!-- ADMIN PANEL (Hidden) -->
+    <div id="adminPanel" class="fixed inset-0 bg-gray-900 bg-opacity-90 hidden-screen items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full m-4">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-xl font-bold text-gray-800">Admin: Manage Dropdowns</h3>
+                <button onclick="toggleAdminPanel()" class="text-gray-500 hover:text-red-500 font-bold">X</button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Select List to Edit</label>
+                    <select id="adminCategory" class="w-full p-2 border rounded">
+                        <option value="client">Client Code</option>
+                        <option value="destination">Destination</option>
+                        <option value="network">Network Type</option>
+                        <option value="extra">Extra Charges</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Value</label>
+                    <input type="text" id="adminValue" class="w-full p-2 border rounded" placeholder="Enter value to add or delete">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button onclick="manageData('add')" class="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700">Add Value</button>
+                    <button onclick="manageData('delete')" class="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700">Delete Value</button>
+                </div>
+                <div id="adminStatus" class="text-sm text-center pt-2 h-6"></div>
+            </div>
         </div>
     </div>
+
+    <!-- Notification Modal -->
+    <div id="modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden items-center justify-center z-50"><div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center"><h3 id="modalTitle" class="text-xl font-bold mb-2"></h3><p id="modalMsg" class="text-gray-600 mb-6"></p><button onclick="closeModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">OK</button></div></div>
 
     <script>
         // ******************************************************
@@ -206,297 +148,212 @@
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec"; 
         // ******************************************************
 
-        const loginScreen = document.getElementById('loginScreen');
-        const appScreen = document.getElementById('appScreen');
-        const navbar = document.getElementById('navbar');
-        const navUser = document.getElementById('navUser');
-        const totalChargeableInput = document.getElementById('totalChargeableWeight');
-        
+        let tsClient, tsDest, tsNetwork; // TomSelect Instances
         let currentUser = localStorage.getItem('shipmentUser');
+        let isAdmin = localStorage.getItem('shipmentIsAdmin') === 'true';
 
         window.addEventListener('load', () => {
-            if (currentUser) {
-                showApp(currentUser);
-            } else {
-                loginScreen.classList.remove('hidden-screen');
-                appScreen.classList.add('hidden-screen');
-                navbar.classList.add('hidden-screen');
+            if (currentUser) showApp(currentUser);
+            else {
+                document.getElementById('loginScreen').classList.remove('hidden-screen');
+                document.getElementById('appScreen').classList.add('hidden-screen');
+                document.getElementById('navbar').classList.add('hidden-screen');
             }
         });
 
-        // --- LOGO HANDLING ---
-        function handleLogoError(img) {
-            if (img.src.endsWith('logo.png')) img.src = 'Logo.png';
-            else if (img.src.endsWith('Logo.png')) img.src = 'LOGO.png';
-            else {
-                img.onerror = null;
-                img.src = 'https://via.placeholder.com/150x50?text=Logo+Missing';
-            }
-        }
-
-        // --- LOGIN ---
+        // Login
         document.getElementById('loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const user = document.getElementById('loginUser').value;
-            const pass = document.getElementById('loginPass').value;
+            const u = document.getElementById('loginUser').value;
+            const p = document.getElementById('loginPass').value;
             const btn = document.getElementById('loginBtn');
+            btn.disabled = true; btn.innerHTML = 'Checking...';
 
-            btn.disabled = true;
-            btn.innerHTML = '<div class="spinner"></div> Checking...';
-
-            const safetyTimeout = setTimeout(() => {
-                if(btn.disabled) { btn.disabled = false; btn.innerHTML = '<span>Login</span>'; showModal("Timeout", "Server took too long."); }
-            }, 15000);
-
-            fetch(WEB_APP_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'login', username: user, password: pass })
-            })
+            fetch(WEB_APP_URL, { method: 'POST', body: JSON.stringify({ action: 'login', username: u, password: p }) })
             .then(res => res.json())
             .then(data => {
-                clearTimeout(safetyTimeout);
-                btn.disabled = false;
-                btn.innerHTML = '<span>Login</span>';
+                btn.disabled = false; btn.innerHTML = 'Login';
                 if (data.result === 'success') {
                     localStorage.setItem('shipmentUser', data.username);
+                    localStorage.setItem('shipmentIsAdmin', data.isAdmin);
+                    isAdmin = data.isAdmin;
                     showApp(data.username);
-                } else {
-                    showModal("Login Failed", data.message);
-                }
-            })
-            .catch(err => {
-                clearTimeout(safetyTimeout);
-                btn.disabled = false;
-                btn.innerHTML = '<span>Login</span>';
-                showModal("Error", "Connection failed.");
-            });
+                } else showModal("Login Failed", data.message);
+            }).catch(e => { btn.disabled = false; showModal("Error", "Connection Failed"); });
         });
 
-        function showApp(username) {
-            currentUser = username;
-            navUser.textContent = username;
-            loginScreen.classList.add('hidden-screen');
-            appScreen.classList.remove('hidden-screen');
-            navbar.classList.remove('hidden-screen');
-            loadDropdowns();
+        function showApp(u) {
+            document.getElementById('navUser').textContent = u;
+            document.getElementById('loginScreen').classList.add('hidden-screen');
+            document.getElementById('appScreen').classList.remove('hidden-screen');
+            document.getElementById('navbar').classList.remove('hidden-screen');
+            if(isAdmin) document.getElementById('adminBtn').classList.remove('hidden');
             document.getElementById('date').valueAsDate = new Date();
+            loadDropdowns();
         }
 
-        function logout() {
+        function logout() { 
+            // Safer Logout: Only remove specific keys
             localStorage.removeItem('shipmentUser');
-            location.reload();
+            localStorage.removeItem('shipmentIsAdmin');
+            location.reload(); 
         }
+        
+        function handleLogoError(img) { if (img.src.endsWith('logo.png')) img.src = 'Logo.png'; else if (img.src.endsWith('Logo.png')) img.src = 'LOGO.png'; else img.src = 'https://via.placeholder.com/150x50?text=No+Logo'; }
 
-        // --- DROPDOWNS ---
+        // Load Dropdowns
         function loadDropdowns() {
-            const dropdownTimeout = setTimeout(() => {
-                ['network', 'client', 'destination'].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el && el.value === "") el.innerHTML = '<option value="">Failed. Refresh?</option>';
-                });
-                // Handle extra charges container error
-                const ecContainer = document.getElementById('extraChargesContainer');
-                if(ecContainer.innerText.includes('Loading')) ecContainer.innerHTML = '<span class="text-red-500 text-sm">Failed to load options</span>';
-            }, 8000);
-
-            fetch(WEB_APP_URL)
-                .then(response => response.json())
-                .then(data => {
-                    clearTimeout(dropdownTimeout);
-                    populateSelect('network', data.networks);
-                    populateSelect('client', data.clients);
-                    populateSelect('destination', data.destinations);
-                    populateCheckboxes('extraChargesContainer', data.extraCharges);
-                })
-                .catch(err => {
-                    clearTimeout(dropdownTimeout);
-                    console.error(err);
-                });
+            fetch(WEB_APP_URL).then(r => r.json()).then(data => {
+                // Initialize TomSelect (Searchable)
+                if(tsClient) tsClient.destroy();
+                if(tsDest) tsDest.destroy();
+                
+                populateSelect('client', data.clients);
+                populateSelect('destination', data.destinations);
+                populateSelect('network', data.networks);
+                
+                tsClient = new TomSelect("#client", { create: false, sortField: { field: "text", direction: "asc" } });
+                tsDest = new TomSelect("#destination", { create: false, sortField: { field: "text", direction: "asc" } });
+                
+                populateCheckboxes('extraChargesContainer', data.extraCharges);
+            }).catch(console.error);
         }
 
         function populateSelect(id, items) {
-            const select = document.getElementById(id);
-            if(select.options.length > 1) return;
-            select.innerHTML = '<option value="">Select...</option>';
-            if(items && items.length > 0) {
-                items.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item;
-                    option.textContent = item;
-                    select.appendChild(option);
-                });
-            }
+            const el = document.getElementById(id);
+            el.innerHTML = '<option value="">Select...</option>';
+            items.forEach(i => { let opt = document.createElement('option'); opt.value = i; opt.textContent = i; el.appendChild(opt); });
         }
 
         function populateCheckboxes(id, items) {
-            const container = document.getElementById(id);
-            container.innerHTML = ''; // Clear loading text
-            
-            if (!items || items.length === 0) {
-                container.innerHTML = '<span class="text-gray-400 text-sm">No extra charges available</span>';
-                return;
-            }
-
-            items.forEach(item => {
-                const label = document.createElement('label');
-                label.className = "flex items-center space-x-2 p-1 hover:bg-gray-100 rounded cursor-pointer";
-                label.innerHTML = `
-                    <input type="checkbox" value="${item}" class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
-                    <span class="text-sm text-gray-700">${item}</span>
-                `;
-                container.appendChild(label);
+            const c = document.getElementById(id); c.innerHTML = '';
+            if(!items.length) c.innerHTML = 'No options';
+            items.forEach(i => {
+                let d = document.createElement('label');
+                d.className = "flex items-center space-x-2 p-1 hover:bg-gray-100 rounded cursor-pointer";
+                d.innerHTML = `<input type="checkbox" value="${i}" class="form-checkbox h-4 w-4 text-blue-600"><span>${i}</span>`;
+                c.appendChild(d);
             });
         }
 
-        // --- TABLE LOGIC ---
-        const boxTableBody = document.getElementById('boxTableBody');
-        document.getElementById('generateBtn').addEventListener('click', () => {
-            const count = parseInt(document.getElementById('totalBoxes').value);
-            if (!count || count < 1) { alert("Invalid number"); return; }
-            if (count > 500 && !confirm(`Generate ${count} rows?`)) return;
-
-            boxTableBody.innerHTML = ''; 
-            const fragment = document.createDocumentFragment();
-
-            for (let i = 1; i <= count; i++) {
-                const tr = document.createElement('tr');
-                tr.className = "border-b hover:bg-gray-50";
-                tr.innerHTML = `
-                    <td class="px-4 py-2 font-medium">${i}</td>
-                    <td class="px-4 py-2"><input type="number" step="0.01" min="0" class="w-full p-1 border rounded" name="weight_${i}" required></td>
-                    <td class="px-4 py-2"><input type="number" step="0.1" min="0" class="w-full p-1 border rounded" name="len_${i}" required></td>
-                    <td class="px-4 py-2"><input type="number" step="0.1" min="0" class="w-full p-1 border rounded" name="bre_${i}" required></td>
-                    <td class="px-4 py-2"><input type="number" step="0.1" min="0" class="w-full p-1 border rounded" name="hei_${i}" required></td>
-                    <td class="px-4 py-2 text-right font-mono text-xs text-gray-500 row-total">0.00</td>
-                `;
-                fragment.appendChild(tr);
-            }
-            boxTableBody.appendChild(fragment);
-            updateTotalChargeableWeight();
-        });
-
-        boxTableBody.addEventListener('input', (e) => {
-            if (e.target.tagName === 'INPUT') updateTotalChargeableWeight();
-        });
-
-        function updateTotalChargeableWeight() {
-            let totalChargeable = 0;
-            const rows = boxTableBody.querySelectorAll('tr');
-
-            rows.forEach(row => {
-                const inputs = row.querySelectorAll('input');
-                if (inputs.length < 4) return;
-                const weight = parseFloat(inputs[0].value) || 0;
-                const length = parseFloat(inputs[1].value) || 0;
-                const breadth = parseFloat(inputs[2].value) || 0;
-                const height = parseFloat(inputs[3].value) || 0;
-
-                const volWeight = (length * breadth * height) / 5000;
-                const rowChargeable = Math.max(weight, volWeight);
-
-                const displayCell = row.querySelector('.row-total');
-                if(displayCell) displayCell.textContent = rowChargeable.toFixed(2);
-                totalChargeable += rowChargeable;
-            });
-
-            totalChargeableInput.value = totalChargeable.toFixed(2);
+        // --- Admin Functions ---
+        function toggleAdminPanel() {
+            const p = document.getElementById('adminPanel');
+            p.classList.toggle('hidden-screen');
+            p.classList.toggle('flex');
         }
 
-        // --- SUBMIT ---
-        document.getElementById('shipmentForm').addEventListener('submit', (e) => {
-            e.preventDefault();
+        function manageData(actionType) {
+            const cat = document.getElementById('adminCategory').value;
+            const val = document.getElementById('adminValue').value.trim();
+            const stat = document.getElementById('adminStatus');
             
-            if (boxTableBody.rows.length === 0 || boxTableBody.rows[0].cells.length < 2) {
-                showModal("Error", "Please click 'Generate Rows' first.");
-                return;
-            }
-
-            // GATHER CHECKBOXES
-            const selectedCharges = Array.from(document.querySelectorAll('#extraChargesContainer input:checked'))
-                                         .map(cb => cb.value)
-                                         .join(', ');
-
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<div class="spinner"></div> Sending...';
-
-            const safetyTimeout = setTimeout(() => {
-                if(btn.disabled) { btn.disabled = false; btn.innerHTML = '<span>Submit Shipment</span>'; showModal("Timeout", "Check internet connection."); }
-            }, 20000);
-
-            const formData = {
-                action: 'submit', 
-                username: currentUser, 
-                awb: document.getElementById('awb').value,
-                date: document.getElementById('date').value,
-                type: document.getElementById('type').value,
-                network: document.getElementById('network').value,
-                client: document.getElementById('client').value,
-                destination: document.getElementById('destination').value,
-                totalBoxes: document.getElementById('totalBoxes').value,
-                extraCharges: selectedCharges, // Send string of checked items
-                boxes: []
-            };
-
-            const rows = boxTableBody.querySelectorAll('tr');
-            rows.forEach((row, index) => {
-                const inputs = row.querySelectorAll('input');
-                if (inputs.length > 0) {
-                    formData.boxes.push({
-                        no: index + 1,
-                        weight: inputs[0].value,
-                        length: inputs[1].value,
-                        breath: inputs[2].value,
-                        height: inputs[3].value
-                    });
-                }
-            });
+            if(!val) return alert("Enter a value");
+            stat.textContent = "Processing..."; stat.className = "text-sm text-center pt-2 text-blue-600";
 
             fetch(WEB_APP_URL, {
                 method: 'POST',
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ action: 'manageData', subAction: actionType, category: cat, value: val })
             })
-            .then(res => res.json())
-            .then(data => {
-                clearTimeout(safetyTimeout);
-                btn.disabled = false;
-                btn.innerHTML = '<span>Submit Shipment</span>';
-                if (data.result === 'success') {
-                    showModal("Success", "Shipment Saved!");
-                    e.target.reset();
-                    // Clear checkboxes
-                    document.querySelectorAll('#extraChargesContainer input:checked').forEach(cb => cb.checked = false);
-                    boxTableBody.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Enter "Total Boxes" and click "Generate Rows"</td></tr>';
-                    document.getElementById('date').valueAsDate = new Date();
-                    updateTotalChargeableWeight();
+            .then(r => r.json())
+            .then(d => {
+                if(d.result === 'success') {
+                    stat.textContent = d.message; stat.className = "text-sm text-center pt-2 text-green-600";
+                    document.getElementById('adminValue').value = '';
+                    setTimeout(() => { loadDropdowns(); }, 1500); // Reload options
                 } else {
-                    showModal("Error", data.message);
+                    stat.textContent = d.message; stat.className = "text-sm text-center pt-2 text-red-600";
                 }
-            })
-            .catch(err => {
-                clearTimeout(safetyTimeout);
-                btn.disabled = false;
-                btn.innerHTML = '<span>Submit Shipment</span>';
-                showModal("Error", "Failed to submit.");
-            });
+            }).catch(e => { stat.textContent = "Error"; });
+        }
+
+        // --- Table & Calculation ---
+        const tbody = document.getElementById('boxTableBody');
+        document.getElementById('generateBtn').addEventListener('click', () => {
+             const n = document.getElementById('totalBoxes').value;
+             if(n < 1) return;
+             tbody.innerHTML = '';
+             for(let i=1; i<=n; i++) {
+                 tbody.innerHTML += `
+                 <tr class="border-b hover:bg-gray-50">
+                    <td class="px-4 py-2 font-medium">${i}</td>
+                    <td class="px-4 py-2"><input type="number" step="0.01" class="w-full p-1 border rounded" required oninput="calcTotal()"></td>
+                    <td class="px-4 py-2"><input type="number" step="0.1" class="w-full p-1 border rounded" required oninput="calcTotal()"></td>
+                    <td class="px-4 py-2"><input type="number" step="0.1" class="w-full p-1 border rounded" required oninput="calcTotal()"></td>
+                    <td class="px-4 py-2"><input type="number" step="0.1" class="w-full p-1 border rounded" required oninput="calcTotal()"></td>
+                    <td class="px-4 py-2 text-right font-mono text-xs text-gray-500 row-total">0.00</td>
+                 </tr>`;
+             }
+             calcTotal();
         });
 
-        function showModal(title, msg) {
-            document.getElementById('modalTitle').textContent = title;
-            document.getElementById('modalMsg').textContent = msg;
-            document.getElementById('modal').classList.remove('hidden');
-            document.getElementById('modal').classList.add('flex');
-            
-            const titleElem = document.getElementById('modalTitle');
-            if (title === "Success") titleElem.className = "text-xl font-bold mb-2 text-green-600";
-            else if (title === "Error" || title === "Timeout") titleElem.className = "text-xl font-bold mb-2 text-red-600";
-            else titleElem.className = "text-xl font-bold mb-2 text-gray-800";
+        function calcTotal() {
+            let total = 0;
+            tbody.querySelectorAll('tr').forEach(r => {
+                const inputs = r.querySelectorAll('input');
+                if(inputs.length < 4) return;
+                const w = parseFloat(inputs[0].value)||0, l = parseFloat(inputs[1].value)||0, b = parseFloat(inputs[2].value)||0, h = parseFloat(inputs[3].value)||0;
+                const vol = (l*b*h)/5000;
+                const chg = Math.max(w, vol);
+                r.querySelector('.row-total').textContent = chg.toFixed(2);
+                total += chg;
+            });
+            document.getElementById('totalChargeableWeight').value = total.toFixed(2);
         }
 
-        function closeModal() {
-            document.getElementById('modal').classList.add('hidden');
-            document.getElementById('modal').classList.remove('flex');
+        // --- Submit ---
+        document.getElementById('shipmentForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if(tbody.rows.length === 0 || tbody.rows[0].cells.length < 2) return showModal("Error", "Generate Rows first");
+            
+            const btn = document.getElementById('submitBtn'); btn.disabled = true; btn.innerHTML = 'Sending...';
+            
+            const boxes = Array.from(tbody.querySelectorAll('tr')).map((r, i) => {
+                const inps = r.querySelectorAll('input');
+                return { no: i+1, weight: inps[0].value, length: inps[1].value, breath: inps[2].value, height: inps[3].value };
+            });
+
+            const extra = Array.from(document.querySelectorAll('#extraChargesContainer input:checked')).map(c => c.value).join(', ');
+
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'submit',
+                    username: currentUser,
+                    awb: document.getElementById('awb').value,
+                    date: document.getElementById('date').value,
+                    type: document.getElementById('type').value,
+                    network: document.getElementById('network').value,
+                    client: document.getElementById('client').value,
+                    destination: document.getElementById('destination').value,
+                    totalBoxes: document.getElementById('totalBoxes').value,
+                    extraCharges: extra,
+                    extraRemarks: document.getElementById('extraRemarks').value,
+                    boxes: boxes
+                })
+            }).then(r=>r.json()).then(d => {
+                btn.disabled = false; btn.innerHTML = 'Submit Shipment';
+                if(d.result === 'success') { showModal("Success", "Saved!"); e.target.reset(); tbody.innerHTML = ''; calcTotal(); tsClient.clear(); tsDest.clear(); }
+                else showModal("Error", d.message);
+            }).catch(e => { btn.disabled = false; showModal("Error", "Failed"); });
+        });
+
+        // Easter Egg: Konami Code (Up, Up, Down, Down, Left, Right, Left, Right, B, A)
+        let keys = []; const konami = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+        window.addEventListener('keydown', (e) => {
+            keys.push(e.key);
+            keys = keys.slice(-10);
+            if (JSON.stringify(keys) === JSON.stringify(konami)) { alert("🚀 EASTER EGG FOUND! You are a wizard, Harry! 🧙‍♂️"); }
+        });
+        
+        let clickCount = 0;
+        function triggerEasterEgg() {
+            clickCount++;
+            if(clickCount === 5) { alert("Stop poking the logo! 🤕"); clickCount = 0; }
         }
+
+        function showModal(t, m) { document.getElementById('modalTitle').textContent = t; document.getElementById('modalMsg').textContent = m; document.getElementById('modal').classList.remove('hidden'); document.getElementById('modal').classList.add('flex'); }
+        function closeModal() { document.getElementById('modal').classList.add('hidden'); document.getElementById('modal').classList.remove('flex'); }
     </script>
 </body>
 </html>
