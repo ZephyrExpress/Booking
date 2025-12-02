@@ -189,6 +189,7 @@
         });
 
         function showApp(u) {
+            currentUser = u; // Fix: Update global variable immediately
             document.getElementById('navUser').textContent = u;
             document.getElementById('loginScreen').classList.add('hidden-screen');
             document.getElementById('appScreen').classList.remove('hidden-screen');
