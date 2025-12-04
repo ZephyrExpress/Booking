@@ -1,145 +1,194 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <base target="_top">
+  <meta charset="UTF-8">
   <title>Unified Logistics Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
   
+  <link rel="icon" href="https://drive.google.com/uc?export=view&id=1ho3aVQTTOv0VhcJ51H-6ZLtcfEJig0eY">
+
   <style>
-    body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    .login-wrapper { display: flex; justify-content: center; align-items: center; height: 100vh; }
-    .login-card { width: 100%; max-width: 400px; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-    .main-container { max-width: 1400px; margin: 20px auto; display: none; padding: 0 15px; }
-    .nav-tabs .nav-link.active { font-weight: bold; border-top: 3px solid #0d6efd; }
-    .tab-content { background: white; padding: 25px; border: 1px solid #dee2e6; border-top: none; border-radius: 0 0 5px 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .table th { background-color: #0d6efd; color: white; }
-    .spinner-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; display:none; justify-content:center; align-items:center; }
+    body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .login-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .login-card { width: 100%; max-width: 400px; padding: 40px; background: white; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+    .main-container { max-width: 1400px; margin: 30px auto; padding: 0 15px; display: none; }
+    .nav-tabs .nav-link { color: #495057; font-weight: 500; }
+    .nav-tabs .nav-link.active { font-weight: bold; border-top: 3px solid #0d6efd; color: #0d6efd; }
+    .tab-content { background: white; padding: 30px; border: 1px solid #dee2e6; border-top: none; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .table th { background-color: #0d6efd; color: white; font-weight: 600; }
+    .spinner-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.85); z-index:9999; display:none; justify-content:center; align-items:center; backdrop-filter: blur(2px); }
+    .logo-img { height: 60px; width: auto; object-fit: contain; }
   </style>
 </head>
 <body>
 
-<div id="spinner" class="spinner-overlay"><div class="spinner-border text-primary" role="status"></div></div>
+<div id="spinner" class="spinner-overlay">
+  <div class="text-center">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    <div class="mt-3 fw-bold text-secondary">Processing...</div>
+  </div>
+</div>
 
 <div id="loginSection" class="login-wrapper">
   <div class="login-card">
-    <h3 class="text-center mb-4 text-primary fw-bold">Logistics Portal</h3>
-    <div class="mb-3"><label>Username</label><input type="text" id="uIn" class="form-control"></div>
-    <div class="mb-4"><label>Password</label><input type="password" id="pIn" class="form-control"></div>
-    <button onclick="doLogin()" id="loginBtn" class="btn btn-primary w-100 py-2">Login</button>
-    <p id="loginError" class="text-danger text-center mt-3 small" style="display:none;"></p>
+    <div class="text-center mb-4">
+      <img src="https://drive.google.com/uc?export=view&id=1M9JP9LzgBJuLiBEZcRBxxt8jvRZYvC9O" alt="Logo" class="logo-img">
+    </div>
+    <h3 class="text-center mb-4 text-primary fw-bold">Portal Login</h3>
+    
+    <form onsubmit="event.preventDefault(); doLogin();">
+      <div class="mb-3">
+        <label class="form-label text-muted small fw-bold">USERNAME</label>
+        <input type="text" id="uIn" class="form-control form-control-lg" placeholder="Enter username" required>
+      </div>
+      <div class="mb-4">
+        <label class="form-label text-muted small fw-bold">PASSWORD</label>
+        <input type="password" id="pIn" class="form-control form-control-lg" placeholder="Enter password" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 py-2 fw-bold text-uppercase shadow-sm">Sign In</button>
+    </form>
+    
+    <div id="loginError" class="alert alert-danger mt-3 text-center small" style="display:none;"></div>
   </div>
 </div>
 
 <div id="appSection" class="main-container">
   
-  <div class="d-flex justify-content-between align-items-center mb-3 bg-white p-3 rounded shadow-sm">
+  <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm">
     <div class="d-flex align-items-center">
-      <h4 class="m-0 fw-bold text-primary me-3">SUPER PORTAL</h4>
-      <span class="badge bg-secondary" id="userBadge">User</span>
+      <img src="https://drive.google.com/uc?export=view&id=1M9JP9LzgBJuLiBEZcRBxxt8jvRZYvC9O" alt="Logo" style="height: 40px;" class="me-3">
+      <div class="border-start ps-3">
+        <h5 class="m-0 fw-bold text-dark">Unified Portal</h5>
+        <small class="text-muted" id="userBadge">User</small>
+      </div>
     </div>
-    <button onclick="logout()" class="btn btn-outline-danger btn-sm">Logout</button>
+    <button onclick="logout()" class="btn btn-outline-danger btn-sm px-3">Logout</button>
   </div>
 
-  <ul class="nav nav-tabs" id="mainTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="dash-tab" data-bs-toggle="tab" data-bs-target="#dash-content" type="button">📋 Task Dashboard</button>
+  <ul class="nav nav-tabs" id="mainTabs">
+    <li class="nav-item">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#dash-content">
+        📋 Dashboard
+      </button>
     </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="form-tab" data-bs-toggle="tab" data-bs-target="#form-content" type="button">📦 New Shipment</button>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#form-content">
+        📦 Shipment Entry
+      </button>
     </li>
-    <li class="nav-item" role="presentation" id="adminTabLi" style="display:none;">
-      <button class="nav-link" id="admin-tab" data-bs-toggle="tab" data-bs-target="#admin-content" type="button">⚙️ Admin Panel</button>
+    <li class="nav-item" id="adminTabLi" style="display:none;">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#admin-content">
+        ⚙️ Admin
+      </button>
     </li>
   </ul>
 
-  <div class="tab-content" id="myTabContent">
+  <div class="tab-content shadow-sm">
     
     <div class="tab-pane fade show active" id="dash-content">
-      <div class="d-flex justify-content-between mb-3">
-        <h5>Pending Allocations: <span id="taskCount" class="badge bg-warning text-dark">0</span></h5>
-        <button class="btn btn-sm btn-secondary" onclick="loadDashboard()">🔄 Refresh</button>
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="m-0">Pending Tasks: <span id="taskCount" class="badge bg-warning text-dark rounded-pill">0</span></h5>
+        <button class="btn btn-sm btn-secondary shadow-sm" onclick="loadDashboard()">🔄 Refresh List</button>
       </div>
+      
       <div class="table-responsive">
-        <table class="table table-hover align-middle table-bordered">
-          <thead><tr><th>AWB</th><th>Client</th><th>Network</th><th>NetNo</th><th>Weight</th><th>Allocated By</th><th>Assign To</th><th>Action</th></tr></thead>
+        <table class="table table-hover align-middle table-bordered" style="min-width: 800px;">
+          <thead class="table-light text-uppercase small text-muted">
+            <tr>
+              <th>AWB</th><th>Client</th><th>Network</th><th>NetNo</th><th>Weight</th>
+              <th>Allocated By</th><th style="width: 200px;">Assign To</th><th style="width: 100px;">Action</th>
+            </tr>
+          </thead>
           <tbody id="dashTable"></tbody>
         </table>
-        <div id="noDashData" class="alert alert-success text-center" style="display:none;">No pending tasks!</div>
+        <div id="noDashData" class="alert alert-success text-center py-4" style="display:none;">
+          🎉 No pending tasks found!
+        </div>
       </div>
     </div>
 
     <div class="tab-pane fade" id="form-content">
       <form id="shipForm">
+        <h5 class="mb-4 text-primary fw-bold">New Shipment Details</h5>
         <div class="row g-3">
-          <div class="col-md-4"><label>AWB</label><input type="text" id="f_awb" class="form-control" required></div>
-          <div class="col-md-4"><label>Date</label><input type="date" id="f_date" class="form-control" required></div>
-          <div class="col-md-4"><label>Type</label><select id="f_type" class="form-select"><option>Dox</option><option>Ndox</option></select></div>
+          <div class="col-md-4"><label class="form-label small fw-bold">AWB Number</label><input type="text" id="f_awb" class="form-control" required></div>
+          <div class="col-md-4"><label class="form-label small fw-bold">Date</label><input type="date" id="f_date" class="form-control" required></div>
+          <div class="col-md-4"><label class="form-label small fw-bold">Type</label><select id="f_type" class="form-select"><option>Dox</option><option>Ndox</option></select></div>
           
-          <div class="col-md-4"><label>Network</label><select id="f_net" class="form-select"></select></div>
-          <div class="col-md-4"><label>Client</label><select id="f_client" placeholder="Search..."></select></div>
-          <div class="col-md-4"><label>Destination</label><select id="f_dest" placeholder="Search..."></select></div>
+          <div class="col-md-4"><label class="form-label small fw-bold">Network</label><select id="f_net" class="form-select"></select></div>
+          <div class="col-md-4"><label class="form-label small fw-bold">Client</label><select id="f_client" placeholder="Search..."></select></div>
+          <div class="col-md-4"><label class="form-label small fw-bold">Destination</label><select id="f_dest" placeholder="Search..."></select></div>
           
-          <div class="col-md-6"><label>Total Boxes</label><input type="number" id="f_boxes" class="form-control" min="1" required></div>
-          <div class="col-md-6"><label>Total Chargeable</label><input type="text" id="f_totalChg" class="form-control bg-light fw-bold" readonly value="0.00"></div>
+          <div class="col-md-6"><label class="form-label small fw-bold">Total Boxes</label><input type="number" id="f_boxes" class="form-control" min="1" required></div>
+          <div class="col-md-6"><label class="form-label small fw-bold">Chargeable Weight</label><input type="text" id="f_totalChg" class="form-control bg-light fw-bold text-success" readonly value="0.00"></div>
         </div>
 
-        <div class="mt-4 border p-3 rounded bg-light">
+        <div class="mt-4 p-3 bg-light rounded border">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <strong>Box Details</strong>
-            <button type="button" class="btn btn-primary btn-sm" onclick="genBoxes()">Generate Rows</button>
+            <strong class="text-secondary">Box Dimensions</strong>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="genBoxes()">Generate Rows</button>
           </div>
-          <table class="table table-sm bg-white">
-            <thead><tr><th>No</th><th>Weight</th><th>L</th><th>B</th><th>H</th><th>Chg Wgt</th></tr></thead>
-            <tbody id="boxTable"><tr><td colspan="6" class="text-center text-muted">Enter boxes & generate</td></tr></tbody>
+          <table class="table table-sm bg-white mb-0">
+            <thead><tr><th>No</th><th>Weight</th><th>Length</th><th>Breadth</th><th>Height</th><th>Vol. Wgt</th></tr></thead>
+            <tbody id="boxTable"></tbody>
           </table>
         </div>
 
         <div class="mt-3">
-          <label>Extra Charges</label>
-          <div id="f_extra" class="d-flex flex-wrap gap-3 border p-2 rounded bg-white">Loading...</div>
+          <label class="form-label small fw-bold">Extra Charges</label>
+          <div id="f_extra" class="d-flex flex-wrap gap-3 p-3 border rounded bg-white">Loading...</div>
         </div>
         
         <div class="mt-3">
-          <label>Remarks</label>
+          <label class="form-label small fw-bold">Remarks</label>
           <textarea id="f_remarks" class="form-control" rows="2"></textarea>
         </div>
 
-        <button type="submit" class="btn btn-success w-100 mt-4 py-2 fw-bold">SUBMIT SHIPMENT</button>
+        <button type="submit" class="btn btn-success w-100 mt-4 py-2 fw-bold shadow-sm">SUBMIT SHIPMENT</button>
       </form>
     </div>
 
     <div class="tab-pane fade" id="admin-content">
       <div class="row">
         <div class="col-md-6">
-          <div class="card p-3 mb-3">
-            <h6>👤 Manage Users</h6>
-            <div class="input-group mb-2">
-              <input type="text" id="nu_u" class="form-control form-control-sm" placeholder="User">
-              <input type="text" id="nu_p" class="form-control form-control-sm" placeholder="Pass">
-              <input type="text" id="nu_n" class="form-control form-control-sm" placeholder="Name">
-              <select id="nu_r" class="form-select form-select-sm"><option>Staff</option><option>Admin</option></select>
-              <button class="btn btn-success btn-sm" onclick="addUser()">Add</button>
-            </div>
-            <div style="max-height:300px; overflow-y:auto;">
-              <table class="table table-sm table-striped"><tbody id="userTable"></tbody></table>
+          <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white fw-bold">👤 User Management</div>
+            <div class="card-body">
+              <div class="input-group mb-3">
+                <input type="text" id="nu_u" class="form-control form-control-sm" placeholder="User">
+                <input type="text" id="nu_p" class="form-control form-control-sm" placeholder="Pass">
+                <input type="text" id="nu_n" class="form-control form-control-sm" placeholder="Name">
+                <select id="nu_r" class="form-select form-select-sm"><option>Staff</option><option>Admin</option></select>
+                <button class="btn btn-success btn-sm" onclick="addUser()">+</button>
+              </div>
+              <div style="max-height:300px; overflow-y:auto;">
+                <table class="table table-sm table-striped mb-0">
+                  <thead class="table-dark small"><tr><th>User</th><th>Pass</th><th>Name</th><th>Role</th><th>Del</th></tr></thead>
+                  <tbody id="userTable"></tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
+        
         <div class="col-md-6">
-          <div class="card p-3">
-            <h6>📝 Manage Dropdowns</h6>
-            <select id="dd_cat" class="form-select mb-2">
-              <option value="client">Client</option>
-              <option value="destination">Destination</option>
-              <option value="network">Network</option>
-              <option value="extra">Extra Charges</option>
-            </select>
-            <div class="input-group">
-              <input type="text" id="dd_val" class="form-control" placeholder="Value">
-              <button class="btn btn-success" onclick="manageDd('add')">Add</button>
-              <button class="btn btn-danger" onclick="manageDd('delete')">Del</button>
+          <div class="card shadow-sm">
+            <div class="card-header bg-white fw-bold">📝 Dropdown Editor</div>
+            <div class="card-body">
+              <select id="dd_cat" class="form-select mb-2">
+                <option value="client">Client Codes</option>
+                <option value="destination">Destinations</option>
+                <option value="network">Network Types</option>
+                <option value="extra">Extra Charges</option>
+              </select>
+              <div class="input-group">
+                <input type="text" id="dd_val" class="form-control" placeholder="New Value">
+                <button class="btn btn-success" onclick="manageDd('add')">Add</button>
+                <button class="btn btn-danger" onclick="manageDd('delete')">Del</button>
+              </div>
             </div>
           </div>
         </div>
@@ -150,200 +199,325 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
 <script>
-  // CONFIGURATION
   // ******************************************************
-  // ✅ URL INSERTED BELOW
+  // ✅ YOUR GOOGLE APPS SCRIPT WEB APP URL
   const API_URL = "https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec"; 
   // ******************************************************
 
   let currentUser = "", currentRole = "", staffList = [];
   let tsClient, tsDest; 
 
-  function showSpin(x) { document.getElementById('spinner').style.display = x ? 'flex' : 'none'; }
-
-  // --- LOGIN ---
-  function doLogin() {
-    let u = document.getElementById('uIn').value;
-    let p = document.getElementById('pIn').value;
-    if(!u || !p) return alert("Enter credentials");
-    
-    showSpin(true);
-    google.script.run.withSuccessHandler(res => {
-      showSpin(false);
-      if(res.valid) {
-        currentUser = res.username;
-        currentRole = res.role.toLowerCase();
-        
-        document.getElementById('userBadge').textContent = res.name + " (" + res.role + ")";
-        document.getElementById('loginSection').style.display = 'none';
-        document.getElementById('appSection').style.display = 'block';
-        
-        // Setup Tabs
-        if(currentRole === 'admin') {
-          document.getElementById('adminTabLi').style.display = 'block';
-          loadUsers();
-        }
-        
-        // Initial Data Load
-        initApp(); 
-      } else {
-        document.getElementById('loginError').textContent = res.error;
-        document.getElementById('loginError').style.display = 'block';
-      }
-    }).verifyLogin(u, p);
+  // --- API HANDLER (Communicates with Google) ---
+  async function callApi(data) {
+    document.getElementById('spinner').style.display = 'flex';
+    try {
+      // We use POST for everything to avoid URL length limits
+      const response = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify(data)
+      });
+      const result = await response.json();
+      document.getElementById('spinner').style.display = 'none';
+      return result;
+    } catch (e) {
+      document.getElementById('spinner').style.display = 'none';
+      console.error(e);
+      alert("Connection Error. Please check your internet or the API URL.");
+      return { result: "error", message: "Connection Failed" };
+    }
+  }
+  
+  // Use GET for initial data loading to be faster/standard
+  async function fetchGet(action) {
+    document.getElementById('spinner').style.display = 'flex';
+    try {
+      const response = await fetch(`${API_URL}?action=${action}&user=${currentUser}`);
+      const result = await response.json();
+      document.getElementById('spinner').style.display = 'none';
+      return result;
+    } catch (e) { 
+      document.getElementById('spinner').style.display = 'none';
+      return { result: "error" }; 
+    }
   }
 
-  function initApp() {
-    // Load Dashboard Staff List
-    google.script.run.withSuccessHandler(list => { staffList = list; loadDashboard(); }).getStaffList();
+  // --- LOGIN LOGIC ---
+  async function doLogin() {
+    const u = document.getElementById('uIn').value;
+    const p = document.getElementById('pIn').value;
+    if(!u || !p) return alert("Enter credentials");
+
+    const res = await callApi({ action: "login", username: u, password: p });
     
-    // Load Form Dropdowns (via JSON GET)
-    fetch(API_URL + "?type=json").then(r=>r.json()).then(d => {
-      fillSel('f_net', d.networks);
-      fillSel('f_client', d.clients);
-      fillSel('f_dest', d.destinations);
-      fillCheck('f_extra', d.extraCharges);
+    if(res.result === "success") {
+      currentUser = res.username;
+      currentRole = res.role.toLowerCase();
       
+      document.getElementById('userBadge').textContent = res.name + " (" + res.role + ")";
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('appSection').style.display = 'block';
+      
+      // Show Admin Tab if applicable
+      if(currentRole === 'admin') {
+        document.getElementById('adminTabLi').style.display = 'block';
+        loadUsers();
+      }
+      initApp();
+    } else {
+      const errDiv = document.getElementById('loginError');
+      errDiv.textContent = res.message;
+      errDiv.style.display = 'block';
+    }
+  }
+
+  // --- APP INITIALIZATION ---
+  async function initApp() {
+    // 1. Get Staff List for Dashboard
+    const sRes = await fetchGet("getStaff");
+    if(sRes.result === "success") {
+      staffList = sRes.list;
+      loadDashboard();
+    }
+
+    // 2. Get Dropdowns for Form
+    const dRes = await fetchGet("getDropdowns");
+    if(dRes.result === "success") {
+      fillSel('f_net', dRes.networks);
+      fillSel('f_client', dRes.clients);
+      fillSel('f_dest', dRes.destinations);
+      fillCheck('f_extra', dRes.extraCharges);
+      
+      // Initialize Searchable Dropdowns
+      if(tsClient) tsClient.destroy();
+      if(tsDest) tsDest.destroy();
       tsClient = new TomSelect("#f_client",{create:false});
       tsDest = new TomSelect("#f_dest",{create:false});
-    });
+    }
     
     document.getElementById('f_date').valueAsDate = new Date();
   }
 
-  // --- DASHBOARD LOGIC ---
-  function loadDashboard() {
-    showSpin(true);
-    google.script.run.withSuccessHandler(res => {
-      showSpin(false);
-      const tb = document.getElementById('dashTable');
-      tb.innerHTML = '';
+  // --- DASHBOARD FUNCTIONS ---
+  async function loadDashboard() {
+    const res = await fetchGet("getDashboard");
+    const tb = document.getElementById('dashTable'); 
+    tb.innerHTML = '';
+    
+    if(res.result === "success") {
       document.getElementById('taskCount').textContent = res.count;
       document.getElementById('noDashData').style.display = res.count===0 ? 'block' : 'none';
       
       res.tasks.forEach(row => {
         let tr = document.createElement('tr');
-        // Cols A-F
-        for(let i=0; i<6; i++) { let td = document.createElement('td'); td.textContent=row[i]; tr.appendChild(td); }
+        // Columns A-F
+        for(let i=0; i<6; i++) { 
+          let td = document.createElement('td'); 
+          td.textContent = row[i]; 
+          tr.appendChild(td); 
+        }
         
         // Dropdown
         let tdSel = document.createElement('td');
-        let sel = document.createElement('select'); sel.className="form-select form-select-sm";
-        sel.innerHTML = '<option value="">Select...</option>';
-        staffList.forEach(s=>sel.innerHTML+=`<option>${s}</option>`);
-        tdSel.appendChild(sel); tr.appendChild(tdSel);
+        let sel = document.createElement('select'); 
+        sel.className = "form-select form-select-sm";
+        sel.innerHTML = '<option value="">Select Staff...</option>';
+        staffList.forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
+        tdSel.appendChild(sel); 
+        tr.appendChild(tdSel);
         
         // Button
         let tdBtn = document.createElement('td');
-        let btn = document.createElement('button'); btn.className="btn btn-success btn-sm w-100"; btn.textContent="Assign";
-        btn.onclick = () => {
-          if(!sel.value) return alert("Select staff");
-          btn.disabled=true; btn.textContent="...";
-          google.script.run.withSuccessHandler(r=>{
-            if(r==="Success") { tr.remove(); let c=document.getElementById('taskCount'); c.textContent=parseInt(c.textContent)-1; }
-            else { alert(r); btn.disabled=false; }
-          }).assignTask(row[0], sel.value, currentUser);
+        let btn = document.createElement('button'); 
+        btn.className = "btn btn-success btn-sm w-100"; 
+        btn.textContent = "Assign";
+        
+        btn.onclick = async () => {
+          if(!sel.value) return alert("Please select a staff member first.");
+          btn.textContent = "Saving..."; btn.disabled = true;
+          
+          const assignRes = await callApi({ 
+            action: "assignTask", 
+            awb: row[0], // AWB is Col 0
+            staff: sel.value, 
+            assigner: currentUser 
+          });
+          
+          if(assignRes.result === "success") {
+            tr.remove(); 
+            let c = document.getElementById('taskCount'); 
+            c.textContent = Math.max(0, parseInt(c.textContent) - 1);
+          } else { 
+            alert(assignRes.message); 
+            btn.textContent = "Assign"; btn.disabled = false;
+          }
         };
-        tdBtn.appendChild(btn); tr.appendChild(tdBtn);
+        tdBtn.appendChild(btn); 
+        tr.appendChild(tdBtn);
         tb.appendChild(tr);
       });
-    }).getUserData(currentUser);
+    }
   }
 
-  // --- FORM LOGIC ---
+  // --- SHIPMENT FORM FUNCTIONS ---
   function genBoxes() {
     let n = document.getElementById('f_boxes').value;
-    let tb = document.getElementById('boxTable'); tb.innerHTML='';
+    let tb = document.getElementById('boxTable'); 
+    tb.innerHTML='';
     for(let i=1; i<=n; i++) {
-      tb.innerHTML += `<tr><td>${i}</td>
-      <td><input type="number" class="form-control form-control-sm" oninput="calcBox(this)"></td>
-      <td><input type="number" class="form-control form-control-sm" oninput="calcBox(this)"></td>
-      <td><input type="number" class="form-control form-control-sm" oninput="calcBox(this)"></td>
-      <td><input type="number" class="form-control form-control-sm" oninput="calcBox(this)"></td>
-      <td class="chg-val fw-bold">0.00</td></tr>`;
+      tb.innerHTML += `
+        <tr>
+          <td>${i}</td>
+          <td><input type="number" class="form-control form-control-sm" step="0.01" oninput="calcBox(this)"></td>
+          <td><input type="number" class="form-control form-control-sm" step="0.1" oninput="calcBox(this)"></td>
+          <td><input type="number" class="form-control form-control-sm" step="0.1" oninput="calcBox(this)"></td>
+          <td><input type="number" class="form-control form-control-sm" step="0.1" oninput="calcBox(this)"></td>
+          <td class="chg-val fw-bold text-success">0.00</td>
+        </tr>`;
     }
   }
 
   function calcBox(el) {
-    let tr = el.closest('tr');
+    let tr = el.closest('tr'); 
     let inps = tr.querySelectorAll('input');
-    let w=parseFloat(inps[0].value)||0, l=parseFloat(inps[1].value)||0, b=parseFloat(inps[2].value)||0, h=parseFloat(inps[3].value)||0;
-    let chg = Math.max(w, (l*b*h)/5000).toFixed(2);
+    let w = parseFloat(inps[0].value)||0;
+    let l = parseFloat(inps[1].value)||0; 
+    let b = parseFloat(inps[2].value)||0; 
+    let h = parseFloat(inps[3].value)||0;
+    let vol = (l*b*h)/5000;
+    let chg = Math.max(w, vol).toFixed(2);
     tr.querySelector('.chg-val').textContent = chg;
     
-    // Total
-    let tot=0;
+    // Update Total
+    let tot = 0; 
     document.querySelectorAll('.chg-val').forEach(e => tot += parseFloat(e.textContent));
     document.getElementById('f_totalChg').value = tot.toFixed(2);
   }
 
-  document.getElementById('shipForm').onsubmit = (e) => {
+  document.getElementById('shipForm').onsubmit = async (e) => {
     e.preventDefault();
-    showSpin(true);
     
-    // Gather Boxes
     let boxes = [];
     document.querySelectorAll('#boxTable tr').forEach((tr, i) => {
       let inps = tr.querySelectorAll('input');
-      if(inps.length>0) boxes.push({no:i+1, weight:inps[0].value, length:inps[1].value, breath:inps[2].value, height:inps[3].value});
+      if(inps.length > 0) {
+        boxes.push({
+          no: i+1, 
+          weight: inps[0].value, 
+          length: inps[1].value, 
+          breath: inps[2].value, 
+          height: inps[3].value
+        });
+      }
     });
 
-    let extra = [];
-    document.querySelectorAll('#f_extra input:checked').forEach(c=>extra.push(c.value));
-
-    let payload = {
-      action: 'submit',
+    let extra = []; 
+    document.querySelectorAll('#f_extra input:checked').forEach(c => extra.push(c.value));
+    
+    const payload = {
+      action: 'submit', 
       username: currentUser,
-      awb: document.getElementById('f_awb').value,
+      awb: document.getElementById('f_awb').value, 
       date: document.getElementById('f_date').value,
-      type: document.getElementById('f_type').value,
+      type: document.getElementById('f_type').value, 
       network: document.getElementById('f_net').value,
-      client: document.getElementById('f_client').value,
+      client: document.getElementById('f_client').value, 
       destination: document.getElementById('f_dest').value,
-      totalBoxes: document.getElementById('f_boxes').value,
+      totalBoxes: document.getElementById('f_boxes').value, 
       extraCharges: extra.join(', '),
-      extraRemarks: document.getElementById('f_remarks').value,
+      extraRemarks: document.getElementById('f_remarks').value, 
       boxes: boxes
     };
 
-    fetch(API_URL, {method:'POST', body:JSON.stringify(payload)})
-    .then(r=>r.json()).then(d=>{
-      showSpin(false);
-      if(d.result==='success') { alert("Saved!"); document.getElementById('shipForm').reset(); document.getElementById('boxTable').innerHTML=''; tsClient.clear(); tsDest.clear(); }
-      else alert(d.message);
-    });
+    const res = await callApi(payload);
+    
+    if(res.result === 'success') { 
+      alert("✅ Shipment Saved Successfully!"); 
+      document.getElementById('shipForm').reset(); 
+      document.getElementById('boxTable').innerHTML=''; 
+      tsClient.clear(); tsDest.clear(); 
+    } else {
+      alert("❌ Error: " + res.message);
+    }
   };
 
-  // --- ADMIN LOGIC ---
-  function loadUsers() {
-    google.script.run.withSuccessHandler(users => {
-      let tb = document.getElementById('userTable'); tb.innerHTML='';
-      users.forEach(u => {
-        tb.innerHTML += `<tr><td>${u[0]}</td><td>${u[2]}</td><td>${u[3]}</td><td><button class="btn btn-danger btn-sm p-0 px-1" onclick="delUser('${u[0]}')">X</button></td></tr>`;
+  // --- ADMIN FUNCTIONS ---
+  async function loadUsers() {
+    const res = await fetchGet("getUsers");
+    if(res.result === "success") {
+      let tb = document.getElementById('userTable'); 
+      tb.innerHTML='';
+      res.users.forEach(u => {
+        tb.innerHTML += `
+          <tr>
+            <td>${u[0]}</td>
+            <td>${u[1]}</td>
+            <td>${u[2]}</td>
+            <td><span class="badge bg-light text-dark border">${u[3]}</span></td>
+            <td><button class="btn btn-danger btn-sm p-0 px-2" onclick="delUser('${u[0]}')">&times;</button></td>
+          </tr>`;
       });
-    }).getAllUsers();
-  }
-  function addUser() {
-    google.script.run.withSuccessHandler(r=>{ alert(r); loadUsers(); }).addNewUser(
-      document.getElementById('nu_u').value, document.getElementById('nu_p').value, document.getElementById('nu_n').value, document.getElementById('nu_r').value
-    );
-  }
-  function delUser(u) { if(confirm("Delete?")) google.script.run.withSuccessHandler(r=>{ loadUsers(); }).deleteUser(u); }
-
-  function manageDd(act) {
-    let cat = document.getElementById('dd_cat').value;
-    let val = document.getElementById('dd_val').value;
-    if(!val) return;
-    showSpin(true);
-    fetch(API_URL, {method:'POST', body:JSON.stringify({action:'manageData', subAction:act, category:cat, value:val})})
-    .then(r=>r.json()).then(d=>{ showSpin(false); alert(d.message); if(d.result==='success') document.getElementById('dd_val').value=''; });
+    }
   }
 
-  // HELPERS
-  function fillSel(id, arr) { let e=document.getElementById(id); e.innerHTML='<option value="">Select...</option>'; arr.forEach(x=>e.innerHTML+=`<option>${x}</option>`); }
-  function fillCheck(id, arr) { let e=document.getElementById(id); e.innerHTML=''; arr.forEach(x=>e.innerHTML+=`<div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label">${x}</label></div>`); }
-  function logout() { location.reload(); }
+  async function addUser() {
+    const u = document.getElementById('nu_u').value;
+    const p = document.getElementById('nu_p').value;
+    const n = document.getElementById('nu_n').value;
+    const r = document.getElementById('nu_r').value;
+    
+    if(!u || !p) return alert("Username and Password are required");
+
+    const res = await callApi({action: "addUser", u: u, p: p, n: n, r: r});
+    alert(res.message); 
+    if(res.result === "success") loadUsers();
+  }
+
+  async function delUser(u) {
+    if(confirm("Are you sure you want to delete user: " + u + "?")) {
+      await callApi({action: "deleteUser", username: u}); 
+      loadUsers();
+    }
+  }
+
+  async function manageDd(act) {
+    const c = document.getElementById('dd_cat').value;
+    const v = document.getElementById('dd_val').value;
+    if(!v) return;
+    
+    const res = await callApi({action: 'manageData', subAction: act, category: c, value: v});
+    alert(res.message); 
+    if(res.result === 'success') {
+      document.getElementById('dd_val').value = '';
+      // Reload dropdowns quietly
+      initApp(); 
+    }
+  }
+
+  // --- HELPERS ---
+  function fillSel(id, arr) { 
+    let e = document.getElementById(id); 
+    e.innerHTML = '<option value="">Select...</option>'; 
+    arr.forEach(x => e.innerHTML += `<option value="${x}">${x}</option>`); 
+  }
+  
+  function fillCheck(id, arr) { 
+    let e = document.getElementById(id); 
+    e.innerHTML = ''; 
+    arr.forEach(x => {
+      e.innerHTML += `
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" value="${x}" id="chk_${x.replace(/\s/g,'')}">
+          <label class="form-check-label" for="chk_${x.replace(/\s/g,'')}">${x}</label>
+        </div>`;
+    }); 
+  }
+  
+  function logout() { 
+    location.reload(); 
+  }
 </script>
 </body>
 </html>
