@@ -14,8 +14,8 @@
     body { background-color: #f4f6f9; font-family: 'Segoe UI', system-ui, sans-serif; overflow-x: hidden; }
     
     /* UTILITIES */
+    .bg-zephyr { background-color: var(--primary-color); }
     .text-zephyr { color: var(--primary-color); }
-    /* Point 5: Green Button for Generate Rows */
     .btn-green { background-color: var(--zephyr-green); color: white; border: none; }
     .btn-green:hover { background-color: #27ae60; color: white; }
     
@@ -24,38 +24,27 @@
     .login-card { width: 100%; max-width: 380px; padding: 2rem; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); background: white; }
     
     /* HEADER & NAV */
-    .top-bar { 
-        background: white; 
-        padding: 10px 20px; 
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
-        position: sticky; 
-        top: 0; 
-        z-index: 1000; 
-        /* Ensure there's space for centered logo */
-        min-height: 60px;
-    }
-    /* Point 3: Logo Always in Middle */
-    .logo-container { position: absolute; left: 50%; transform: translateX(-50%); top: 10px; }
+    .top-bar { background: white; padding: 10px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; }
+    .logo-container { position: absolute; left: 50%; transform: translateX(-50%); }
     .logo-img { height: 40px; }
     
-    /* Point 11: Universal Button for My Tasks */
+    /* UNIVERSAL BUTTON */
     .universal-btn { background: #ff4757; color: white; border-radius: 30px; padding: 5px 15px; font-weight: bold; font-size: 0.9rem; border: none; box-shadow: 0 4px 6px rgba(255, 71, 87, 0.3); transition: transform 0.2s; }
     .universal-btn:active { transform: scale(0.95); }
     
-    /* Point 14: Overview Stat Cards */
-    .stat-card { background: white; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.03); height: 100%; border-bottom: 4px solid transparent; }
+    /* OVERVIEW CARDS */
+    .stat-card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.03); height: 100%; border-bottom: 4px solid transparent; }
     .stat-card.c-blue { border-color: #3498db; }
     .stat-card.c-red { border-color: #ff4757; }
     .stat-card.c-green { border-color: #2ecc71; }
-    /* Point 13: Live, Bold & Red Numbers */
-    .stat-num { font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 5px; }
-    .stat-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #7f8c8d; font-weight: bold; }
+    .stat-num { font-size: 2.5rem; font-weight: 800; line-height: 1; margin-bottom: 5px; }
+    .stat-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #7f8c8d; font-weight: bold; }
     .text-red-bold { color: #ff4757; font-weight: 800; }
 
-    /* Merged Table Styling */
+    /* MERGED TABLE */
     .table-custom th { font-size: 0.75rem; text-transform: uppercase; background: #f8f9fa; color: #636e72; }
     .type-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; }
-    .badge-auto { background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; } /* Highlight Automation */
+    .badge-auto { background: #e1f5fe; color: #0288d1; }
     .badge-alloc { background: #fff3e0; color: #f57c00; }
 
     /* SPINNER */
@@ -72,14 +61,14 @@
   <div class="login-card">
     <div class="text-center mb-4">
       <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" alt="Zephyr" style="max-height: 60px;">
-      <h5 class="mt-3 fw-bold text-zephyr">Zephyr Express Portal</h5>
+      <h5 class="mt-3 fw-bold text-zephyr">Zephyr Portal</h5>
     </div>
     <form onsubmit="event.preventDefault(); doLogin();">
       <input type="text" class="form-control mb-3 py-2" id="uIn" placeholder="Username" required>
       <input type="password" class="form-control mb-4 py-2" id="pIn" placeholder="Password" required>
       <button type="submit" class="btn btn-primary w-100 py-2 rounded-pill fw-bold">Sign In</button>
     </form>
-    <div id="loginError" class="text-danger text-center mt-3 small" style="display:none;"></div>
+    <div id="loginError" class="text-danger text-center mt-3 small"></div>
   </div>
 </div>
 
@@ -87,7 +76,7 @@
   
   <div class="top-bar d-flex align-items-center justify-content-between">
     <button class="universal-btn" onclick="openMyTasks()">
-      <i class="bi bi-list-task me-1"></i> My Tasks: <span id="myTaskCount">0</span>
+      <i class="bi bi-list-task me-1"></i> <span id="myTaskCount">0</span>
     </button>
     
     <div class="logo-container">
@@ -99,14 +88,14 @@
 
   <div class="container mt-3">
     <ul class="nav nav-pills nav-fill bg-white rounded p-1 shadow-sm mb-4" id="mainNav">
-      <li class="nav-item"><button class="nav-link" id="tab-inbound" onclick="switchTab('inbound')"><i class="bi bi-box-seam me-2"></i>Inbound</button></li>
-      <li class="nav-item"><button class="nav-link" id="tab-overview" onclick="switchTab('overview')"><i class="bi bi-grid-1x2 me-2"></i>Overview</button></li>
-      <li class="nav-item" id="nav-admin" style="display:none;"><button class="nav-link" id="tab-admin" onclick="switchTab('admin')"><i class="bi bi-gear me-2"></i>Admin</button></li>
+      <li class="nav-item"><button class="nav-link" id="tab-inbound" onclick="switchTab('inbound')">Inbound</button></li>
+      <li class="nav-item"><button class="nav-link" id="tab-overview" onclick="switchTab('overview')">Overview</button></li>
+      <li class="nav-item" id="nav-admin" style="display:none;"><button class="nav-link" onclick="switchTab('admin')">Admin</button></li>
     </ul>
 
-    <div id="view-inbound" class="view-section" style="display:none;">
+    <div id="view-inbound" class="view-section">
       <div class="card border-0 shadow-sm p-3">
-        <h6 class="text-zephyr fw-bold mb-3">New Entry</h6>
+        <h6 class="text-zephyr fw-bold mb-3"><i class="bi bi-box-seam me-2"></i>New Entry</h6>
         <form id="shipForm">
           <div class="row g-2">
             <div class="col-6 col-md-3"><input type="text" id="f_awb" class="form-control" placeholder="AWB No." required></div>
@@ -138,7 +127,7 @@
           </div>
           <div class="mt-2"><textarea id="f_remarks" class="form-control" rows="1" placeholder="Remarks..."></textarea></div>
 
-          <button type="submit" class="btn btn-primary w-100 mt-4 py-3 rounded-pill fw-bold shadow-sm">SUBMIT ENTRY</button>
+          <button type="submit" class="btn btn-primary w-100 mt-4 py-3 rounded-pill fw-bold shadow-sm">SUBMIT</button>
         </form>
       </div>
     </div>
@@ -154,30 +143,30 @@
         </div>
         <div class="col-4">
           <div class="stat-card c-red">
-            <div class="stat-num text-danger" id="cnt-auto">0</div> 
-            <div class="stat-label">Pending Automation</div>
+            <div class="stat-num text-danger" id="cnt-auto">0</div>
+            <div class="stat-label">Pending Auto</div>
           </div>
         </div>
         <div class="col-4">
           <div class="stat-card c-green">
             <div class="stat-num text-success" id="cnt-label">0</div>
-            <div class="stat-label">Pending Paperwork</div>
+            <div class="stat-label">Pending Label</div>
           </div>
         </div>
       </div>
 
       <div class="card border-0 shadow-sm">
         <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
-          <span><i class="bi bi-list-ul me-2"></i>Combined Task List</span>
-          <button class="btn btn-sm btn-light" onclick="loadData()"><i class="bi bi-arrow-clockwise me-1"></i> Refresh</button>
+          <span><i class="bi bi-list-ul me-2"></i>Pending Tasks</span>
+          <button class="btn btn-sm btn-light" onclick="loadData()"><i class="bi bi-arrow-clockwise"></i></button>
         </div>
         <div class="table-responsive">
           <table class="table table-hover mb-0 table-custom align-middle">
             <thead class="table-light">
               <tr>
                 <th>Type</th>
-                <th>Details (AWB, Client, Network)</th>
-                <th>Origin User</th>
+                <th>Details</th>
+                <th>Origin</th>
                 <th style="min-width:140px;">Assign To</th>
               </tr>
             </thead>
@@ -189,8 +178,8 @@
     </div>
 
     <div id="view-admin" class="view-section" style="display:none;">
-       <div class="alert alert-info">Admin Panel (Implement Users/Dropdowns here)</div>
-    </div>
+       <div class="alert alert-info">Admin Panel - User Management Here</div>
+       </div>
 
   </div>
 </div>
@@ -199,7 +188,7 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title fw-bold">Tasks Assigned To Me</h5>
+        <h5 class="modal-title fw-bold">My Tasks</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body p-0">
@@ -213,22 +202,18 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 
 <script>
-  // ⚠️ YOUR WEB APP URL (Confirmed)
+  // ⚠️ REPLACE WITH YOUR DEPLOYED URL
   const API_URL = "https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec"; 
 
-  let currentUser = {}; // Stores {username, name, role}
-  let staffList = [];
+  let currentUser = {}, staffList = [];
   let tsClient, tsDest;
   
-  // --- CORE SYSTEM & AUTO-SYNC ---
+  // --- CORE SYSTEM ---
   window.onload = () => {
-    // Check local storage for session (Point 2: Session Persistence)
     const saved = localStorage.getItem("zPortalUser");
     if(saved) {
       currentUser = JSON.parse(saved);
       initApp();
-    } else {
-      document.getElementById('loginSection').style.display = 'flex';
     }
   };
 
@@ -236,28 +221,23 @@
     document.getElementById('loginSection').style.display = 'none';
     document.getElementById('appSection').style.display = 'block';
     
-    // Point 4: Inbound as default for Staff
-    if(currentUser.role && currentUser.role.toLowerCase() === 'staff') {
+    // Set Default Tab based on Role (Point 4)
+    if(currentUser.role.toLowerCase() === 'staff') {
        switchTab('inbound');
     } else {
-       // Admin/Others default to Overview
        switchTab('overview');
-       if(currentUser.role && currentUser.role.toLowerCase() === 'admin') {
-         document.getElementById('nav-admin').style.display = 'block';
-       }
+       document.getElementById('nav-admin').style.display = 'block';
     }
 
-    // Set today's date
     document.getElementById('f_date').value = new Date().toLocaleDateString('en-CA');
     
-    // Initial Load (Concurrent fetching of static and dynamic data)
+    // Initial Load
     await Promise.all([loadDropdowns(), loadData()]);
     
-    // Point 2: Auto Sync (60 seconds)
+    // Auto Sync (Point 2) - Every 60 seconds
     setInterval(() => { loadData(false); }, 60000);
   }
 
-  // Point 6: Minimized buffering during data refresh
   async function loadData(showSpin=true) {
     if(showSpin) document.getElementById('spinner').style.display='flex';
     
@@ -265,30 +245,24 @@
       const res = await fetch(`${API_URL}?action=getOverview&user=${currentUser.username}`).then(r=>r.json());
       
       if(res.result === "success") {
-        // Point 13 & 14: Update Counters
+        // Update Counters (Points 13, 14)
         const c = res.counts;
         document.getElementById('cnt-inbound').textContent = c.inbound;
         document.getElementById('cnt-auto').textContent = c.auto;
         document.getElementById('cnt-label').textContent = c.label;
         document.getElementById('myTaskCount').textContent = res.myTasks.length;
 
-        // Point 12: Render Merged List
+        // Render Merged List (Point 12)
         renderMergedTable(res.mergedList);
         
-        // Point 10: Render My Tasks for modal
+        // Render My Tasks
         renderMyTasks(res.myTasks);
-      } else {
-        console.error("API Error:", res.message);
       }
-    } catch(e) { 
-      console.error("Fetch Error:", e); 
-      alert("Failed to connect to backend API.");
-    }
+    } catch(e) { console.error(e); }
     
     if(showSpin) document.getElementById('spinner').style.display='none';
   }
 
-  // Point 12: Render Merged Table (Automations + Shipments)
   function renderMergedTable(list) {
     const tb = document.getElementById('mergedTable');
     tb.innerHTML = '';
@@ -297,46 +271,39 @@
     list.forEach(item => {
       const tr = document.createElement('tr');
       
-      // Highlight automations (since they are top priority)
+      // Type Badge
       const badgeClass = item.type==='Automation' ? 'badge-auto' : 'badge-alloc';
       
+      // Cells
       tr.innerHTML = `
         <td><span class="type-badge ${badgeClass}">${item.type}</span></td>
         <td>
           <div class="fw-bold text-dark">${item.awb}</div>
           <div class="small text-muted">${item.client} | ${item.network}</div>
-          <div class="small text-danger fw-bold">${item.details}</div> 
+          <div class="small text-danger fw-bold">${item.details}</div>
         </td>
         <td class="small text-muted">${item.origin}</td>
         <td id="act-${item.awb}"></td>
       `;
       
-      // Assignment Dropdown
+      // Assign Dropdown (Merged Logic)
       const tdAct = tr.querySelector(`#act-${item.awb}`);
       const sel = document.createElement('select');
       sel.className = "form-select form-select-sm border-danger text-danger fw-bold";
-      // Ensure staffList is populated (from loadDropdowns)
       sel.innerHTML = `<option value="">ASSIGN...</option>${staffList.map(s=>`<option value="${s}">${s}</option>`).join('')}`;
       
-      sel.onchange = async function() {
-         if(!this.value) return;
-         if(!confirm(`Assign ${item.awb} (${item.type}) to ${this.value}?`)) { this.value=""; return; }
+      sel.onchange = async () => {
+         if(!sel.value) return;
+         if(!confirm(`Assign ${item.awb} to ${sel.value}?`)) { sel.value=""; return; }
          
-         this.disabled = true;
+         sel.disabled = true;
          const apiRes = await fetch(API_URL, {
             method: "POST", 
-            body: JSON.stringify({ action: "assignTask", type: item.type, id: item.awb, staff: this.value, assigner: currentUser.username })
+            body: JSON.stringify({ action: "assignTask", type: item.type, id: item.awb, staff: sel.value, assigner: currentUser.username })
          }).then(r=>r.json());
          
-         if(apiRes.result === "success") { 
-            tr.remove(); 
-            // Refresh counters silently
-            loadData(false); 
-         }
-         else { 
-            alert("Error: " + apiRes.message); 
-            this.disabled=false; 
-         }
+         if(apiRes.result === "success") { tr.remove(); loadData(false); }
+         else { alert("Error"); sel.disabled=false; }
       };
       
       tdAct.appendChild(sel);
@@ -344,7 +311,6 @@
     });
   }
 
-  // Point 10 & 11: My Tasks Modal Renderer
   function renderMyTasks(tasks) {
     const ul = document.getElementById('myTaskList');
     ul.innerHTML = '';
@@ -355,32 +321,23 @@
        li.className = "list-group-item d-flex justify-content-between align-items-center";
        li.innerHTML = `
          <div>
-           <div class="fw-bold text-primary">${t.id} <span class="badge bg-secondary">${t.type}</span></div>
+           <div class="fw-bold">${t.id}</div>
            <div class="small text-muted">${t.details}</div>
-           ${t.reqStatus === 'Pending' ? '<div class="small text-warning fw-bold mt-1"><i class="bi bi-hourglass-split"></i> Transfer Requested</div>' : ''}
          </div>
        `;
        
-       // Point 11: Transfer Request Button
+       // Transfer Request Button
        const btn = document.createElement('button');
-       btn.className = "btn btn-outline-danger btn-sm";
-       btn.innerHTML = 'Transfer';
-       
-       if(t.reqStatus === 'Pending') { 
-          btn.disabled=true; 
-          btn.classList.remove('btn-outline-danger'); 
-          btn.classList.add('btn-secondary');
-          btn.innerHTML = 'Pending...'; 
-       }
+       btn.className = "btn btn-outline-secondary btn-sm";
+       btn.innerHTML = '<i class="bi bi-arrow-left-right"></i>';
+       if(t.reqStatus === 'Pending') { btn.disabled=true; btn.classList.add('btn-warning'); btn.innerHTML='<i class="bi bi-hourglass"></i>'; }
        
        btn.onclick = async () => {
-          const target = prompt("Enter the username of the staff member you wish to transfer this task to:");
-          if(target && staffList.map(s => s.toLowerCase()).includes(target.toLowerCase())) {
+          const target = prompt("Transfer to user (Username):");
+          if(target) {
              const r = await fetch(API_URL, { method:"POST", body:JSON.stringify({action:"requestTransfer", awb:t.id, targetUser:target}) }).then(j=>j.json());
              alert(r.message);
              loadData(false);
-          } else if (target) {
-            alert("Invalid username or transfer cancelled.");
           }
        };
        li.appendChild(btn);
@@ -388,27 +345,23 @@
     });
   }
 
-
-  // --- UTILITY FUNCTIONS ---
+  // --- HELPERS ---
   async function loadDropdowns() {
      const res = await fetch(`${API_URL}?action=getDropdowns`).then(r=>r.json());
      if(res.result==="success") {
         fillSel('f_net', res.networks);
         fillSel('f_client', res.clients);
         fillSel('f_dest', res.destinations);
-        
-        // Custom Checkbox Styling
+        // Fill Extras
         document.getElementById('f_extra').innerHTML = res.extraCharges.map(x=>`
           <label class="btn btn-outline-secondary btn-sm border-0 bg-white shadow-sm">
              <input type="checkbox" class="form-check-input me-1" value="${x}"> ${x}
           </label>
         `).join('');
-        
-        // Init TomSelect for searching Client/Destination
-        if(!tsClient) tsClient = new TomSelect("#f_client");
-        if(!tsDest) tsDest = new TomSelect("#f_dest");
-        
-        // Get Staff List for Assignments
+        // Init TomSelect
+        tsClient = new TomSelect("#f_client");
+        tsDest = new TomSelect("#f_dest");
+        // Get Staff
         const sRes = await fetch(`${API_URL}?action=getStaff`).then(r=>r.json());
         if(sRes.result==="success") staffList = sRes.list;
      }
@@ -417,8 +370,6 @@
   function doLogin() {
     const u=document.getElementById('uIn').value, p=document.getElementById('pIn').value;
     document.getElementById('spinner').style.display='flex';
-    document.getElementById('loginError').style.display='none';
-
     fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "login", username: u, password: p }) })
       .then(r=>r.json())
       .then(res => {
@@ -429,13 +380,7 @@
             initApp();
          } else {
             document.getElementById('loginError').textContent = res.message;
-            document.getElementById('loginError').style.display='block';
          }
-      })
-      .catch(e => {
-        document.getElementById('spinner').style.display='none';
-        document.getElementById('loginError').textContent = "Connection failed. Check API URL/Deployment.";
-        document.getElementById('loginError').style.display='block';
       });
   }
   
@@ -446,19 +391,9 @@
      document.getElementById('tab-'+id)?.classList.add('active');
   }
 
-  function openMyTasks() { 
-     const m = new bootstrap.Modal(document.getElementById('myTaskModal')); 
-     m.show(); 
-  }
-
-  function logout() { 
-    localStorage.removeItem("zPortalUser"); 
-    location.reload(); 
-  }
-  
-  function fillSel(id, arr) { 
-    document.getElementById(id).innerHTML = `<option value="">Select...</option>` + arr.map(x=>`<option value="${x}">${x}</option>`).join(''); 
-  }
+  function openMyTasks() { const m = new bootstrap.Modal(document.getElementById('myTaskModal')); m.show(); }
+  function logout() { localStorage.removeItem("zPortalUser"); location.reload(); }
+  function fillSel(id, arr) { document.getElementById(id).innerHTML = `<option value="">Select...</option>` + arr.map(x=>`<option value="${x}">${x}</option>`).join(''); }
   
   // Box Generator
   function genBoxes() {
@@ -468,45 +403,36 @@
     for(let i=0; i<n; i++) {
        tb.innerHTML += `<tr>
          <td width="20"><small>${i+1}</small></td>
-         <td><input type="number" class="form-control form-control-sm" placeholder="Wgt" oninput="calc()" min="0.01" step="0.01"></td>
-         <td><input type="number" class="form-control form-control-sm" placeholder="L" oninput="calc()" min="1" step="0.1"></td>
-         <td><input type="number" class="form-control form-control-sm" placeholder="B" oninput="calc()" min="1" step="0.1"></td>
-         <td><input type="number" class="form-control form-control-sm" placeholder="H" oninput="calc()" min="1" step="0.1"></td>
+         <td><input type="number" class="form-control form-control-sm" placeholder="Wgt" oninput="calc()"></td>
+         <td><input type="number" class="form-control form-control-sm" placeholder="L" oninput="calc()"></td>
+         <td><input type="number" class="form-control form-control-sm" placeholder="B" oninput="calc()"></td>
+         <td><input type="number" class="form-control form-control-sm" placeholder="H" oninput="calc()"></td>
        </tr>`;
     }
-    calc(); // Recalculate total immediately
   }
-
   function calc() {
      let tot = 0;
      document.querySelectorAll('#boxTable tr').forEach(tr => {
         const i = tr.querySelectorAll('input');
         const w = parseFloat(i[0].value)||0;
-        // Volumetric calculation (L*B*H / 5000)
-        const vol = (parseFloat(i[1].value||0)*parseFloat(i[2].value||0)*parseFloat(i[3].value||0))/5000; 
-        // Chargeable weight is Max(Actual Weight, Volumetric Weight)
+        const vol = (parseFloat(i[1].value||0)*parseFloat(i[2].value||0)*parseFloat(i[3].value||0))/5000;
         tot += Math.max(w, vol);
      });
      document.getElementById('f_totalChg').value = tot.toFixed(2) + " kg";
   }
 
-  // Handle Form Submit
+  // Handle Form Submit (Simplified)
   document.getElementById('shipForm').onsubmit = async (e) => {
     e.preventDefault();
     document.getElementById('spinner').style.display='flex';
-    
-    // 1. Gather Box Data
-    let boxes = []; 
-    document.querySelectorAll('#boxTable tr').forEach((tr,i) => {
+    // ... Gather boxes ...
+    let boxes = []; document.querySelectorAll('#boxTable tr').forEach((tr,i) => {
        const inp=tr.querySelectorAll('input');
        boxes.push({no:i+1, weight:inp[0].value, length:inp[1].value, breath:inp[2].value, height:inp[3].value});
     });
+    // ... Gather Extras ...
+    let extra = []; document.querySelectorAll('#f_extra input:checked').forEach(c=>extra.push(c.value));
     
-    // 2. Gather Extras
-    let extra = []; 
-    document.querySelectorAll('#f_extra input:checked').forEach(c=>extra.push(c.value));
-    
-    // 3. Build API Body
     const body = {
        action: "submit",
        username: currentUser.username,
@@ -517,27 +443,15 @@
        client: document.getElementById('f_client').value,
        destination: document.getElementById('f_dest').value,
        totalBoxes: document.getElementById('f_boxes').value,
-       // Pass total chargeable weight to simplify backend
-       totalChg: parseFloat(document.getElementById('f_totalChg').value.split(' ')[0]) || 0,
        extraCharges: extra.join(', '),
        extraRemarks: document.getElementById('f_remarks').value,
        boxes: boxes
     };
     
-    // 4. Call API
     const res = await fetch(API_URL, {method:"POST", body:JSON.stringify(body)}).then(r=>r.json());
     document.getElementById('spinner').style.display='none';
-
-    if(res.result==='success') { 
-        alert("✅ Inbound Entry Saved!"); 
-        document.getElementById('shipForm').reset(); 
-        tsClient.clear(); 
-        tsDest.clear(); 
-        document.getElementById('boxTable').innerHTML=''; 
-        loadData(false); 
-    } else {
-        alert("❌ Submission Failed: " + res.message);
-    }
+    if(res.result==='success') { alert("Saved!"); document.getElementById('shipForm').reset(); tsClient.clear(); tsDest.clear(); document.getElementById('boxTable').innerHTML=''; loadData(false); }
+    else alert(res.message);
   };
 </script>
 
