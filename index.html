@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Unified Logistics Portal</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
@@ -13,35 +13,38 @@
 
   <style>
     :root { --primary-color: #2c3e50; --accent-color: #3498db; }
-    body { background-color: #f8f9fa; font-family: 'Segoe UI', system-ui, sans-serif; color: #343a40; }
+    body { background-color: #f0f2f5; font-family: 'Segoe UI', system-ui, sans-serif; color: #343a40; overflow-x: hidden; }
     
-    /* Login Fixes */
-    .login-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%); padding: 20px; }
-    .login-card { width: 100%; max-width: 420px; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
-    .logo-login { max-width: 80%; height: auto; object-fit: contain; margin-bottom: 20px; max-height: 80px; }
+    /* === MOBILE OPTIMIZED LOGIN === */
+    .login-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 15px; }
+    .login-card { width: 100%; max-width: 400px; padding: 2rem; background: white; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+    .logo-login { max-width: 100%; height: auto; object-fit: contain; margin-bottom: 1.5rem; max-height: 70px; }
     
-    /* Main Layout */
-    .main-container { max-width: 1600px; margin: 0 auto; padding: 20px; display: none; }
-    .header-bar { background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 25px; }
-    .logo-header { height: 40px; width: auto; }
+    /* === MAIN LAYOUT === */
+    .main-container { max-width: 1400px; margin: 0 auto; padding: 15px; display: none; padding-bottom: 80px; }
     
-    /* Tabs & Cards */
-    .nav-pills .nav-link { color: #555; font-weight: 600; padding: 10px 20px; border-radius: 8px; transition: all 0.3s; }
-    .nav-pills .nav-link.active { background-color: var(--primary-color); color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .card-custom { background: white; border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 20px; height: 100%; }
-    .card-header-custom { background: transparent; border-bottom: 1px solid #eee; padding: 20px; font-weight: 700; color: var(--primary-color); font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center; }
+    /* Mobile Header Tweaks */
+    .header-bar { background: white; padding: 12px 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .logo-header { height: 35px; width: auto; }
     
-    /* Tables */
-    .table-container { max-height: 600px; overflow-y: auto; }
-    .table thead th { background-color: #f8f9fa; color: #6c757d; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; border-bottom: 2px solid #dee2e6; vertical-align: middle; position: sticky; top: 0; z-index: 10; }
-    .table td { vertical-align: middle; font-size: 0.9rem; border-color: #f1f1f1; }
+    /* Cards & Tabs */
+    .card-custom { background: white; border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom: 20px; overflow: hidden; }
+    .card-header-custom { background: #fff; border-bottom: 1px solid #f0f0f0; padding: 15px; font-weight: 700; color: var(--primary-color); display: flex; justify-content: space-between; align-items: center; }
+    
+    /* === RESPONSIVE TABLES === */
+    .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; } /* Smooth scroll on iOS */
+    .table { white-space: nowrap; } /* Prevents ugly text wrapping on mobile */
+    .table thead th { background-color: #f8f9fa; color: #6c757d; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; border-bottom: 2px solid #dee2e6; }
+    
+    /* Mobile Form Fixes */
+    input, select, textarea { font-size: 16px !important; } /* Prevents iOS zoom on focus */
+    .form-control:focus, .form-select:focus { box-shadow: none; border-color: var(--accent-color); }
     
     /* Dropdown Pending State */
-    select.pending-state { border: 2px solid #dc3545; color: #dc3545; font-weight: 700; background-color: #fff8f8; }
-    select.assigned-state { border: 1px solid #ced4da; color: #212529; font-weight: normal; }
+    .pending-state { border: 2px solid #dc3545 !important; color: #dc3545; background-color: #fff5f5; font-weight: 700; }
     
     /* Spinner */
-    .spinner-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.85); z-index:9999; display:none; justify-content:center; align-items:center; backdrop-filter: blur(4px); }
+    .spinner-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:9999; display:none; justify-content:center; align-items:center; }
   </style>
 </head>
 <body>
@@ -49,7 +52,6 @@
 <div id="spinner" class="spinner-overlay">
   <div class="text-center">
     <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
-    <div class="mt-3 fw-bold text-secondary text-uppercase small letter-spacing-1">Loading...</div>
   </div>
 </div>
 
@@ -58,7 +60,8 @@
     <div class="text-center">
       <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" alt="Logo" class="logo-login">
     </div>
-    <h5 class="text-center mb-4 fw-bold text-secondary">Portal Access</h5>
+    <h5 class="text-center mb-4 fw-bold text-secondary">Portal Login</h5>
+    
     <form onsubmit="event.preventDefault(); doLogin();">
       <div class="form-floating mb-3">
         <input type="text" class="form-control" id="uIn" placeholder="Username" required>
@@ -68,9 +71,11 @@
         <input type="password" class="form-control" id="pIn" placeholder="Password" required>
         <label>Password</label>
       </div>
-      <button type="submit" class="btn btn-primary w-100 py-3 fw-bold shadow-sm">SECURE LOGIN <i class="bi bi-arrow-right ms-2"></i></button>
+      <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow-sm">
+        LOG IN <i class="bi bi-box-arrow-in-right ms-2"></i>
+      </button>
     </form>
-    <div id="loginError" class="alert alert-danger mt-3 text-center small border-0 bg-danger-subtle text-danger fw-bold" style="display:none;"></div>
+    <div id="loginError" class="alert alert-danger mt-3 text-center small border-0 p-2" style="display:none;"></div>
   </div>
 </div>
 
@@ -78,77 +83,86 @@
   
   <div class="header-bar d-flex justify-content-between align-items-center">
     <div class="d-flex align-items-center">
-      <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" alt="Logo" class="logo-header me-3">
-      <div class="d-none d-md-block border-start ps-3">
-        <div class="fw-bold text-dark">Unified Logistics Portal</div>
-        <small class="text-muted"><i class="bi bi-person-circle me-1"></i> <span id="userBadge">Guest</span></small>
+      <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" alt="Logo" class="logo-header me-2">
+      <div class="d-none d-md-block border-start ps-3 ms-2">
+        <div class="fw-bold text-dark lh-1">Unified Portal</div>
+        <small class="text-muted" style="font-size: 0.75rem;"><span id="userBadge">Guest</span></small>
       </div>
     </div>
-    <div class="d-flex align-items-center gap-3">
-      <ul class="nav nav-pills d-none d-lg-flex" id="topNav">
-        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#dash-content">Dashboard</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#form-content">Inbound</button></li>
-        <li class="nav-item" id="adminTabLi" style="display:none;"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#admin-content">Admin</button></li>
-      </ul>
-      <button onclick="logout()" class="btn btn-outline-danger btn-sm px-3"><i class="bi bi-box-arrow-right"></i></button>
+    
+    <div class="d-flex align-items-center gap-2">
+      <span class="d-md-none badge bg-light text-dark border me-1" id="userBadgeMobile">User</span>
+      <button onclick="logout()" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-bold">
+        <i class="bi bi-power"></i>
+      </button>
     </div>
   </div>
 
   <div class="d-lg-none mb-3">
-    <select class="form-select fw-bold" onchange="mobileNav(this.value)">
-      <option value="dash-content">Dashboard</option>
-      <option value="form-content">Shipment Inbound</option>
-      <option value="admin-content" id="mobileAdminOpt" style="display:none;">Admin Settings</option>
+    <label class="small text-muted fw-bold ms-1 mb-1">NAVIGATE TO:</label>
+    <select class="form-select fw-bold border-primary shadow-sm" onchange="mobileNav(this.value)">
+      <option value="dash-content">📊 Dashboard</option>
+      <option value="form-content">📦 Shipment Inbound</option>
+      <option value="admin-content" id="mobileAdminOpt" style="display:none;">⚙️ Admin Settings</option>
     </select>
   </div>
+
+  <ul class="nav nav-pills mb-3 d-none d-lg-flex" id="topNav">
+    <li class="nav-item me-2"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#dash-content"><i class="bi bi-grid-1x2 me-2"></i>Dashboard</button></li>
+    <li class="nav-item me-2"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#form-content"><i class="bi bi-box-seam me-2"></i>Inbound</button></li>
+    <li class="nav-item" id="adminTabLi" style="display:none;"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#admin-content"><i class="bi bi-gear me-2"></i>Admin</button></li>
+  </ul>
 
   <div class="tab-content">
     
     <div class="tab-pane fade show active" id="dash-content">
       <div class="d-flex justify-content-end mb-3">
-        <button class="btn btn-dark btn-sm shadow-sm" onclick="loadDashboard()"><i class="bi bi-arrow-clockwise me-1"></i> Refresh Data</button>
+        <button class="btn btn-dark btn-sm rounded-pill shadow-sm px-3" onclick="loadDashboard()">
+          <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+        </button>
       </div>
 
-      <div class="row g-4">
+      <div class="row g-3">
         
         <div class="col-12 col-xl-6">
           <div class="card-custom">
-            <div class="card-header-custom border-bottom-0">
-              <span><i class="bi bi-robot me-2"></i>Pending for Automation</span>
+            <div class="card-header-custom">
+              <span class="d-flex align-items-center"><i class="bi bi-robot me-2 text-primary"></i>Pending Automation</span>
               <span class="badge bg-danger rounded-pill" id="countAuto">0</span>
             </div>
-            <div class="table-container px-3 pb-3">
+            <div class="table-container p-0">
               <table class="table table-hover mb-0">
                 <thead>
                   <tr>
-                    <th>AWB</th><th>Client</th><th>Type</th><th>User</th>
-                    <th style="width:180px">Assign To</th><th>Action</th>
+                    <th>AWB</th><th>Client</th><th>User</th>
+                    <th style="min-width:160px">Assign To</th><th>Act</th>
                   </tr>
                 </thead>
                 <tbody id="tblAuto"></tbody>
               </table>
-              <div id="noDataAuto" class="text-center py-5 text-muted small" style="display:none;"><i class="bi bi-check-circle fs-4 d-block mb-2"></i>No pending automation tasks</div>
+              <div id="noDataAuto" class="text-center py-4 text-muted small" style="display:none;">No pending tasks</div>
             </div>
           </div>
         </div>
 
         <div class="col-12 col-xl-6">
           <div class="card-custom">
-            <div class="card-header-custom border-bottom-0">
-              <span><i class="bi bi-box-seam me-2"></i>Pending for Shipments to be Ready</span>
-              <span class="badge bg-warning text-dark rounded-pill" id="countAlloc">0</span>
+            <div class="card-header-custom">
+              <span class="d-flex align-items-center"><i class="bi bi-truck me-2 text-warning"></i>Pending Shipments</span>
+              <span class="badge bg-secondary rounded-pill" id="countAlloc">0</span>
             </div>
-            <div class="table-container px-3 pb-3">
+            <div class="table-container p-0">
               <table class="table table-hover mb-0">
                 <thead>
                   <tr>
-                    <th>Info</th> <th>Net. No</th>
-                    <th style="width:180px">Assign To</th><th>Action</th>
+                    <th>Shipment Info</th>
+                    <th>Net. No</th>
+                    <th style="min-width:160px">Assign To</th><th>Act</th>
                   </tr>
                 </thead>
                 <tbody id="tblAlloc"></tbody>
               </table>
-              <div id="noDataAlloc" class="text-center py-5 text-muted small" style="display:none;"><i class="bi bi-check-circle fs-4 d-block mb-2"></i>No pending shipments</div>
+              <div id="noDataAlloc" class="text-center py-4 text-muted small" style="display:none;">No pending shipments</div>
             </div>
           </div>
         </div>
@@ -159,36 +173,40 @@
     <div class="tab-pane fade" id="form-content">
       <div class="row justify-content-center">
         <div class="col-12 col-lg-10">
-          <div class="card-custom p-4">
-            <h5 class="text-primary fw-bold mb-4"><i class="bi bi-box-arrow-in-down me-2"></i>Shipment Inbound Entry</h5>
+          <div class="card-custom p-3 p-md-4">
+            <h5 class="text-primary fw-bold mb-3 border-bottom pb-2">New Inbound Entry</h5>
             <form id="shipForm">
               <div class="row g-3">
-                <div class="col-md-4"><label class="small text-muted fw-bold">AWB NUMBER</label><input type="text" id="f_awb" class="form-control" required></div>
-                <div class="col-md-4"><label class="small text-muted fw-bold">DATE</label><input type="date" id="f_date" class="form-control" required></div>
-                <div class="col-md-4"><label class="small text-muted fw-bold">TYPE</label><select id="f_type" class="form-select"><option>Dox</option><option>Ndox</option></select></div>
+                <div class="col-12 col-md-4"><label class="small text-muted fw-bold">AWB NO.</label><input type="text" id="f_awb" class="form-control" required></div>
+                <div class="col-6 col-md-4"><label class="small text-muted fw-bold">DATE</label><input type="date" id="f_date" class="form-control" required></div>
+                <div class="col-6 col-md-4"><label class="small text-muted fw-bold">TYPE</label><select id="f_type" class="form-select"><option>Dox</option><option>Ndox</option></select></div>
                 
-                <div class="col-md-4"><label class="small text-muted fw-bold">NETWORK</label><select id="f_net" class="form-select"></select></div>
-                <div class="col-md-4"><label class="small text-muted fw-bold">CLIENT CODE</label><select id="f_client" placeholder="Search..."></select></div>
-                <div class="col-md-4"><label class="small text-muted fw-bold">DESTINATION</label><select id="f_dest" placeholder="Search..."></select></div>
+                <div class="col-12 col-md-4"><label class="small text-muted fw-bold">NETWORK</label><select id="f_net" class="form-select"></select></div>
+                <div class="col-12 col-md-4"><label class="small text-muted fw-bold">CLIENT</label><select id="f_client" placeholder="Search..."></select></div>
+                <div class="col-12 col-md-4"><label class="small text-muted fw-bold">DESTINATION</label><select id="f_dest" placeholder="Search..."></select></div>
                 
-                <div class="col-md-6"><label class="small text-muted fw-bold">TOTAL BOXES</label><input type="number" id="f_boxes" class="form-control" min="1" required></div>
-                <div class="col-md-6"><label class="small text-muted fw-bold">CHARGEABLE WEIGHT</label><input type="text" id="f_totalChg" class="form-control bg-light fw-bold text-primary" readonly value="0.00"></div>
+                <div class="col-6"><label class="small text-muted fw-bold">BOXES</label><input type="number" id="f_boxes" class="form-control" min="1" required></div>
+                <div class="col-6"><label class="small text-muted fw-bold">CHG. WGT</label><input type="text" id="f_totalChg" class="form-control bg-light fw-bold text-primary" readonly value="0.00"></div>
               </div>
 
               <div class="mt-4 p-3 bg-light rounded border-0">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                  <strong class="text-secondary small">BOX DIMENSIONS</strong>
-                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="genBoxes()"><i class="bi bi-plus-lg me-1"></i>Generate Rows</button>
+                  <strong class="text-secondary small">BOX DIMS</strong>
+                  <button type="button" class="btn btn-outline-secondary btn-sm" onclick="genBoxes()">+ Add Rows</button>
                 </div>
-                <table class="table table-sm mb-0">
-                  <thead class="text-muted small"><tr><th>No</th><th>Wgt</th><th>L</th><th>B</th><th>H</th><th>Vol</th></tr></thead>
-                  <tbody id="boxTable"></tbody>
-                </table>
+                <div class="table-container">
+                  <table class="table table-sm mb-0 bg-white">
+                    <thead class="text-muted small"><tr><th>#</th><th>Wgt</th><th>L</th><th>B</th><th>H</th><th>Vol</th></tr></thead>
+                    <tbody id="boxTable"></tbody>
+                  </table>
+                </div>
               </div>
 
-              <div class="mt-3"><label class="small text-muted fw-bold">EXTRA CHARGES</label><div id="f_extra" class="d-flex flex-wrap gap-2 p-3 border rounded">Loading...</div></div>
+              <div class="mt-3"><label class="small text-muted fw-bold">EXTRA CHARGES</label><div id="f_extra" class="d-flex flex-wrap gap-2 p-3 border rounded bg-white">Loading...</div></div>
               <div class="mt-3"><label class="small text-muted fw-bold">REMARKS</label><textarea id="f_remarks" class="form-control" rows="2"></textarea></div>
-              <button type="submit" class="btn btn-primary w-100 mt-4 py-3 fw-bold text-uppercase shadow-sm">Submit Inbound <i class="bi bi-send ms-2"></i></button>
+              <button type="submit" class="btn btn-primary w-100 mt-4 py-3 fw-bold rounded-pill shadow-sm">
+                SUBMIT ENTRY <i class="bi bi-check-circle-fill ms-1"></i>
+              </button>
             </form>
           </div>
         </div>
@@ -198,37 +216,31 @@
     <div class="tab-pane fade" id="admin-content">
       <div class="row g-4">
         <div class="col-md-6">
-          <div class="card-custom p-0 overflow-hidden">
-            <div class="card-header-custom bg-light"><span><i class="bi bi-people me-2"></i>User Accounts</span></div>
-            <div class="p-3">
-              <div class="input-group mb-3">
-                <input type="text" id="nu_u" class="form-control form-control-sm" placeholder="User">
-                <input type="text" id="nu_p" class="form-control form-control-sm" placeholder="Pass">
-                <input type="text" id="nu_n" class="form-control form-control-sm" placeholder="Name">
-                <select id="nu_r" class="form-select form-select-sm" style="max-width:80px"><option>Staff</option><option>Admin</option></select>
-                <button class="btn btn-success btn-sm" onclick="addUser()"><i class="bi bi-plus"></i></button>
-              </div>
-              <div style="max-height:300px; overflow-y:auto;">
-                <table class="table table-sm table-striped mb-0"><thead class="small text-muted"><tr><th>User</th><th>Pass</th><th>Name</th><th>Role</th><th>Del</th></tr></thead><tbody id="userTable"></tbody></table>
-              </div>
+          <div class="card-custom p-3">
+            <h6 class="fw-bold mb-3">👤 Users</h6>
+            <div class="input-group mb-3">
+              <input type="text" id="nu_u" class="form-control form-control-sm" placeholder="User">
+              <input type="text" id="nu_p" class="form-control form-control-sm" placeholder="Pass">
+              <input type="text" id="nu_n" class="form-control form-control-sm" placeholder="Name">
+              <select id="nu_r" class="form-select form-select-sm" style="max-width:70px"><option>Staff</option><option>Admin</option></select>
+              <button class="btn btn-success btn-sm" onclick="addUser()">+</button>
+            </div>
+            <div style="max-height:300px; overflow-y:auto;">
+              <table class="table table-sm table-striped mb-0"><tbody id="userTable"></tbody></table>
             </div>
           </div>
         </div>
         <div class="col-md-6">
-          <div class="card-custom p-0 overflow-hidden">
-            <div class="card-header-custom bg-light"><span><i class="bi bi-list-check me-2"></i>Dropdown Lists</span></div>
-            <div class="p-3">
-              <select id="dd_cat" class="form-select mb-2">
-                <option value="client">Client Codes</option>
-                <option value="destination">Destinations</option>
-                <option value="network">Network Types</option>
-                <option value="extra">Extra Charges</option>
-              </select>
-              <div class="input-group">
-                <input type="text" id="dd_val" class="form-control" placeholder="New Value">
-                <button class="btn btn-success" onclick="manageDd('add')">Add</button>
-                <button class="btn btn-danger" onclick="manageDd('delete')">Del</button>
-              </div>
+          <div class="card-custom p-3">
+            <h6 class="fw-bold mb-3">📝 Dropdowns</h6>
+            <select id="dd_cat" class="form-select mb-2">
+              <option value="client">Client</option><option value="destination">Destination</option>
+              <option value="network">Network</option><option value="extra">Extra Charges</option>
+            </select>
+            <div class="input-group">
+              <input type="text" id="dd_val" class="form-control" placeholder="Value">
+              <button class="btn btn-success" onclick="manageDd('add')">Add</button>
+              <button class="btn btn-danger" onclick="manageDd('delete')">Del</button>
             </div>
           </div>
         </div>
@@ -242,7 +254,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 
 <script>
-  // ✅ CONFIGURATION - UPDATED URL
+  // ✅ CONFIGURATION
   const API_URL = "https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec"; 
 
   let currentUser="", currentRole="", staffList=[];
@@ -260,7 +272,7 @@
       return result;
     } catch (e) {
       showSpin(false);
-      alert("Connection Error.");
+      alert("Connection Error. Please check internet.");
       return { result: "error", message: "Failed" };
     }
   }
@@ -280,9 +292,14 @@
     if(res.result === "success") {
       currentUser = res.username; currentRole = res.role.toLowerCase();
       document.getElementById('userBadge').textContent = res.name;
+      document.getElementById('userBadgeMobile').textContent = res.name;
       document.getElementById('loginSection').style.display='none';
       document.getElementById('appSection').style.display='block';
-      if(currentRole==='admin') { document.getElementById('adminTabLi').style.display='block'; document.getElementById('mobileAdminOpt').style.display='block'; loadUsers(); }
+      if(currentRole==='admin') { 
+        document.getElementById('adminTabLi').style.display='block'; 
+        document.getElementById('mobileAdminOpt').style.display='block'; 
+        loadUsers(); 
+      }
       initApp();
     } else {
       document.getElementById('loginError').textContent = res.message;
@@ -305,17 +322,14 @@
     showSpin(false);
   }
 
-  // --- SPLIT DASHBOARD RENDERER ---
+  // --- DASHBOARD RENDERER ---
   async function loadDashboard(showLoader=true) {
     if(showLoader) showSpin(true);
     const res = await fetchGet("getDashboardData"); 
     if(showLoader) showSpin(false);
 
     if(res.result === "success") {
-      // 1. RENDER AUTOMATION (Left Table)
       renderTable('tblAuto', 'noDataAuto', 'countAuto', res.automations, 'automation');
-      
-      // 2. RENDER ALLOCATIONS (Right Table)
       renderTable('tblAlloc', 'noDataAlloc', 'countAlloc', res.allocations, 'allocation');
     }
   }
@@ -330,13 +344,15 @@
       const addCell = (txt) => { let td=document.createElement('td'); td.innerHTML=txt; tr.appendChild(td); };
       
       if(type === 'automation') {
-        // Automation Data: AWB(0), Client(1), Network(2), Boxes(3), User(4)
-        addCell(`<span class="fw-bold text-primary">${row[0]}</span>`);
-        addCell(row[1]);
+        // Automation: AWB(0), Client(1), Network(2), Boxes(3), User(4)
+        addCell(`
+          <div class="fw-bold text-primary">${row[0]}</div>
+          <div class="small text-muted">${row[1]}</div>
+        `);
         addCell(`<span class="badge bg-light text-dark border">${row[2]}</span>`);
         addCell(row[4]); 
       } else {
-        // Alloc Data: AWB(0), Client(1), Network(2), NetNo(3), Weight(4), AllocatedBy(5)
+        // Alloc: AWB(0), Client(1), Network(2), NetNo(3), Weight(4), AutoBy(5)
         addCell(`
           <div class="fw-bold text-primary">${row[0]}</div>
           <div class="small text-muted">${row[1]} | ${row[2]}</div>
@@ -345,44 +361,37 @@
         addCell(row[3]);
       }
 
-      // ASSIGNMENT DROPDOWN
+      // ASSIGN DROPDOWN
       let tdSel = document.createElement('td');
       let sel = document.createElement('select'); 
       sel.className = "form-select form-select-sm pending-state"; // Default Red
-      
-      let defOpt = document.createElement('option');
-      defOpt.value=""; defOpt.text="PENDING"; 
-      sel.appendChild(defOpt);
-      
+      let defOpt = document.createElement('option'); defOpt.value=""; defOpt.text="PENDING"; sel.appendChild(defOpt);
       staffList.forEach(s => { let o=document.createElement('option'); o.value=s; o.text=s; sel.appendChild(o); });
       
       sel.onchange = function() {
         if(this.value) { this.classList.remove('pending-state'); this.classList.add('assigned-state'); }
         else { this.classList.remove('assigned-state'); this.classList.add('pending-state'); }
       };
-      
       tdSel.appendChild(sel); tr.appendChild(tdSel);
 
-      // ACTION BUTTON
+      // BUTTON
       let tdBtn = document.createElement('td');
       let btn = document.createElement('button');
       btn.className="btn btn-success btn-sm w-100 fw-bold"; 
-      btn.innerHTML='<i class="bi bi-check-lg"></i>';
-      
+      btn.innerHTML='<i class="bi bi-check2"></i>';
       btn.onclick = async () => {
         if(!sel.value) return alert("Select staff first");
         btn.innerHTML='...'; btn.disabled=true;
         const apiRes = await callApi({ action: "assignTask", type: type, id: row[0], staff: sel.value, assigner: currentUser });
         if(apiRes.result==="success") { tr.remove(); let c=document.getElementById(countId); c.textContent=Math.max(0, parseInt(c.textContent)-1); }
-        else { alert(apiRes.message); btn.disabled=false; btn.innerHTML='<i class="bi bi-check-lg"></i>'; }
+        else { alert(apiRes.message); btn.disabled=false; btn.innerHTML='<i class="bi bi-check2"></i>'; }
       };
       tdBtn.appendChild(btn); tr.appendChild(tdBtn);
-      
       tb.appendChild(tr);
     });
   }
 
-  // --- FORM ---
+  // --- FORM LOGIC ---
   function genBoxes() {
     let n = document.getElementById('f_boxes').value, tb = document.getElementById('boxTable'); tb.innerHTML='';
     for(let i=1; i<=n; i++) tb.innerHTML += `<tr><td>${i}</td><td><input type="number" class="form-control form-control-sm" oninput="calcBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="calcBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="calcBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="calcBox(this)"></td><td class="text-primary fw-bold small chg-val">0.00</td></tr>`;
@@ -400,13 +409,17 @@
     if(res.result==='success') { alert("✅ Inbound Saved!"); document.getElementById('shipForm').reset(); document.getElementById('boxTable').innerHTML=''; tsClient.clear(); tsDest.clear(); } else alert("❌ "+res.message);
   };
 
-  // --- ADMIN & UTILS ---
-  async function loadUsers() { const r=await fetchGet("getUsers"); if(r.result==="success") { let t=document.getElementById('userTable'); t.innerHTML=''; r.users.forEach(u=>t.innerHTML+=`<tr><td>${u[0]}</td><td>${u[1]}</td><td>${u[2]}</td><td><span class="badge bg-light text-dark border">${u[3]}</span></td><td><button class="btn btn-danger btn-sm py-0" onclick="delUser('${u[0]}')">&times;</button></td></tr>`); } }
+  // --- ADMIN ---
+  async function loadUsers() { const r=await fetchGet("getUsers"); if(r.result==="success") { let t=document.getElementById('userTable'); t.innerHTML=''; r.users.forEach(u=>t.innerHTML+=`<tr><td>${u[0]}</td><td>${u[1]}</td><td>${u[2]}</td><td>${u[3]}</td><td><button class="btn btn-danger btn-sm py-0" onclick="delUser('${u[0]}')">X</button></td></tr>`); } }
   async function addUser() { const r=await callApi({action:"addUser", u:document.getElementById('nu_u').value, p:document.getElementById('nu_p').value, n:document.getElementById('nu_n').value, r:document.getElementById('nu_r').value}); alert(r.message); if(r.result==="success") loadUsers(); }
   async function delUser(u) { if(confirm("Delete user?")) { await callApi({action:"deleteUser", username:u}); loadUsers(); } }
   async function manageDd(act) { const v=document.getElementById('dd_val').value; if(!v) return; const r=await callApi({action:'manageData', subAction:act, category:document.getElementById('dd_cat').value, value:v}); alert(r.message); if(r.result==='success') { document.getElementById('dd_val').value=''; initApp(); } }
   
-  function mobileNav(tabId) { const triggerEl = document.querySelector(`button[data-bs-target="#${tabId}"]`); bootstrap.Tab.getOrCreateInstance(triggerEl).show(); }
+  function mobileNav(tabId) { 
+    // Hides all tabs and shows the selected one manually to support the dropdown
+    document.querySelectorAll('.tab-pane').forEach(el => { el.classList.remove('show', 'active'); });
+    document.getElementById(tabId).classList.add('show', 'active');
+  }
   function fillSel(id, arr) { let e=document.getElementById(id); e.innerHTML='<option value="">Select...</option>'; arr.forEach(x=>e.innerHTML+=`<option value="${x}">${x}</option>`); }
   function fillCheck(id, arr) { let e=document.getElementById(id); e.innerHTML=''; arr.forEach(x=>e.innerHTML+=`<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label small">${x}</label></div>`); }
   function logout() { location.reload(); }
