@@ -18,18 +18,16 @@
     .logo-img { height: 42px; width: auto; object-fit: contain; }
     .navbar-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
     .panel-card { background: white; border-radius: var(--card-radius); border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.01); height: 100%; overflow: hidden; }
-    .panel-header { background: #f8fafc; padding: 15px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #475569; display: flex; justify-content: space-between; align-items: center; }
     .task-card-horizontal { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; transition: transform 0.2s; }
     .task-card-horizontal:hover { transform: translateY(-2px); box-shadow: 0 5px 15px -3px rgba(0,0,0,0.05); }
     .form-control, .form-select { border-radius: 8px; border-color: #cbd5e1; }
     .btn-zephyr-green { background-color: var(--zephyr-green); color: white; border:none; font-weight:600; }
     .split-col { height: 600px; overflow-y: auto; }
-    .nav-pills .nav-link { color: #64748b; font-weight: 600; padding: 8px 20px; border-radius: 50px; position: relative; }
+    .nav-pills .nav-link { color: #64748b; font-weight: 600; padding: 8px 20px; border-radius: 50px; }
     .nav-pills .nav-link.active { background-color: var(--primary-color); color: white; }
     .stat-val { font-size: 2rem; font-weight: 800; line-height: 1; }
     .spinner-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; display:none; justify-content:center; align-items:center; }
     
-    /* Stats Cards Style */
     .overview-stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s; height: 100%; }
     .overview-stat-card:hover { transform: translateY(-3px); }
     .overview-label { font-size: 0.85rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
@@ -68,7 +66,7 @@
   <ul class="nav nav-pills justify-content-center mb-4" id="mainNav">
     <li class="nav-item" id="nav-inbound"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#inbound-tab"><i class="bi bi-box-seam me-2"></i>Inbound Entry</button></li>
     <li class="nav-item" id="nav-overview"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#overview-tab" onclick="loadOverview()"><i class="bi bi-grid-1x2 me-2"></i>Overview</button></li>
-    <li class="nav-item" id="nav-taskhub"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#taskhub-tab" onclick="loadTaskHub()"><i class="bi bi-list-check me-2"></i><span id="taskHubLabel">My Tasks</span></button></li>
+    <li class="nav-item" id="nav-taskhub"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#taskhub-tab" onclick="loadTaskHub()"><i class="bi bi-list-check me-2"></i><span id="taskHubLabel">Task Hub</span></button></li>
     <li class="nav-item" id="nav-admin" style="display:none;"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#admin-tab"><i class="bi bi-shield-lock me-2"></i>Admin Panel <span class="badge bg-danger badge-notif rounded-circle" id="adminBadge" style="display:none">0</span></button></li>
   </ul>
 
@@ -108,8 +106,8 @@
     <div class="tab-pane fade" id="overview-tab">
       <div class="row g-4 mb-4">
         <div class="col-md-4"><div class="overview-stat-card border-success border-opacity-25 bg-success bg-opacity-10"><div class="overview-label text-success">Today's Inbound (<span id="ovDate"></span>)</div><div class="stat-val text-success" id="ovInbound">0</div></div></div>
-        <div class="col-md-4"><div class="overview-stat-card border-danger border-opacity-25"><div class="overview-label text-danger">Pending Automation</div><div class="stat-val text-live-red" id="ovAuto">0</div></div></div>
-        <div class="col-md-4"><div class="overview-stat-card border-warning border-opacity-25"><div class="overview-label text-warning text-dark">Pending Paperwork</div><div class="stat-val text-live-red" id="ovPaper">0</div></div></div>
+        <div class="col-md-4"><div class="overview-stat-card border-danger border-opacity-25"><div class="overview-label text-danger">Pending for Automation</div><div class="stat-val text-live-red" id="ovAuto">0</div></div></div>
+        <div class="col-md-4"><div class="overview-stat-card border-warning border-opacity-25"><div class="overview-label text-warning text-dark">Pending for Paperwork</div><div class="stat-val text-live-red" id="ovPaper">0</div></div></div>
       </div>
       <div class="row g-4">
         <div class="col-md-6"><div class="panel-card"><div class="panel-header border-bottom-0 bg-white"><span><i class="bi bi-robot me-2 text-danger"></i>Pending for Automation</span></div><div class="split-col p-0"><div class="list-group list-group-flush" id="listAuto"></div></div></div></div>
@@ -119,18 +117,37 @@
 
     <!-- 3. TASK HUB -->
     <div class="tab-pane fade" id="taskhub-tab">
-      <!-- Admin View -->
+      
+      <!-- STAFF VIEW -->
+      <div id="staffTaskView" style="display:none;">
+        <ul class="nav nav-tabs mb-3">
+          <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabAssign">Assign Next Step</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabTodo">My Tasks</button></li>
+        </ul>
+        <div class="tab-content">
+          <!-- Assign Tab -->
+          <div class="tab-pane fade show active" id="tabAssign">
+            <p class="text-muted small">Shipments you automated. Assign them to a Paperwork Doer.</p>
+            <div id="staffAssignContainer"></div>
+            <div id="noAssignMsg" class="text-center py-4 text-muted">No pending assignments.</div>
+          </div>
+          <!-- Todo Tab -->
+          <div class="tab-pane fade" id="tabTodo">
+            <p class="text-muted small">Paperwork tasks assigned to you.</p>
+            <div id="staffTodoContainer"></div>
+            <div id="noTodoMsg" class="text-center py-4 text-muted">No pending tasks.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN VIEW -->
       <div id="adminTaskView" style="display:none;">
         <div class="panel-card p-3">
-          <h6 class="fw-bold mb-3">Admin Task Assignment Pool</h6>
+          <h6 class="fw-bold mb-3">Global Task Pool</h6>
           <div class="table-responsive"><table class="table table-hover align-middle"><thead class="bg-light"><tr><th>ID</th><th>Type</th><th>Details</th><th>Assign To</th><th>Action</th></tr></thead><tbody id="poolTable"></tbody></table></div>
         </div>
       </div>
-      <!-- Staff View -->
-      <div id="staffTaskView" style="display:none;">
-        <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="fw-bold m-0">My Assigned Tasks</h5><button class="btn btn-sm btn-outline-secondary" onclick="syncData()">Refresh</button></div>
-        <div id="myTasksContainer"></div><div id="noTasksMsg" class="text-center py-5 text-muted" style="display:none;">No pending tasks.</div>
-      </div>
+
     </div>
 
     <!-- 4. ADMIN -->
@@ -144,18 +161,14 @@
   </div>
 </div>
 
-<!-- Modal -->
-<div class="modal fade" id="reassignModal" tabindex="-1"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h6 class="modal-title fw-bold">Transfer Task</h6></div><div class="modal-body"><p class="small text-muted">Transfer <b id="reassignId"></b> to:</p><select id="reassignStaff" class="form-select mb-3"></select><button class="btn btn-primary w-100 btn-sm" onclick="submitReassign()">Send Request</button></div></div></div></div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 
 <script>
-  // ✅ API CONFIGURATION
   const API_URL="https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
+  let currentUser="", currentRole="", tsClient, tsDest;
   
-  let currentUser="", currentRole="", tsClient, tsDest, currentReassign={};
-  window.APP_DATA = { staff: [], dropdowns: {}, overview: { auto:[], paper:[] }, myTasks: [], stats: {} };
+  window.APP_DATA = { staff: [], dropdowns: {}, overview: { auto:[], paper:[] }, workflow: { toAssign:[], toDo:[] }, stats: {} };
 
   function showSpin(x){document.getElementById('spinner').style.display=x?'flex':'none';}
   async function callApi(d){ try{const r=await fetch(API_URL,{method:"POST",body:JSON.stringify(d)}); return await r.json();}catch(e){return{result:"error"};}}
@@ -236,62 +249,72 @@
 
   function renderTaskHub() {
     if(currentRole === 'admin') {
+      // Admin sees global pool
       const tb = document.getElementById('poolTable'); tb.innerHTML='';
       const pool = [...window.APP_DATA.overview.auto, ...window.APP_DATA.overview.paper];
-      
       pool.forEach(t => {
         let opts = `<option value="">Assign...</option>`;
         window.APP_DATA.staff.forEach(s => opts += `<option value="${s}">${s}</option>`);
         tb.innerHTML += `<tr><td>${t.id}</td><td><span class="badge ${t.type==='Automation'?'bg-danger':'bg-warning text-dark'}">${t.type}</span></td><td><small>${t.details}</small></td><td><select id="as_${t.id}" class="form-select form-select-sm">${opts}</select></td><td><button class="btn btn-sm btn-success" onclick="actAssign('${t.id}','${t.type}')">✓</button></td></tr>`;
       });
     } else {
-      const div = document.getElementById('myTasksContainer'); div.innerHTML='';
-      const tasks = window.APP_DATA.myTasks;
-      document.getElementById('noTasksMsg').style.display = tasks.length===0?'block':'none';
+      // Staff Views
+      const toAssign = window.APP_DATA.workflow.toAssign;
+      const toDo = window.APP_DATA.workflow.toDo;
       
-      tasks.forEach(t => {
-        div.innerHTML += `
-          <div class="task-card-horizontal" id="card_${t.id}">
-            <div>
-              <div class="d-flex align-items-center gap-2 mb-1"><span class="badge bg-dark">${t.type}</span><strong class="fs-5">${t.id}</strong></div>
-              <div class="small fw-bold text-secondary">${t.title}</div><div class="small text-muted">${t.subtitle}</div>
-            </div>
+      // 1. Assign Next Step
+      const ac = document.getElementById('staffAssignContainer'); ac.innerHTML='';
+      document.getElementById('noAssignMsg').style.display = toAssign.length===0?'block':'none';
+      toAssign.forEach(t => {
+        let opts = `<option value="">Assign Paperwork To...</option>`;
+        window.APP_DATA.staff.forEach(s => opts += `<option value="${s}">${s}</option>`);
+        ac.innerHTML += `
+          <div class="task-card-horizontal" id="assign_card_${t.id}">
+            <div><strong class="fs-5">${t.id}</strong><div class="small text-muted">${t.title}</div></div>
             <div class="d-flex gap-2">
-              <button class="btn btn-success btn-sm px-3" onclick="actDone('${t.id}','${t.type}')">Done</button>
-              <button class="btn btn-outline-secondary btn-sm px-3" onclick="actTrans('${t.id}','${t.type}')">Transfer</button>
+              <select id="staff_assign_${t.id}" class="form-select form-select-sm" style="width:150px">${opts}</select>
+              <button class="btn btn-primary btn-sm" onclick="staffActAssign('${t.id}')">Assign</button>
             </div>
+          </div>`;
+      });
+
+      // 2. To Do
+      const tc = document.getElementById('staffTodoContainer'); tc.innerHTML='';
+      document.getElementById('noTodoMsg').style.display = toDo.length===0?'block':'none';
+      toDo.forEach(t => {
+        tc.innerHTML += `
+          <div class="task-card-horizontal" id="todo_card_${t.id}">
+            <div><span class="badge bg-warning text-dark mb-1">Paperwork</span><br><strong>${t.id}</strong><div class="small">${t.subtitle}</div></div>
+            <button class="btn btn-success btn-sm px-4" onclick="staffActDone('${t.id}')">Mark Done</button>
           </div>`;
       });
     }
   }
 
+  // --- ACTIONS ---
+  
+  // 1. Admin Assign (Global)
   async function actAssign(id, type) {
     const s = document.getElementById('as_'+id).value; if(!s) return alert("Select Staff");
-    const row = document.getElementById('as_'+id).closest('tr'); row.style.display = 'none';
+    document.getElementById('as_'+id).closest('tr').remove(); // Optimistic
     await callApi({action:"assignTask", id:id, type:type, staff:s, assigner:currentUser});
     syncData(false);
   }
 
-  async function actDone(id, type) {
-    if(!confirm("Mark Completed?")) return;
-    document.getElementById('card_'+id).remove();
-    await callApi({action:"updateStatus", id:id, type:type});
+  // 2. Staff Assign (Automation Doer -> Paperwork Doer)
+  async function staffActAssign(id) {
+    const s = document.getElementById('staff_assign_'+id).value; if(!s) return alert("Select Staff");
+    document.getElementById('assign_card_'+id).remove(); // Optimistic
+    await callApi({action:"assignTask", id:id, type:"Paperwork", staff:s, assigner:currentUser});
     syncData(false);
   }
 
-  function actTrans(id, type) {
-    currentReassign = {id:id, type:type};
-    document.getElementById('reassignId').textContent = id;
-    const sel = document.getElementById('reassignStaff'); sel.innerHTML = '<option value="">Select...</option>';
-    window.APP_DATA.staff.forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
-    new bootstrap.Modal(document.getElementById('reassignModal')).show();
-  }
-
-  async function submitReassign() {
-    const to = document.getElementById('reassignStaff').value; if(!to) return;
-    bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide();
-    alert("Request Sent!"); 
-    await callApi({action:"requestTransfer", taskId:currentReassign.id, type:currentReassign.type, by:currentUser, to:to});
+  // 3. Staff Mark Done (Paperwork Doer)
+  async function staffActDone(id) {
+    if(!confirm("Paperwork Completed?")) return;
+    document.getElementById('todo_card_'+id).remove(); // Optimistic
+    await callApi({action:"markPaperworkDone", id:id});
+    syncData(false);
   }
 
   function loadOverview() { renderOverview(); }
@@ -317,7 +340,7 @@
     };
     
     const taskLabel = document.getElementById('taskHubLabel');
-    taskLabel.textContent = currentRole === 'admin' ? "Task Manager" : "My Tasks";
+    taskLabel.textContent = currentRole === 'admin' ? "Task Manager" : "Work Panel";
 
     if(currentRole === 'admin') {
       nav.append(tabs.over, tabs.inb, tabs.task, tabs.adm);
@@ -333,6 +356,7 @@
     }
   }
 
+  // FORM LOGIC
   function genBoxes() {
     const n = document.getElementById('f_boxes').value;
     if(!n || n<1) return alert("Enter Total Boxes first");
