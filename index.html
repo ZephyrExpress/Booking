@@ -24,10 +24,18 @@
     .form-control, .form-select { border-radius: 8px; border-color: #cbd5e1; }
     .btn-zephyr-green { background-color: var(--zephyr-green); color: white; border:none; font-weight:600; }
     .split-col { height: 600px; overflow-y: auto; }
-    .nav-pills .nav-link { color: #64748b; font-weight: 600; padding: 8px 20px; border-radius: 50px; }
+    .nav-pills .nav-link { color: #64748b; font-weight: 600; padding: 8px 20px; border-radius: 50px; position: relative; }
     .nav-pills .nav-link.active { background-color: var(--primary-color); color: white; }
     .stat-val { font-size: 2rem; font-weight: 800; line-height: 1; }
     .spinner-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; display:none; justify-content:center; align-items:center; }
+    
+    /* Stats Cards Style */
+    .overview-stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s; height: 100%; }
+    .overview-stat-card:hover { transform: translateY(-3px); }
+    .overview-label { font-size: 0.85rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .text-live-red { color: #dc2626; text-shadow: 0 2px 10px rgba(220, 38, 38, 0.15); }
+    .badge-notif { position: absolute; top: -5px; right: -5px; font-size: 0.7rem; }
+
     @media(max-width: 991px) { .navbar-center { position: relative; left: auto; top: auto; transform: none; display: block; margin: 0 auto 10px auto; } .navbar-custom { flex-wrap: wrap; text-align: center; justify-content: center; } }
   </style>
 </head>
@@ -58,11 +66,10 @@
   </div>
 
   <ul class="nav nav-pills justify-content-center mb-4" id="mainNav">
-    <!-- RESTORED MISSING TABS -->
     <li class="nav-item" id="nav-inbound"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#inbound-tab"><i class="bi bi-box-seam me-2"></i>Inbound Entry</button></li>
     <li class="nav-item" id="nav-overview"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#overview-tab" onclick="loadOverview()"><i class="bi bi-grid-1x2 me-2"></i>Overview</button></li>
-    <li class="nav-item" id="nav-taskhub"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#taskhub-tab" onclick="loadTaskHub()"><i class="bi bi-list-check me-2"></i>Task Manager</button></li>
-    <li class="nav-item" id="nav-admin" style="display:none;"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#admin-tab"><i class="bi bi-shield-lock me-2"></i>Admin</button></li>
+    <li class="nav-item" id="nav-taskhub"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#taskhub-tab" onclick="loadTaskHub()"><i class="bi bi-list-check me-2"></i><span id="taskHubLabel">My Tasks</span></button></li>
+    <li class="nav-item" id="nav-admin" style="display:none;"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#admin-tab"><i class="bi bi-shield-lock me-2"></i>Admin Panel <span class="badge bg-danger badge-notif rounded-circle" id="adminBadge" style="display:none">0</span></button></li>
   </ul>
 
   <div class="tab-content">
@@ -97,39 +104,31 @@
       </div>
     </div>
 
-    <!-- 2. OVERVIEW (Split) -->
+    <!-- 2. OVERVIEW -->
     <div class="tab-pane fade" id="overview-tab">
+      <div class="row g-4 mb-4">
+        <div class="col-md-4"><div class="overview-stat-card border-success border-opacity-25 bg-success bg-opacity-10"><div class="overview-label text-success">Today's Inbound (<span id="ovDate"></span>)</div><div class="stat-val text-success" id="ovInbound">0</div></div></div>
+        <div class="col-md-4"><div class="overview-stat-card border-danger border-opacity-25"><div class="overview-label text-danger">Pending Automation</div><div class="stat-val text-live-red" id="ovAuto">0</div></div></div>
+        <div class="col-md-4"><div class="overview-stat-card border-warning border-opacity-25"><div class="overview-label text-warning text-dark">Pending Paperwork</div><div class="stat-val text-live-red" id="ovPaper">0</div></div></div>
+      </div>
       <div class="row g-4">
-        <div class="col-md-6">
-          <div class="panel-card">
-            <div class="panel-header border-bottom-0 bg-danger bg-opacity-10 text-danger"><span>Pending Automation</span><span class="badge bg-danger rounded-pill" id="cntAuto">0</span></div>
-            <div class="split-col p-0"><div class="list-group list-group-flush" id="listAuto"></div></div>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="panel-card">
-            <div class="panel-header border-bottom-0 bg-warning bg-opacity-10 text-warning"><span>Pending Paperwork</span><span class="badge bg-warning text-dark rounded-pill" id="cntPaper">0</span></div>
-            <div class="split-col p-0"><div class="list-group list-group-flush" id="listPaper"></div></div>
-          </div>
-        </div>
+        <div class="col-md-6"><div class="panel-card"><div class="panel-header border-bottom-0 bg-white"><span><i class="bi bi-robot me-2 text-danger"></i>Pending for Automation</span></div><div class="split-col p-0"><div class="list-group list-group-flush" id="listAuto"></div></div></div></div>
+        <div class="col-md-6"><div class="panel-card"><div class="panel-header border-bottom-0 bg-white"><span><i class="bi bi-files me-2 text-warning"></i>Pending for Paperwork & Label Pasting</span></div><div class="split-col p-0"><div class="list-group list-group-flush" id="listPaper"></div></div></div></div>
       </div>
     </div>
 
-    <!-- 3. TASK MANAGER -->
+    <!-- 3. TASK HUB -->
     <div class="tab-pane fade" id="taskhub-tab">
+      <!-- Admin View -->
       <div id="adminTaskView" style="display:none;">
-        <div class="row g-3 mb-4 text-center">
-          <div class="col-4 p-3 bg-white border rounded-3"> <div class="small fw-bold text-muted">TOTAL PENDING</div><div class="stat-val" id="statTot">0</div></div>
-          <div class="col-4 p-3 bg-white border rounded-3"> <div class="small fw-bold text-muted">AUTOMATION</div><div class="stat-val text-danger" id="statAut">0</div></div>
-          <div class="col-4 p-3 bg-white border rounded-3"> <div class="small fw-bold text-muted">PAPERWORK</div><div class="stat-val text-warning" id="statPap">0</div></div>
-        </div>
         <div class="panel-card p-3">
-          <h6 class="fw-bold mb-3">Assignment Pool</h6>
+          <h6 class="fw-bold mb-3">Admin Task Assignment Pool</h6>
           <div class="table-responsive"><table class="table table-hover align-middle"><thead class="bg-light"><tr><th>ID</th><th>Type</th><th>Details</th><th>Assign To</th><th>Action</th></tr></thead><tbody id="poolTable"></tbody></table></div>
         </div>
       </div>
+      <!-- Staff View -->
       <div id="staffTaskView" style="display:none;">
-        <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="fw-bold m-0">My Tasks</h5><button class="btn btn-sm btn-outline-secondary" onclick="syncData()">Refresh</button></div>
+        <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="fw-bold m-0">My Assigned Tasks</h5><button class="btn btn-sm btn-outline-secondary" onclick="syncData()">Refresh</button></div>
         <div id="myTasksContainer"></div><div id="noTasksMsg" class="text-center py-5 text-muted" style="display:none;">No pending tasks.</div>
       </div>
     </div>
@@ -152,17 +151,16 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 
 <script>
+  // ✅ API CONFIGURATION
   const API_URL="https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
-  let currentUser="", currentRole="", tsClient, tsDest, currentReassign={};
   
-  // GLOBAL STATE (For Ultra Speed)
+  let currentUser="", currentRole="", tsClient, tsDest, currentReassign={};
   window.APP_DATA = { staff: [], dropdowns: {}, overview: { auto:[], paper:[] }, myTasks: [], stats: {} };
 
   function showSpin(x){document.getElementById('spinner').style.display=x?'flex':'none';}
   async function callApi(d){ try{const r=await fetch(API_URL,{method:"POST",body:JSON.stringify(d)}); return await r.json();}catch(e){return{result:"error"};}}
   async function fetchGet(a){ try{const r=await fetch(`${API_URL}?action=${a}&user=${currentUser}`); return await r.json();}catch(e){return{result:"error"};}}
 
-  // --- LOGIN & SYNC ---
   async function doLogin(){
     showSpin(true);
     const u=document.getElementById('uIn').value, p=document.getElementById('pIn').value;
@@ -173,26 +171,23 @@
       document.getElementById('loginSection').style.display='none';
       document.getElementById('appSection').style.display='block';
       buildNav();
-      await syncData(true); // First Sync
+      await syncData(true);
     } else { showSpin(false); document.getElementById('loginError').textContent=r.message; document.getElementById('loginError').style.display='block'; }
   }
 
-  // MASSIVE SYNC FUNCTION (Single Request)
   async function syncData(firstLoad=false){
     if(firstLoad) showSpin(true);
     try {
       const url = `${API_URL}?action=getAllData&user=${currentUser}`;
       const r = await fetch(url).then(res => res.json());
       if(r.result === "success") {
+        window.APP_DATA = { ...window.APP_DATA, ...r };
         window.APP_DATA.staff = r.static.staff;
         window.APP_DATA.dropdowns = r.static.dropdowns;
-        window.APP_DATA.overview = r.overview;
-        window.APP_DATA.myTasks = r.myTasks;
-        window.APP_DATA.stats = r.stats;
         
         if(firstLoad) {
           initForms();
-          setInterval(()=>syncData(false), 30000); // Background Sync
+          setInterval(()=>syncData(false), 30000);
         }
         refreshUI();
       }
@@ -203,20 +198,36 @@
   function refreshUI() {
     renderOverview();
     renderTaskHub();
-    if(currentRole==='admin') renderAdminStats();
+    if(currentRole==='admin') {
+      loadAdminReqs();
+      const c = window.APP_DATA.stats.requests || 0;
+      const b = document.getElementById('adminBadge');
+      b.textContent = c;
+      b.style.display = c > 0 ? 'inline-block' : 'none';
+    }
   }
 
-  // --- RENDERERS (From Memory) ---
   function renderOverview() {
     const d = window.APP_DATA.overview;
-    document.getElementById('cntAuto').textContent = d.auto.length;
-    document.getElementById('cntPaper').textContent = d.paper.length;
+    const s = window.APP_DATA.stats;
+    
+    document.getElementById('ovDate').textContent = new Date().toLocaleDateString();
+    document.getElementById('ovInbound').textContent = s.inbound;
+    document.getElementById('ovAuto').textContent = d.auto.length;
+    document.getElementById('ovPaper').textContent = d.paper.length;
     
     const fill = (id, list) => {
       const el=document.getElementById(id); el.innerHTML='';
       if(!list.length) el.innerHTML='<div class="text-center p-3 text-muted small">All clear!</div>';
       list.forEach(x => {
-        el.innerHTML += `<div class="list-group-item"><div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div><div class="small">${x.client}</div><div class="small text-primary">${x.details}</div></div>`;
+        let userBadge = x.user ? `<div class="small text-secondary mb-1"><i class="bi bi-person me-1"></i>${x.user}</div>` : '';
+        el.innerHTML += `
+          <div class="list-group-item">
+            <div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div>
+            <div class="small fw-bold">${x.client}</div>
+            ${userBadge}
+            <div class="small text-primary">${x.details}</div>
+          </div>`;
       });
     };
     fill('listAuto', d.auto);
@@ -225,7 +236,6 @@
 
   function renderTaskHub() {
     if(currentRole === 'admin') {
-      // Admin Pool View
       const tb = document.getElementById('poolTable'); tb.innerHTML='';
       const pool = [...window.APP_DATA.overview.auto, ...window.APP_DATA.overview.paper];
       
@@ -235,7 +245,6 @@
         tb.innerHTML += `<tr><td>${t.id}</td><td><span class="badge ${t.type==='Automation'?'bg-danger':'bg-warning text-dark'}">${t.type}</span></td><td><small>${t.details}</small></td><td><select id="as_${t.id}" class="form-select form-select-sm">${opts}</select></td><td><button class="btn btn-sm btn-success" onclick="actAssign('${t.id}','${t.type}')">✓</button></td></tr>`;
       });
     } else {
-      // Staff View
       const div = document.getElementById('myTasksContainer'); div.innerHTML='';
       const tasks = window.APP_DATA.myTasks;
       document.getElementById('noTasksMsg').style.display = tasks.length===0?'block':'none';
@@ -256,25 +265,11 @@
     }
   }
 
-  function renderAdminStats() {
-    const s = window.APP_DATA.stats;
-    document.getElementById('statTot').textContent = s.auto + s.paper;
-    document.getElementById('statAut').textContent = s.auto;
-    document.getElementById('statPap').textContent = s.paper;
-  }
-
-  // --- ACTIONS (Optimistic) ---
   async function actAssign(id, type) {
-    const s = document.getElementById('as_'+id).value;
-    if(!s) return alert("Select Staff");
-    
-    // Optimistic Remove
-    const row = document.getElementById('as_'+id).closest('tr');
-    row.style.display = 'none';
-    
-    // Server Call
+    const s = document.getElementById('as_'+id).value; if(!s) return alert("Select Staff");
+    const row = document.getElementById('as_'+id).closest('tr'); row.style.display = 'none';
     await callApi({action:"assignTask", id:id, type:type, staff:s, assigner:currentUser});
-    syncData(false); // Background Sync
+    syncData(false);
   }
 
   async function actDone(id, type) {
@@ -295,11 +290,10 @@
   async function submitReassign() {
     const to = document.getElementById('reassignStaff').value; if(!to) return;
     bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide();
-    alert("Request Sent! Pending Approval."); 
+    alert("Request Sent!"); 
     await callApi({action:"requestTransfer", taskId:currentReassign.id, type:currentReassign.type, by:currentUser, to:to});
   }
 
-  // --- TABS & UI HELPERS ---
   function loadOverview() { renderOverview(); }
   function loadTaskHub() { renderTaskHub(); }
 
@@ -322,6 +316,9 @@
       adm: document.getElementById('nav-admin')
     };
     
+    const taskLabel = document.getElementById('taskHubLabel');
+    taskLabel.textContent = currentRole === 'admin' ? "Task Manager" : "My Tasks";
+
     if(currentRole === 'admin') {
       nav.append(tabs.over, tabs.inb, tabs.task, tabs.adm);
       tabs.adm.style.display='block';
@@ -336,7 +333,6 @@
     }
   }
 
-  // --- FORM SUBMIT ---
   function genBoxes() {
     const n = document.getElementById('f_boxes').value;
     if(!n || n<1) return alert("Enter Total Boxes first");
@@ -376,7 +372,6 @@
     } else alert(res.message);
   };
 
-  // --- ADMIN HELPERS ---
   async function manageDd(act){
     const v=document.getElementById('dd_val').value, c=document.getElementById('dd_cat').value; if(!v)return;
     await callApi({action:"manageData", subAction:act, category:c, value:v});
