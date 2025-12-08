@@ -11,29 +11,25 @@
   <style>
     :root { --primary-color: #0f172a; --accent-color: #3b82f6; --zephyr-green: #10b981; --bg-color: #f1f5f9; --card-radius: 12px; }
     body { background-color: var(--bg-color); font-family: 'Segoe UI', system-ui, sans-serif; color: #334155; padding-bottom: 80px; }
-    
     .login-wrapper { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%); }
     .login-card { width: 100%; max-width: 400px; padding: 3rem 2rem; background: white; border-radius: 24px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1); }
-    
     .main-container { max-width: 1400px; margin: 0 auto; padding: 15px; display: none; }
     .navbar-custom { background: white; padding: 12px 20px; border-radius: var(--card-radius); box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-bottom: 20px; position: relative; border: 1px solid #e2e8f0; }
     .logo-img { height: 42px; width: auto; object-fit: contain; }
     .navbar-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
-    
     .panel-card { background: white; border-radius: var(--card-radius); border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.01); height: 100%; overflow: hidden; }
-    .panel-header { background: #f8fafc; padding: 15px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #475569; display: flex; justify-content: space-between; align-items: center; }
-    
     .task-card-horizontal { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; transition: transform 0.2s; }
     .task-card-horizontal:hover { transform: translateY(-2px); box-shadow: 0 5px 15px -3px rgba(0,0,0,0.05); }
-    
+    .form-control, .form-select { border-radius: 8px; border-color: #cbd5e1; }
+    .btn-zephyr-green { background-color: var(--zephyr-green); color: white; border:none; font-weight:600; }
+    .split-col { height: 600px; overflow-y: auto; }
     .nav-pills .nav-link { color: #64748b; font-weight: 600; padding: 8px 20px; border-radius: 50px; position: relative; }
     .nav-pills .nav-link.active { background-color: var(--primary-color); color: white; }
+    .stat-val { font-size: 2rem; font-weight: 800; line-height: 1; }
+    .spinner-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; display:none; justify-content:center; align-items:center; }
     
     .overview-stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s; height: 100%; }
     .text-live-red { color: #dc2626; text-shadow: 0 2px 10px rgba(220, 38, 38, 0.15); }
-    .stat-val { font-size: 2rem; font-weight: 800; line-height: 1; }
-    
-    .spinner-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; display:none; justify-content:center; align-items:center; }
     .badge-notif { position: absolute; top: -5px; right: -5px; font-size: 0.7rem; }
 
     @media(max-width: 991px) { .navbar-center { position: relative; left: auto; top: auto; transform: none; display: block; margin: 0 auto 10px auto; } .navbar-custom { flex-wrap: wrap; text-align: center; justify-content: center; } }
@@ -119,21 +115,17 @@
 
     <!-- 3. TASK HUB -->
     <div class="tab-pane fade" id="taskhub-tab">
-      
-      <!-- STAFF VIEW -->
       <div id="staffTaskView" style="display:none;">
         <ul class="nav nav-tabs mb-3">
           <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabAssign">Assign Next Step</button></li>
           <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabTodo">My Assignments</button></li>
         </ul>
         <div class="tab-content">
-          <!-- ASSIGN TAB -->
           <div class="tab-pane fade show active" id="tabAssign">
             <div class="alert alert-light border small text-muted"><i class="bi bi-info-circle me-2"></i>Shipments you automated. Assign them to a Paperwork Doer.</div>
             <div id="staffAssignContainer"></div>
             <div id="noAssignMsg" class="text-center py-5 text-muted" style="display:none;">No pending assignments found.</div>
           </div>
-          <!-- TODO TAB -->
           <div class="tab-pane fade" id="tabTodo">
             <div class="alert alert-light border small text-muted"><i class="bi bi-info-circle me-2"></i>Paperwork tasks assigned to you. Mark done when complete.</div>
             <div id="staffTodoContainer"></div>
@@ -141,15 +133,12 @@
           </div>
         </div>
       </div>
-
-      <!-- ADMIN VIEW -->
       <div id="adminTaskView" style="display:none;">
         <div class="panel-card p-3">
           <h6 class="fw-bold mb-3">Global Task Assignment Pool</h6>
           <div class="table-responsive"><table class="table table-hover align-middle"><thead class="bg-light"><tr><th>ID</th><th>Type</th><th>Details</th><th>Assign To</th><th>Action</th></tr></thead><tbody id="poolTable"></tbody></table></div>
         </div>
       </div>
-
     </div>
 
     <!-- 4. ADMIN -->
@@ -163,6 +152,9 @@
   </div>
 </div>
 
+<!-- Modal -->
+<div class="modal fade" id="reassignModal" tabindex="-1"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h6 class="modal-title fw-bold">Transfer Task</h6></div><div class="modal-body"><p class="small text-muted">Transfer <b id="reassignId"></b> to:</p><select id="reassignStaff" class="form-select mb-3"></select><button class="btn btn-primary w-100 btn-sm" onclick="submitReassign()">Send Request</button></div></div></div></div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 
@@ -173,6 +165,26 @@
   
   // Initial State
   window.APP_DATA = { staff: [], dropdowns: {}, overview: { auto:[], paper:[] }, workflow: { toAssign:[], toDo:[] }, stats: {} };
+  window.tomInstances = { client: null, dest: null };
+
+  // --- GLOBALS (Attached to Window for Safety) ---
+  window.loadOverview = function() { renderOverview(); };
+  window.loadTaskHub = function() { renderTaskHub(); };
+  window.loadAdminPanel = function() { if(currentRole==='admin') { loadUsers(); loadAdminReqs(); } };
+  window.genBoxes = function() {
+    const n = document.getElementById('f_boxes').value;
+    if(!n || n<1) return alert("Enter Total Boxes first");
+    const tb = document.getElementById('boxTable'); tb.innerHTML='';
+    for(let i=1; i<=n; i++) tb.innerHTML += `<tr><td>${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="text-end val-chg small fw-bold">0.00</td></tr>`;
+  };
+  window.cBox = function(el) {
+    const r=el.closest('tr'), i=r.querySelectorAll('input');
+    const w=parseFloat(i[0].value)||0, l=parseFloat(i[1].value)||0, b=parseFloat(i[2].value)||0, h=parseFloat(i[3].value)||0;
+    const chg=Math.max(w, (l*b*h)/5000); r.querySelector('.val-chg').textContent=chg.toFixed(2);
+    let tot=0; document.querySelectorAll('.val-chg').forEach(x=>tot+=parseFloat(x.textContent));
+    document.getElementById('f_totalChg').value=tot.toFixed(2);
+  };
+  window.logout = function() { location.reload(); };
 
   function showSpin(x){document.getElementById('spinner').style.display=x?'flex':'none';}
   async function callApi(d){ try{const r=await fetch(API_URL,{method:"POST",body:JSON.stringify(d)}); return await r.json();}catch(e){return{result:"error"};}}
@@ -192,6 +204,7 @@
       await syncData(true);
     } else { showSpin(false); document.getElementById('loginError').textContent=r.message; document.getElementById('loginError').style.display='block'; }
   }
+  window.doLogin = doLogin; // Attach
 
   // --- DATA SYNC ---
   async function syncData(firstLoad=false){
@@ -201,7 +214,13 @@
       const r = await fetch(url).then(res => res.json());
       if(r.result === "success") {
         window.APP_DATA = { ...window.APP_DATA, ...r };
-        // Unpack Workflow
+        
+        // Safety Check for Static Data
+        if(r.static) {
+            window.APP_DATA.staff = r.static.staff || [];
+            window.APP_DATA.dropdowns = r.static.dropdowns || {};
+        }
+
         if(r.workflow) {
           window.APP_DATA.workflow.toAssign = r.workflow.toAssign || [];
           window.APP_DATA.workflow.toDo = r.workflow.toDo || [];
@@ -210,6 +229,8 @@
         if(firstLoad) {
           initForms();
           setInterval(()=>syncData(false), 30000);
+        } else {
+          updateDropdowns();
         }
         refreshUI();
       }
@@ -221,7 +242,7 @@
     renderOverview();
     renderTaskHub();
     if(currentRole==='admin') {
-      const c = window.APP_DATA.stats.requests || 0; // Check local stats
+      const c = window.APP_DATA.stats.requests || 0; 
       const b = document.getElementById('adminBadge');
       b.textContent = c;
       b.style.display = c > 0 ? 'inline-block' : 'none';
@@ -232,6 +253,7 @@
   function renderOverview() {
     const d = window.APP_DATA.overview;
     const s = window.APP_DATA.stats;
+    
     document.getElementById('ovDate').textContent = new Date().toLocaleDateString();
     document.getElementById('ovInbound').textContent = s.inbound;
     document.getElementById('ovAuto').textContent = d.auto.length;
@@ -242,7 +264,13 @@
       if(!list.length) el.innerHTML='<div class="text-center p-3 text-muted small">All clear!</div>';
       list.forEach(x => {
         let userBadge = x.user ? `<div class="small text-secondary mb-1"><i class="bi bi-person me-1"></i>${x.user}</div>` : '';
-        el.innerHTML += `<div class="list-group-item"><div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div><div class="small fw-bold">${x.client}</div>${userBadge}<div class="small text-primary">${x.details}</div></div>`;
+        el.innerHTML += `
+          <div class="list-group-item">
+            <div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div>
+            <div class="small fw-bold">${x.client}</div>
+            ${userBadge}
+            <div class="small text-primary">${x.details}</div>
+          </div>`;
       });
     };
     fill('listAuto', d.auto);
@@ -296,6 +324,7 @@
     await callApi({action:"assignTask", id:id, type:type, staff:s, assigner:currentUser});
     syncData(false);
   }
+  window.actAssign = actAssign;
 
   async function staffActAssign(id) {
     const s = document.getElementById('staff_assign_'+id).value; if(!s) return alert("Select Staff");
@@ -303,6 +332,7 @@
     await callApi({action:"assignTask", id:id, type:"Paperwork", staff:s, assigner:currentUser});
     syncData(false);
   }
+  window.staffActAssign = staffActAssign;
 
   async function staffActDone(id) {
     if(!confirm("Paperwork Completed?")) return;
@@ -310,13 +340,9 @@
     await callApi({action:"markPaperworkDone", id:id});
     syncData(false);
   }
+  window.staffActDone = staffActDone;
 
-  // --- ADMIN PANEL (Explicit Load) ---
-  function loadAdminPanel() { 
-    loadUsers(); 
-    loadAdminReqs(); 
-  }
-
+  // --- ADMIN ---
   async function loadUsers() {
     const r = await fetchGet("getUsers");
     if(r.result==='success'){
@@ -341,13 +367,44 @@
 
   // --- UTILS ---
   function initForms() {
-    const dd = window.APP_DATA.dropdowns;
-    fillSel('f_net', dd.networks); fillSel('f_client', dd.clients); fillSel('f_dest', dd.destinations);
-    tsClient = new TomSelect("#f_client",{create:false}); tsDest = new TomSelect("#f_dest",{create:false});
+    const dd = window.APP_DATA.dropdowns || {};
+    fillSel('f_net', dd.networks || []); 
+    
+    window.tomInstances.client = new TomSelect("#f_client",{create:false, dropdownParent: 'body', placeholder: "Search Client..."});
+    window.tomInstances.dest = new TomSelect("#f_dest",{create:false, dropdownParent: 'body', placeholder: "Search Dest..."});
+    
+    updateDropdownOptions();
     
     const ex = document.getElementById('f_extra'); ex.innerHTML='';
-    dd.extraCharges.forEach(x => ex.innerHTML += `<div class="form-check form-check-inline bg-light border px-2 py-1 rounded small"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1">${x}</label></div>`);
+    if(dd.extraCharges) {
+        dd.extraCharges.forEach(x => ex.innerHTML += `<div class="form-check form-check-inline bg-light border px-2 py-1 rounded small"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1">${x}</label></div>`);
+    }
     document.getElementById('f_date').valueAsDate = new Date();
+  }
+
+  function updateDropdowns() {
+    const dd = window.APP_DATA.dropdowns || {};
+    fillSel('f_net', dd.networks || []);
+    updateDropdownOptions();
+    
+    const ex = document.getElementById('f_extra'); ex.innerHTML='';
+    if(dd.extraCharges) {
+        dd.extraCharges.forEach(x => ex.innerHTML += `<div class="form-check form-check-inline bg-light border px-2 py-1 rounded small"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1">${x}</label></div>`);
+    }
+  }
+
+  function updateDropdownOptions() {
+    const dd = window.APP_DATA.dropdowns || {};
+    if(window.tomInstances.client && dd.clients) {
+      window.tomInstances.client.clearOptions();
+      dd.clients.forEach(c => window.tomInstances.client.addOption({value:c, text:c}));
+      window.tomInstances.client.refreshOptions(false);
+    }
+    if(window.tomInstances.dest && dd.destinations) {
+      window.tomInstances.dest.clearOptions();
+      dd.destinations.forEach(d => window.tomInstances.dest.addOption({value:d, text:d}));
+      window.tomInstances.dest.refreshOptions(false);
+    }
   }
 
   function buildNav() {
@@ -359,7 +416,6 @@
       adm: document.getElementById('nav-admin')
     };
     
-    // Label Logic
     const taskLabel = document.getElementById('taskHubLabel');
     taskLabel.textContent = currentRole === 'admin' ? "Task Manager" : "Work Panel";
 
@@ -368,7 +424,7 @@
       tabs.adm.style.display='block';
       new bootstrap.Tab(tabs.over.querySelector('button')).show();
       document.getElementById('adminTaskView').style.display='block';
-      loadAdminPanel(); // Trigger load immediately for admin
+      loadAdminPanel();
     } else {
       nav.append(tabs.inb, tabs.over, tabs.task);
       tabs.adm.style.display='none';
@@ -377,19 +433,6 @@
     }
   }
 
-  function genBoxes() {
-    const n = document.getElementById('f_boxes').value;
-    if(!n || n<1) return alert("Enter Total Boxes first");
-    const tb = document.getElementById('boxTable'); tb.innerHTML='';
-    for(let i=1; i<=n; i++) tb.innerHTML += `<tr><td>${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="text-end val-chg small fw-bold">0.00</td></tr>`;
-  }
-  function cBox(el) {
-    const r=el.closest('tr'), i=r.querySelectorAll('input');
-    const w=parseFloat(i[0].value)||0, l=parseFloat(i[1].value)||0, b=parseFloat(i[2].value)||0, h=parseFloat(i[3].value)||0;
-    const chg=Math.max(w, (l*b*h)/5000); r.querySelector('.val-chg').textContent=chg.toFixed(2);
-    let tot=0; document.querySelectorAll('.val-chg').forEach(x=>tot+=parseFloat(x.textContent));
-    document.getElementById('f_totalChg').value=tot.toFixed(2);
-  }
   document.getElementById('shipForm').onsubmit = async (e) => {
     e.preventDefault();
     if(!document.getElementById('f_net').value || !document.getElementById('f_client').value || !document.getElementById('f_dest').value) return alert("Fill Dropdowns");
@@ -421,15 +464,22 @@
     await callApi({action:"manageData", subAction:act, category:c, value:v});
     document.getElementById('dd_val').value=''; syncData(false);
   }
+  window.manageDd = manageDd;
+
   async function decideTr(rid, tid, typ, to, dec){ showSpin(true); await callApi({action:"approveTransfer", reqId:rid, taskId:tid, type:typ, to:to, decision:dec}); loadAdminReqs(); showSpin(false); }
+  window.decideTr = decideTr;
+
   async function addUser() { await callApi({action:"addUser", u:document.getElementById('nu_u').value, p:document.getElementById('nu_p').value, n:document.getElementById('nu_n').value, r:document.getElementById('nu_r').value}); loadUsers(); }
+  window.addUser = addUser;
+
   async function delUser(u) { if(confirm("Del?")) await callApi({action:"deleteUser", username:u}); loadUsers(); }
+  window.delUser = delUser;
   
-  function fillSel(id, arr) { let e=document.getElementById(id); e.innerHTML='<option value="">Select...</option>'; arr.forEach(x=>e.innerHTML+=`<option value="${x}">${x}</option>`); }
-  function logout() { location.reload(); }
-  
-  function loadOverview() { renderOverview(); }
-  function loadTaskHub() { renderTaskHub(); }
+  function fillSel(id, arr) { 
+    let e=document.getElementById(id); 
+    e.innerHTML='<option value="">Select...</option>'; 
+    if(arr) arr.forEach(x=>e.innerHTML+=`<option value="${x}">${x}</option>`); 
+  }
 </script>
 </body>
 </html>
