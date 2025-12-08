@@ -11,40 +11,26 @@
   <style>
     :root { --primary-color: #0f172a; --accent-color: #3b82f6; --zephyr-green: #10b981; --bg-color: #f1f5f9; --card-radius: 12px; }
     body { background-color: var(--bg-color); font-family: 'Segoe UI', system-ui, sans-serif; color: #334155; padding-bottom: 80px; }
-    
     .login-wrapper { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%); }
     .login-card { width: 100%; max-width: 400px; padding: 3rem 2rem; background: white; border-radius: 24px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1); }
-    
     .main-container { max-width: 1400px; margin: 0 auto; padding: 15px; display: none; }
     .navbar-custom { background: white; padding: 12px 20px; border-radius: var(--card-radius); box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-bottom: 20px; position: relative; border: 1px solid #e2e8f0; }
     .logo-img { height: 42px; width: auto; object-fit: contain; }
     .navbar-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
-    
     .panel-card { background: white; border-radius: var(--card-radius); border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.01); height: 100%; }
-    .panel-header { background: #f8fafc; padding: 15px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #475569; display: flex; justify-content: space-between; align-items: center; }
-    
     .task-card-horizontal { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; transition: transform 0.2s; }
     .task-card-horizontal:hover { transform: translateY(-2px); box-shadow: 0 5px 15px -3px rgba(0,0,0,0.05); }
-    
     .form-control, .form-select { border-radius: 8px; border-color: #cbd5e1; }
     .btn-zephyr-green { background-color: var(--zephyr-green); color: white; border:none; font-weight:600; }
     .split-col { height: 600px; overflow-y: auto; }
-    
     .nav-pills .nav-link { color: #64748b; font-weight: 600; padding: 8px 20px; border-radius: 50px; position: relative; }
     .nav-pills .nav-link.active { background-color: var(--primary-color); color: white; }
-    
     .stat-val { font-size: 2rem; font-weight: 800; line-height: 1; }
-    
     .spinner-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; display:none; justify-content:center; align-items:center; }
-    
     .overview-stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s; height: 100%; }
     .text-live-red { color: #dc2626; text-shadow: 0 2px 10px rgba(220, 38, 38, 0.15); }
-    
     .badge-notif { position: absolute; top: -5px; right: -5px; font-size: 0.7rem; }
-    
-    /* Fix for TomSelect Dropdowns */
     .ts-dropdown { z-index: 1055 !important; }
-
     @media(max-width: 991px) { .navbar-center { position: relative; left: auto; top: auto; transform: none; display: block; margin: 0 auto 10px auto; } .navbar-custom { flex-wrap: wrap; text-align: center; justify-content: center; } }
   </style>
 </head>
@@ -52,7 +38,6 @@
 
 <div id="spinner" class="spinner-overlay"><div class="spinner-border text-primary" role="status"></div></div>
 
-<!-- LOGIN -->
 <div id="loginSection" class="login-wrapper">
   <div class="login-card">
     <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" alt="Logo" class="logo-img mb-4 d-block mx-auto">
@@ -66,7 +51,6 @@
   </div>
 </div>
 
-<!-- APP -->
 <div id="appSection" class="main-container">
   <div class="navbar-custom d-lg-flex justify-content-between align-items-center">
     <div class="d-none d-lg-block"><div class="bg-light px-3 py-1 rounded-pill border small fw-bold text-secondary"><i class="bi bi-person-fill"></i> <span id="userBadge">User</span></div></div>
@@ -82,8 +66,7 @@
   </ul>
 
   <div class="tab-content">
-    
-    <!-- 1. INBOUND -->
+    <!-- INBOUND -->
     <div class="tab-pane fade" id="inbound-tab">
       <div class="row justify-content-center">
         <div class="col-xl-10">
@@ -113,7 +96,7 @@
       </div>
     </div>
 
-    <!-- 2. OVERVIEW -->
+    <!-- OVERVIEW -->
     <div class="tab-pane fade" id="overview-tab">
       <div class="row g-4 mb-4">
         <div class="col-md-4"><div class="overview-stat-card border-success border-opacity-25 bg-success bg-opacity-10"><div class="overview-label text-success">Today's Inbound (<span id="ovDate"></span>)</div><div class="stat-val text-success" id="ovInbound">0</div></div></div>
@@ -126,15 +109,12 @@
       </div>
     </div>
 
-    <!-- 3. TASK HUB -->
+    <!-- TASK HUB -->
     <div class="tab-pane fade" id="taskhub-tab">
-      
-      <!-- STAFF VIEW -->
       <div id="staffTaskView" style="display:none;">
         <ul class="nav nav-tabs mb-3">
           <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabAssign">Assign Next Step</button></li>
           <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabTodo">My Assignments</button></li>
-          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHistory">Work History</button></li>
         </ul>
         <div class="tab-content">
           <div class="tab-pane fade show active" id="tabAssign">
@@ -147,14 +127,8 @@
             <div id="staffTodoContainer"></div>
             <div id="noTodoMsg" class="text-center py-5 text-muted" style="display:none;">You have no active tasks.</div>
           </div>
-          <div class="tab-pane fade" id="tabHistory">
-            <div class="alert alert-light border small text-muted"><i class="bi bi-clock-history me-2"></i>Recent Automation tasks you completed.</div>
-            <div id="staffHistoryContainer"></div>
-          </div>
         </div>
       </div>
-
-      <!-- ADMIN VIEW -->
       <div id="adminTaskView" style="display:none;">
         <div class="panel-card p-3">
           <h6 class="fw-bold mb-3">Global Task Assignment Pool (Paperwork Only)</h6>
@@ -163,11 +137,11 @@
       </div>
     </div>
 
-    <!-- 4. ADMIN -->
+    <!-- ADMIN -->
     <div class="tab-pane fade" id="admin-tab">
       <div class="row g-4">
         <div class="col-md-6"><div class="panel-card p-3 h-100"><h6 class="fw-bold mb-3 text-warning">Transfer Requests</h6><div id="adminReqList" class="list-group list-group-flush"></div></div></div>
-        <div class="col-md-6"><div class="panel-card p-3 h-100"><h6 class="fw-bold mb-3 text-primary">Manage Users</h6><div class="input-group mb-3"><input id="nu_u" class="form-control" placeholder="User"><input id="nu_p" class="form-control" placeholder="Pass"><input id="nu_n" class="form-control" placeholder="Name"><select id="nu_r" class="form-select" style="max-width:80px"><option>Staff</option><option>Admin</option></select><button onclick="addUser()" class="btn btn-success">+</button></div><div style="max-height:200px;overflow-y:auto"><table class="table table-sm"><tbody id="userTable"></tbody></table></div></div></div>
+        <div class="col-md-6"><div class="panel-card p-3 h-100"><h6 class="fw-bold mb-3 text-primary">Manage Users</h6><div class="input-group mb-3"><input id="nu_u" class="form-control" placeholder="User"><input id="nu_p" class="form-control" placeholder="Pass"><input id="nu_n" class="form-control" placeholder="Name"><select id="nu_r" class="form-select" style="max-width:80px"><option>Staff</option><option>Admin</option></select><button onclick="addUser()" class="btn btn-success">+</button></div><div style="max-height:200px;overflow-y:auto"><table class="table table-sm"><thead class="bg-light"><tr><th>User</th><th>Pass</th><th>Name</th><th>Act</th></tr></thead><tbody id="userTable"></tbody></table></div></div></div>
         <div class="col-12"><div class="panel-card p-3"><h6 class="fw-bold mb-3 text-success">Dropdowns</h6><div class="row g-2"><div class="col-auto"><select id="dd_cat" class="form-select"><option value="client">Client</option><option value="network">Network</option><option value="destination">Dest</option><option value="extra">Charge</option></select></div><div class="col"><input id="dd_val" class="form-control" placeholder="Value"></div><div class="col-auto"><button class="btn btn-success" onclick="manageDd('add')">Add</button><button class="btn btn-danger" onclick="manageDd('delete')">Del</button></div></div></div></div>
       </div>
     </div>
@@ -266,6 +240,7 @@
       const b = document.getElementById('adminBadge');
       b.textContent = c;
       b.style.display = c > 0 ? 'inline-block' : 'none';
+      loadAdminReqs();
     }
   }
 
@@ -317,7 +292,6 @@
     } else {
       const toAssign = window.APP_DATA.workflow.toAssign;
       const toDo = window.APP_DATA.workflow.toDo;
-      const history = window.APP_DATA.workflow.history;
       
       const ac = document.getElementById('staffAssignContainer'); ac.innerHTML='';
       document.getElementById('noAssignMsg').style.display = toAssign.length===0?'block':'none';
@@ -345,11 +319,6 @@
                 <button class="btn btn-outline-secondary btn-sm px-3" onclick="reqTransfer('${t.id}','${t.type}')">Transfer</button>
             </div>
           </div>`;
-      });
-      
-      const hc = document.getElementById('staffHistoryContainer'); hc.innerHTML='';
-      history.forEach(t => {
-         hc.innerHTML += `<div class="list-group-item d-flex justify-content-between"><span>${t.id}</span><small class="text-muted">${t.details}</small></div>`;
       });
     }
   }
@@ -380,19 +349,19 @@
   window.staffActDone = staffActDone;
 
   // --- ADMIN PANEL ---
-  function loadAdminPanel() { 
-    if(currentRole === 'admin') {
-      loadUsers(); loadAdminReqs();
-    }
-  }
-  window.loadAdminPanel = loadAdminPanel;
-
   async function loadUsers() {
     const r = await fetchGet("getUsers");
     if(r.result==='success'){
       const t = document.getElementById('userTable'); t.innerHTML='';
       if(r.users) r.users.forEach(u => {
-        t.innerHTML += `<tr><td>${u[0]}</td><td><small>${u[2]}</small></td><td><button class="btn btn-danger btn-sm py-0" onclick="delUser('${u[0]}')">×</button></td></tr>`;
+        // Password column with toggle logic
+        t.innerHTML += `
+          <tr>
+            <td>${u[0]}</td>
+            <td class="text-muted small" style="font-family:monospace; cursor:pointer; user-select:none;" onclick="this.textContent=this.textContent==='****'?'${u[1]}':'****'" title="Click to reveal">****</td>
+            <td><small>${u[2]}</small></td>
+            <td><button class="btn btn-danger btn-sm py-0" onclick="delUser('${u[0]}')">×</button></td>
+          </tr>`;
       });
     }
   }
@@ -402,7 +371,20 @@
     const el = document.getElementById('adminReqList'); el.innerHTML='';
     if(r.requests && r.requests.length > 0) {
       r.requests.forEach(x => {
-        el.innerHTML += `<div class="list-group-item d-flex justify-content-between align-items-center"><small><b>${x.taskId}</b>: ${x.by} -> ${x.to}</small><div><button class="btn btn-sm btn-outline-success py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">✓</button><button class="btn btn-sm btn-outline-danger py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">✕</button></div></div>`;
+        // Now displaying Task Type inside the badge
+        el.innerHTML += `
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <small>
+               <b>${x.taskId}</b> 
+               <span class="badge bg-secondary text-light ms-1" style="font-size:0.65rem">${x.type}</span>
+               <br>
+               ${x.by} <i class="bi bi-arrow-right"></i> ${x.to}
+            </small>
+            <div>
+               <button class="btn btn-sm btn-outline-success py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">✓</button>
+               <button class="btn btn-sm btn-outline-danger py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">✕</button>
+            </div>
+          </div>`;
       });
     } else {
       el.innerHTML = '<div class="text-center p-3 text-muted small">No pending requests</div>';
