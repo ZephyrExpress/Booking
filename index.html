@@ -11,26 +11,40 @@
   <style>
     :root { --primary-color: #0f172a; --accent-color: #3b82f6; --zephyr-green: #10b981; --bg-color: #f1f5f9; --card-radius: 12px; }
     body { background-color: var(--bg-color); font-family: 'Segoe UI', system-ui, sans-serif; color: #334155; padding-bottom: 80px; }
+    
     .login-wrapper { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%); }
     .login-card { width: 100%; max-width: 400px; padding: 3rem 2rem; background: white; border-radius: 24px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1); }
+    
     .main-container { max-width: 1400px; margin: 0 auto; padding: 15px; display: none; }
     .navbar-custom { background: white; padding: 12px 20px; border-radius: var(--card-radius); box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-bottom: 20px; position: relative; border: 1px solid #e2e8f0; }
     .logo-img { height: 42px; width: auto; object-fit: contain; }
     .navbar-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+    
     .panel-card { background: white; border-radius: var(--card-radius); border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.01); height: 100%; }
+    .panel-header { background: #f8fafc; padding: 15px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #475569; display: flex; justify-content: space-between; align-items: center; }
+    
     .task-card-horizontal { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; transition: transform 0.2s; }
     .task-card-horizontal:hover { transform: translateY(-2px); box-shadow: 0 5px 15px -3px rgba(0,0,0,0.05); }
+    
     .form-control, .form-select { border-radius: 8px; border-color: #cbd5e1; }
     .btn-zephyr-green { background-color: var(--zephyr-green); color: white; border:none; font-weight:600; }
     .split-col { height: 600px; overflow-y: auto; }
+    
     .nav-pills .nav-link { color: #64748b; font-weight: 600; padding: 8px 20px; border-radius: 50px; position: relative; }
     .nav-pills .nav-link.active { background-color: var(--primary-color); color: white; }
+    
     .stat-val { font-size: 2rem; font-weight: 800; line-height: 1; }
+    
     .spinner-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; display:none; justify-content:center; align-items:center; }
+    
     .overview-stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s; height: 100%; }
     .text-live-red { color: #dc2626; text-shadow: 0 2px 10px rgba(220, 38, 38, 0.15); }
+    
     .badge-notif { position: absolute; top: -5px; right: -5px; font-size: 0.7rem; }
+    
+    /* Fix for TomSelect Dropdowns */
     .ts-dropdown { z-index: 1055 !important; }
+
     @media(max-width: 991px) { .navbar-center { position: relative; left: auto; top: auto; transform: none; display: block; margin: 0 auto 10px auto; } .navbar-custom { flex-wrap: wrap; text-align: center; justify-content: center; } }
   </style>
 </head>
@@ -38,6 +52,7 @@
 
 <div id="spinner" class="spinner-overlay"><div class="spinner-border text-primary" role="status"></div></div>
 
+<!-- LOGIN -->
 <div id="loginSection" class="login-wrapper">
   <div class="login-card">
     <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" alt="Logo" class="logo-img mb-4 d-block mx-auto">
@@ -51,6 +66,7 @@
   </div>
 </div>
 
+<!-- APP -->
 <div id="appSection" class="main-container">
   <div class="navbar-custom d-lg-flex justify-content-between align-items-center">
     <div class="d-none d-lg-block"><div class="bg-light px-3 py-1 rounded-pill border small fw-bold text-secondary"><i class="bi bi-person-fill"></i> <span id="userBadge">User</span></div></div>
@@ -112,10 +128,13 @@
 
     <!-- 3. TASK HUB -->
     <div class="tab-pane fade" id="taskhub-tab">
+      
+      <!-- STAFF VIEW -->
       <div id="staffTaskView" style="display:none;">
         <ul class="nav nav-tabs mb-3">
           <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabAssign">Assign Next Step</button></li>
           <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabTodo">My Assignments</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabHistory">Work History</button></li>
         </ul>
         <div class="tab-content">
           <div class="tab-pane fade show active" id="tabAssign">
@@ -128,11 +147,17 @@
             <div id="staffTodoContainer"></div>
             <div id="noTodoMsg" class="text-center py-5 text-muted" style="display:none;">You have no active tasks.</div>
           </div>
+          <div class="tab-pane fade" id="tabHistory">
+            <div class="alert alert-light border small text-muted"><i class="bi bi-clock-history me-2"></i>Recent Automation tasks you completed.</div>
+            <div id="staffHistoryContainer"></div>
+          </div>
         </div>
       </div>
+
+      <!-- ADMIN VIEW -->
       <div id="adminTaskView" style="display:none;">
         <div class="panel-card p-3">
-          <h6 class="fw-bold mb-3">Global Task Assignment Pool</h6>
+          <h6 class="fw-bold mb-3">Global Task Assignment Pool (Paperwork Only)</h6>
           <div class="table-responsive"><table class="table table-hover align-middle"><thead class="bg-light"><tr><th>ID</th><th>Type</th><th>Details</th><th>Assign To</th><th>Action</th></tr></thead><tbody id="poolTable"></tbody></table></div>
         </div>
       </div>
@@ -218,6 +243,7 @@
         if(r.workflow) {
           window.APP_DATA.workflow.toAssign = r.workflow.toAssign || [];
           window.APP_DATA.workflow.toDo = r.workflow.toDo || [];
+          window.APP_DATA.workflow.history = r.workflow.history || [];
         }
         
         if(firstLoad) {
@@ -253,27 +279,13 @@
     document.getElementById('ovAuto').textContent = d.auto.length;
     document.getElementById('ovPaper').textContent = d.paper.length;
     
-    // Sort logic: Unassigned (empty assignee) comes before Assigned (non-empty assignee)
-    const sortedPaper = [...d.paper].sort((a, b) => {
-        // If 'a' is assigned and 'b' is not, 'a' comes later (return 1)
-        if (a.assignee && !b.assignee) return 1;
-        // If 'a' is not assigned and 'b' is, 'a' comes first (return -1)
-        if (!a.assignee && b.assignee) return -1;
-        return 0; // Keep original order if both are same state
-    });
-
     const fill = (id, list) => {
       const el=document.getElementById(id); el.innerHTML='';
       if(!list.length) el.innerHTML='<div class="text-center p-3 text-muted small">All clear!</div>';
       list.forEach(x => {
         let userBadge = x.user ? `<div class="small text-secondary mb-1"><i class="bi bi-person me-1"></i>${x.user}</div>` : '';
-        let assigneeBadge = '';
-        
-        if (x.assignee) {
-             assigneeBadge = `<div class="small text-success fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i>Assigned to: ${x.assignee}</div>`;
-        } else if (x.autoDoer) {
-             assigneeBadge = `<div class="small text-secondary mb-1"><i class="bi bi-robot me-1"></i>Auto by: ${x.autoDoer}</div>`;
-        }
+        let assigneeBadge = x.assignee ? `<div class="small text-success fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i>Assigned to: ${x.assignee}</div>` : (x.autoDoer ? `<div class="small text-secondary mb-1"><i class="bi bi-robot me-1"></i>Auto by: ${x.autoDoer}</div>` : '');
+        let netHtml = x.netNo ? ` | Net# ${x.netNo}` : '';
 
         el.innerHTML += `
           <div class="list-group-item">
@@ -281,19 +293,22 @@
             <div class="small fw-bold">${x.client}</div>
             ${userBadge}
             ${assigneeBadge}
-            <div class="small text-primary">${x.details}</div>
+            <div class="small text-primary">${x.details}${netHtml}</div>
           </div>`;
       });
     };
-    
     fill('listAuto', d.auto);
+    
+    const sortedPaper = [...d.paper].sort((a,b) => (a.assignee ? 1 : -1) - (b.assignee ? 1 : -1));
     fill('listPaper', sortedPaper);
   }
 
   function renderTaskHub() {
     if(currentRole === 'admin') {
       const tb = document.getElementById('poolTable'); tb.innerHTML='';
-      const pool = [...window.APP_DATA.overview.auto, ...window.APP_DATA.overview.paper];
+      // FIX: Use adminPool (paperwork only) for Admin Task Manager
+      const pool = window.APP_DATA.adminPool || window.APP_DATA.overview.paper || [];
+      
       pool.forEach(t => {
         let opts = `<option value="">Assign...</option>`;
         if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(s => opts += `<option value="${s}">${s}</option>`);
@@ -302,6 +317,7 @@
     } else {
       const toAssign = window.APP_DATA.workflow.toAssign;
       const toDo = window.APP_DATA.workflow.toDo;
+      const history = window.APP_DATA.workflow.history;
       
       const ac = document.getElementById('staffAssignContainer'); ac.innerHTML='';
       document.getElementById('noAssignMsg').style.display = toAssign.length===0?'block':'none';
@@ -310,14 +326,7 @@
         if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(s => opts += `<option value="${s}">${s}</option>`);
         ac.innerHTML += `
           <div class="task-card-horizontal" id="assign_card_${t.id}">
-            <div>
-               <div class="d-flex align-items-center gap-2 mb-1">
-                 <span class="badge bg-danger">Automation Done</span>
-                 <strong class="fs-5">${t.id}</strong>
-               </div>
-               <div class="small fw-bold text-dark">${t.client}</div>
-               <div class="small text-muted">${t.net} | ${t.details}</div>
-            </div>
+            <div><strong class="fs-5">${t.id}</strong><div class="small fw-bold text-secondary">${t.client}</div><div class="small text-muted">${t.net} | ${t.details}</div></div>
             <div class="d-flex gap-2 align-items-center">
               <select id="staff_assign_${t.id}" class="form-select form-select-sm" style="width:160px">${opts}</select>
               <button class="btn btn-primary btn-sm" onclick="staffActAssign('${t.id}')">Assign</button>
@@ -330,19 +339,17 @@
       toDo.forEach(t => {
         tc.innerHTML += `
           <div class="task-card-horizontal" id="todo_card_${t.id}">
-            <div>
-               <div class="d-flex align-items-center gap-2 mb-1">
-                 <span class="badge bg-warning text-dark">To Do</span>
-                 <strong class="fs-5">${t.id}</strong>
-               </div>
-               <div class="small fw-bold text-dark">${t.client}</div>
-               <div class="small text-muted">${t.net} | ${t.details}</div>
-            </div>
+            <div><span class="badge bg-warning text-dark mb-1">Assigned to Me</span><br><strong>${t.id}</strong><div class="small">${t.subtitle}</div><div class="small text-muted">${t.details}</div></div>
             <div class="d-flex gap-2">
                 <button class="btn btn-success btn-sm px-4" onclick="staffActDone('${t.id}')">Mark Done</button>
                 <button class="btn btn-outline-secondary btn-sm px-3" onclick="reqTransfer('${t.id}','${t.type}')">Transfer</button>
             </div>
           </div>`;
+      });
+      
+      const hc = document.getElementById('staffHistoryContainer'); hc.innerHTML='';
+      history.forEach(t => {
+         hc.innerHTML += `<div class="list-group-item d-flex justify-content-between"><span>${t.id}</span><small class="text-muted">${t.details}</small></div>`;
       });
     }
   }
