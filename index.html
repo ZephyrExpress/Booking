@@ -18,6 +18,7 @@
     .logo-img { height: 42px; width: auto; object-fit: contain; }
     .navbar-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
     .panel-card { background: white; border-radius: var(--card-radius); border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.01); height: 100%; }
+    .panel-header { background: #f8fafc; padding: 15px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #475569; display: flex; justify-content: space-between; align-items: center; }
     .task-card-horizontal { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; transition: transform 0.2s; }
     .task-card-horizontal:hover { transform: translateY(-2px); box-shadow: 0 5px 15px -3px rgba(0,0,0,0.05); }
     .form-control, .form-select { border-radius: 8px; border-color: #cbd5e1; }
@@ -30,8 +31,8 @@
     .overview-stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s; height: 100%; }
     .text-live-red { color: #dc2626; text-shadow: 0 2px 10px rgba(220, 38, 38, 0.15); }
     .badge-notif { position: absolute; top: -5px; right: -5px; font-size: 0.7rem; }
-    /* Fix for TomSelect Dropdowns */
     .ts-dropdown { z-index: 1055 !important; }
+
     @media(max-width: 991px) { .navbar-center { position: relative; left: auto; top: auto; transform: none; display: block; margin: 0 auto 10px auto; } .navbar-custom { flex-wrap: wrap; text-align: center; justify-content: center; } }
   </style>
 </head>
@@ -158,30 +159,10 @@
 <script>
   // API CONFIG
   const API_URL="https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
-  let currentUser="", currentRole="", tsClient, tsDest;
+  let currentUser="", currentRole="", tsClient, tsDest, currentReassign={};
   
-  // Initial State
   window.APP_DATA = { staff: [], dropdowns: {}, overview: { auto:[], paper:[] }, workflow: { toAssign:[], toDo:[] }, stats: {} };
   window.tomInstances = { client: null, dest: null };
-
-  // --- GLOBALS ---
-  window.loadOverview = function() { renderOverview(); };
-  window.loadTaskHub = function() { renderTaskHub(); };
-  window.loadAdminPanel = function() { if(currentRole==='admin') { loadUsers(); loadAdminReqs(); } };
-  window.genBoxes = function() {
-    const n = document.getElementById('f_boxes').value;
-    if(!n || n<1) return alert("Enter Total Boxes first");
-    const tb = document.getElementById('boxTable'); tb.innerHTML='';
-    for(let i=1; i<=n; i++) tb.innerHTML += `<tr><td>${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="text-end val-chg small fw-bold">0.00</td></tr>`;
-  };
-  window.cBox = function(el) {
-    const r=el.closest('tr'), i=r.querySelectorAll('input');
-    const w=parseFloat(i[0].value)||0, l=parseFloat(i[1].value)||0, b=parseFloat(i[2].value)||0, h=parseFloat(i[3].value)||0;
-    const chg=Math.max(w, (l*b*h)/5000); r.querySelector('.val-chg').textContent=chg.toFixed(2);
-    let tot=0; document.querySelectorAll('.val-chg').forEach(x=>tot+=parseFloat(x.textContent));
-    document.getElementById('f_totalChg').value=tot.toFixed(2);
-  };
-  window.logout = function() { location.reload(); };
 
   function showSpin(x){document.getElementById('spinner').style.display=x?'flex':'none';}
   async function callApi(d){ try{const r=await fetch(API_URL,{method:"POST",body:JSON.stringify(d)}); return await r.json();}catch(e){return{result:"error"};}}
@@ -245,6 +226,7 @@
     }
   }
 
+  // --- RENDERERS ---
   function renderOverview() {
     const d = window.APP_DATA.overview;
     const s = window.APP_DATA.stats;
@@ -254,22 +236,59 @@
     document.getElementById('ovAuto').textContent = d.auto.length;
     document.getElementById('ovPaper').textContent = d.paper.length;
     
-    const fill = (id, list) => {
-      const el=document.getElementById(id); el.innerHTML='';
-      if(!list.length) el.innerHTML='<div class="text-center p-3 text-muted small">All clear!</div>';
-      list.forEach(x => {
-        let userBadge = x.user ? `<div class="small text-secondary mb-1"><i class="bi bi-person me-1"></i>${x.user}</div>` : '';
-        el.innerHTML += `
-          <div class="list-group-item">
-            <div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div>
-            <div class="small fw-bold">${x.client}</div>
-            ${userBadge}
-            <div class="small text-primary">${x.details}</div>
-          </div>`;
-      });
+    // Sort and fill Pending Automation list (Local Shipments)
+    const fillAuto = (id, list) => {
+        const el = document.getElementById(id);
+        el.innerHTML = '';
+        if (!list || list.length === 0) {
+            el.innerHTML = '<div class="text-center p-3 text-muted small">All clear!</div>';
+            return;
+        }
+        list.forEach(x => {
+            let userBadge = x.user ? `<div class="small text-secondary mb-1"><i class="bi bi-person me-1"></i>${x.user}</div>` : '';
+            el.innerHTML += `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div>
+                    <div class="small fw-bold">${x.client}</div>
+                    ${userBadge}
+                    <div class="small text-primary">${x.details}</div>
+                </div>`;
+        });
     };
-    fill('listAuto', d.auto);
-    fill('listPaper', d.paper);
+
+    // Sort and fill Pending Paperwork list (FMS Data)
+    const fillPaper = (id, list) => {
+        const el = document.getElementById(id);
+        el.innerHTML = '';
+        if (!list || list.length === 0) {
+            el.innerHTML = '<div class="text-center p-3 text-muted small">All clear!</div>';
+            return;
+        }
+
+        // Sort: Unassigned (empty assignee) first, then Assigned
+        list.sort((a, b) => (a.assignee ? 1 : -1) - (b.assignee ? 1 : -1));
+
+        list.forEach(x => {
+            // Determine what to show: Assigned To Name OR Automation Doer Name
+            let badgeHtml = '';
+            if (x.assignee) {
+                badgeHtml = `<div class="small text-success fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i>Assigned to: ${x.assignee}</div>`;
+            } else {
+                badgeHtml = `<div class="small text-secondary mb-1"><i class="bi bi-robot me-1"></i>Auto by: ${x.autoDoer}</div>`;
+            }
+
+            el.innerHTML += `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div>
+                    <div class="small fw-bold">${x.client}</div>
+                    ${badgeHtml}
+                    <div class="small text-primary">${x.details}</div>
+                </div>`;
+        });
+    };
+
+    fillAuto('listAuto', d.auto);
+    fillPaper('listPaper', d.paper);
   }
 
   function renderTaskHub() {
@@ -312,6 +331,7 @@
     }
   }
 
+  // --- ACTIONS ---
   async function actAssign(id, type) {
     const s = document.getElementById('as_'+id).value; if(!s) return alert("Select Staff");
     document.getElementById('as_'+id).closest('tr').remove();
@@ -336,6 +356,14 @@
   }
   window.staffActDone = staffActDone;
 
+  // --- ADMIN PANEL ---
+  function loadAdminPanel() { 
+    if(currentRole === 'admin') {
+      loadUsers(); loadAdminReqs();
+    }
+  }
+  window.loadAdminPanel = loadAdminPanel;
+
   async function loadUsers() {
     const r = await fetchGet("getUsers");
     if(r.result==='success'){
@@ -358,10 +386,12 @@
     }
   }
 
+  // --- UTILS ---
   function initForms() {
     const dd = window.APP_DATA.dropdowns || {};
-    fillSel('f_net', dd.networks); 
+    fillSel('f_net', dd.networks || []); 
     
+    // Init TomSelect
     if(dd.clients) {
       window.tomInstances.client = new TomSelect("#f_client",{create:false, dropdownParent: 'body', placeholder: "Search Client..."});
     }
@@ -380,7 +410,7 @@
 
   function updateDropdowns() {
     const dd = window.APP_DATA.dropdowns || {};
-    fillSel('f_net', dd.networks);
+    fillSel('f_net', dd.networks || []);
     updateDropdownOptions();
     
     const ex = document.getElementById('f_extra'); ex.innerHTML='';
@@ -428,6 +458,23 @@
       document.getElementById('staffTaskView').style.display='block';
     }
   }
+
+  function genBoxes() {
+    const n = document.getElementById('f_boxes').value;
+    if(!n || n<1) return alert("Enter Total Boxes first");
+    const tb = document.getElementById('boxTable'); tb.innerHTML='';
+    for(let i=1; i<=n; i++) tb.innerHTML += `<tr><td>${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="text-end val-chg small fw-bold">0.00</td></tr>`;
+  }
+  window.genBoxes = genBoxes;
+
+  function cBox(el) {
+    const r=el.closest('tr'), i=r.querySelectorAll('input');
+    const w=parseFloat(i[0].value)||0, l=parseFloat(i[1].value)||0, b=parseFloat(i[2].value)||0, h=parseFloat(i[3].value)||0;
+    const chg=Math.max(w, (l*b*h)/5000); r.querySelector('.val-chg').textContent=chg.toFixed(2);
+    let tot=0; document.querySelectorAll('.val-chg').forEach(x=>tot+=parseFloat(x.textContent));
+    document.getElementById('f_totalChg').value=tot.toFixed(2);
+  }
+  window.cBox = cBox;
 
   document.getElementById('shipForm').onsubmit = async (e) => {
     e.preventDefault();
@@ -480,6 +527,32 @@
         e.innerHTML += opts;
     }
   }
+  
+  function loadOverview() { renderOverview(); }
+  window.loadOverview = loadOverview;
+  
+  function loadTaskHub() { renderTaskHub(); }
+  window.loadTaskHub = loadTaskHub;
+  
+  function logout() { location.reload(); }
+  window.logout = logout;
+  
+  function submitReassign() {
+    const to = document.getElementById('reassignStaff').value; if(!to) return;
+    bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide();
+    alert("Request Sent!"); 
+    callApi({action:"requestTransfer", taskId:currentReassign.id, type:currentReassign.type, by:currentUser, to:to});
+  }
+  window.submitReassign = submitReassign;
+
+  function reqTransfer(id, type){
+    currentReassign={id:id, type:type};
+    document.getElementById('reassignId').textContent=id;
+    const s=document.getElementById('reassignStaff'); s.innerHTML='<option value="">Select...</option>';
+    if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(x=>s.innerHTML+=`<option value="${x}">${x}</option>`);
+    new bootstrap.Modal(document.getElementById('reassignModal')).show();
+  }
+  window.reqTransfer = reqTransfer;
 </script>
 </body>
 </html>
