@@ -66,7 +66,8 @@
   </ul>
 
   <div class="tab-content">
-    <!-- INBOUND -->
+    
+    <!-- 1. INBOUND -->
     <div class="tab-pane fade" id="inbound-tab">
       <div class="row justify-content-center">
         <div class="col-xl-10">
@@ -96,7 +97,7 @@
       </div>
     </div>
 
-    <!-- OVERVIEW -->
+    <!-- 2. OVERVIEW -->
     <div class="tab-pane fade" id="overview-tab">
       <div class="row g-4 mb-4">
         <div class="col-md-4"><div class="overview-stat-card border-success border-opacity-25 bg-success bg-opacity-10"><div class="overview-label text-success">Today's Inbound (<span id="ovDate"></span>)</div><div class="stat-val text-success" id="ovInbound">0</div></div></div>
@@ -109,7 +110,7 @@
       </div>
     </div>
 
-    <!-- TASK HUB -->
+    <!-- 3. TASK HUB -->
     <div class="tab-pane fade" id="taskhub-tab">
       <div id="staffTaskView" style="display:none;">
         <ul class="nav nav-tabs mb-3">
@@ -137,7 +138,7 @@
       </div>
     </div>
 
-    <!-- ADMIN -->
+    <!-- 4. ADMIN -->
     <div class="tab-pane fade" id="admin-tab">
       <div class="row g-4">
         <div class="col-md-6"><div class="panel-card p-3 h-100"><h6 class="fw-bold mb-3 text-warning">Transfer Requests</h6><div id="adminReqList" class="list-group list-group-flush"></div></div></div>
@@ -217,7 +218,6 @@
         if(r.workflow) {
           window.APP_DATA.workflow.toAssign = r.workflow.toAssign || [];
           window.APP_DATA.workflow.toDo = r.workflow.toDo || [];
-          window.APP_DATA.workflow.history = r.workflow.history || [];
         }
         
         if(firstLoad) {
@@ -349,19 +349,19 @@
   window.staffActDone = staffActDone;
 
   // --- ADMIN PANEL ---
+  function loadAdminPanel() { 
+    if(currentRole === 'admin') {
+      loadUsers(); loadAdminReqs();
+    }
+  }
+  window.loadAdminPanel = loadAdminPanel;
+
   async function loadUsers() {
     const r = await fetchGet("getUsers");
     if(r.result==='success'){
       const t = document.getElementById('userTable'); t.innerHTML='';
       if(r.users) r.users.forEach(u => {
-        // Password column with toggle logic
-        t.innerHTML += `
-          <tr>
-            <td>${u[0]}</td>
-            <td class="text-muted small" style="font-family:monospace; cursor:pointer; user-select:none;" onclick="this.textContent=this.textContent==='****'?'${u[1]}':'****'" title="Click to reveal">****</td>
-            <td><small>${u[2]}</small></td>
-            <td><button class="btn btn-danger btn-sm py-0" onclick="delUser('${u[0]}')">×</button></td>
-          </tr>`;
+        t.innerHTML += `<tr><td>${u[0]}</td><td class="text-muted small" style="font-family:monospace; cursor:pointer;" onclick="this.textContent=this.textContent==='****'?'${u[1]}':'****'" title="Click to reveal">****</td><td><small>${u[2]}</small></td><td><button class="btn btn-danger btn-sm py-0" onclick="delUser('${u[0]}')">×</button></td></tr>`;
       });
     }
   }
@@ -371,20 +371,7 @@
     const el = document.getElementById('adminReqList'); el.innerHTML='';
     if(r.requests && r.requests.length > 0) {
       r.requests.forEach(x => {
-        // Now displaying Task Type inside the badge
-        el.innerHTML += `
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <small>
-               <b>${x.taskId}</b> 
-               <span class="badge bg-secondary text-light ms-1" style="font-size:0.65rem">${x.type}</span>
-               <br>
-               ${x.by} <i class="bi bi-arrow-right"></i> ${x.to}
-            </small>
-            <div>
-               <button class="btn btn-sm btn-outline-success py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">✓</button>
-               <button class="btn btn-sm btn-outline-danger py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">✕</button>
-            </div>
-          </div>`;
+        el.innerHTML += `<div class="list-group-item d-flex justify-content-between align-items-center"><small><b>${x.taskId}</b> <span class="badge bg-secondary text-light" style="font-size:0.6rem">${x.type}</span><br>${x.by} <i class="bi bi-arrow-right"></i> ${x.to}</small><div><button class="btn btn-sm btn-outline-success py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">✓</button><button class="btn btn-sm btn-outline-danger py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">✕</button></div></div>`;
       });
     } else {
       el.innerHTML = '<div class="text-center p-3 text-muted small">No pending requests</div>';
