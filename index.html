@@ -18,7 +18,6 @@
     .logo-img { height: 42px; width: auto; object-fit: contain; }
     .navbar-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
     .panel-card { background: white; border-radius: var(--card-radius); border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.01); height: 100%; }
-    .panel-header { background: #f8fafc; padding: 15px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #475569; display: flex; justify-content: space-between; align-items: center; }
     .task-card-horizontal { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; transition: transform 0.2s; }
     .task-card-horizontal:hover { transform: translateY(-2px); box-shadow: 0 5px 15px -3px rgba(0,0,0,0.05); }
     .form-control, .form-select { border-radius: 8px; border-color: #cbd5e1; }
@@ -46,7 +45,7 @@
     <h5 class="fw-bold mb-4 text-center text-dark">Portal Access</h5>
     <form onsubmit="event.preventDefault(); doLogin();">
       <div class="form-floating mb-3"><input type="text" class="form-control" id="uIn" required><label>Username</label></div>
-      <div class="form-floating mb-4"><input type="password" class="form-control" id="pIn" required><label>Password</label></div>
+      <div class="form-floating mb-4"><input type="text" class="form-control" id="pIn" required style="-webkit-text-security: disc;"><label>Password</label></div>
       <button type="submit" class="btn btn-dark w-100 py-3 rounded-pill fw-bold">LOG IN</button>
     </form>
     <div id="loginError" class="alert alert-danger mt-3 small p-2 border-0 fw-bold text-center" style="display:none;"></div>
@@ -151,7 +150,11 @@
   </div>
 </div>
 
+<!-- Modal: Reassign -->
 <div class="modal fade" id="reassignModal" tabindex="-1"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h6 class="modal-title fw-bold">Transfer Task</h6></div><div class="modal-body"><p class="small text-muted">Transfer <b id="reassignId"></b> to:</p><select id="reassignStaff" class="form-select mb-3"></select><button class="btn btn-primary w-100 btn-sm" onclick="submitReassign()">Send Request</button></div></div></div></div>
+
+<!-- Modal: Admin Alert -->
+<div class="modal fade" id="adminAlertModal" tabindex="-1"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content text-center p-3 border-warning border-3"><h5 class="fw-bold text-warning">New Requests!</h5><p class="mb-3">Staff are requesting task transfers.</p><button class="btn btn-warning w-100" data-bs-dismiss="modal" onclick="document.querySelector('#nav-admin button').click()">View Requests</button></div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
@@ -164,6 +167,11 @@
   window.APP_DATA = { staff: [], dropdowns: {}, overview: { auto:[], paper:[] }, workflow: { toAssign:[], toDo:[] }, stats: {} };
   window.tomInstances = { client: null, dest: null };
 
+  // --- GLOBALS ---
+  window.loadOverview = function() { renderOverview(); };
+  window.loadTaskHub = function() { renderTaskHub(); };
+  window.loadAdminPanel = function() { if(currentRole==='admin') { loadUsers(); loadAdminReqs(); } };
+  
   function showSpin(x){document.getElementById('spinner').style.display=x?'flex':'none';}
   async function callApi(d){ try{const r=await fetch(API_URL,{method:"POST",body:JSON.stringify(d)}); return await r.json();}catch(e){return{result:"error"};}}
   async function fetchGet(a){ try{const r=await fetch(`${API_URL}?action=${a}&user=${currentUser}`); return await r.json();}catch(e){return{result:"error"};}}
@@ -223,6 +231,12 @@
       const b = document.getElementById('adminBadge');
       b.textContent = c;
       b.style.display = c > 0 ? 'inline-block' : 'none';
+      
+      // Admin Popup Trigger
+      if(c > 0 && !window.adminAlertShown) {
+         new bootstrap.Modal(document.getElementById('adminAlertModal')).show();
+         window.adminAlertShown = true; // Show only once per session or reset on logic
+      }
     }
   }
 
@@ -236,59 +250,27 @@
     document.getElementById('ovAuto').textContent = d.auto.length;
     document.getElementById('ovPaper').textContent = d.paper.length;
     
-    // Sort and fill Pending Automation list (Local Shipments)
-    const fillAuto = (id, list) => {
-        const el = document.getElementById(id);
-        el.innerHTML = '';
-        if (!list || list.length === 0) {
-            el.innerHTML = '<div class="text-center p-3 text-muted small">All clear!</div>';
-            return;
-        }
-        list.forEach(x => {
-            let userBadge = x.user ? `<div class="small text-secondary mb-1"><i class="bi bi-person me-1"></i>${x.user}</div>` : '';
-            el.innerHTML += `
-                <div class="list-group-item">
-                    <div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div>
-                    <div class="small fw-bold">${x.client}</div>
-                    ${userBadge}
-                    <div class="small text-primary">${x.details}</div>
-                </div>`;
-        });
+    const fill = (id, list) => {
+      const el=document.getElementById(id); el.innerHTML='';
+      if(!list.length) el.innerHTML='<div class="text-center p-3 text-muted small">All clear!</div>';
+      list.forEach(x => {
+        let userBadge = x.user ? `<div class="small text-secondary mb-1"><i class="bi bi-person me-1"></i>${x.user}</div>` : '';
+        let assigneeBadge = x.assignee ? `<div class="small text-success fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i>Assigned to: ${x.assignee}</div>` : (x.autoDoer ? `<div class="small text-secondary mb-1"><i class="bi bi-robot me-1"></i>Auto by: ${x.autoDoer}</div>` : '');
+
+        el.innerHTML += `
+          <div class="list-group-item">
+            <div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div>
+            <div class="small fw-bold">${x.client}</div>
+            ${userBadge}
+            ${assigneeBadge}
+            <div class="small text-primary">${x.details}</div>
+          </div>`;
+      });
     };
-
-    // Sort and fill Pending Paperwork list (FMS Data)
-    const fillPaper = (id, list) => {
-        const el = document.getElementById(id);
-        el.innerHTML = '';
-        if (!list || list.length === 0) {
-            el.innerHTML = '<div class="text-center p-3 text-muted small">All clear!</div>';
-            return;
-        }
-
-        // Sort: Unassigned (empty assignee) first, then Assigned
-        list.sort((a, b) => (a.assignee ? 1 : -1) - (b.assignee ? 1 : -1));
-
-        list.forEach(x => {
-            // Determine what to show: Assigned To Name OR Automation Doer Name
-            let badgeHtml = '';
-            if (x.assignee) {
-                badgeHtml = `<div class="small text-success fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i>Assigned to: ${x.assignee}</div>`;
-            } else {
-                badgeHtml = `<div class="small text-secondary mb-1"><i class="bi bi-robot me-1"></i>Auto by: ${x.autoDoer}</div>`;
-            }
-
-            el.innerHTML += `
-                <div class="list-group-item">
-                    <div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div>
-                    <div class="small fw-bold">${x.client}</div>
-                    ${badgeHtml}
-                    <div class="small text-primary">${x.details}</div>
-                </div>`;
-        });
-    };
-
-    fillAuto('listAuto', d.auto);
-    fillPaper('listPaper', d.paper);
+    fill('listAuto', d.auto);
+    
+    const sortedPaper = [...d.paper].sort((a,b) => (a.assignee ? 1 : -1) - (b.assignee ? 1 : -1));
+    fill('listPaper', sortedPaper);
   }
 
   function renderTaskHub() {
@@ -325,7 +307,10 @@
         tc.innerHTML += `
           <div class="task-card-horizontal" id="todo_card_${t.id}">
             <div><span class="badge bg-warning text-dark mb-1">Assigned to Me</span><br><strong>${t.id}</strong><div class="small">${t.subtitle}</div></div>
-            <button class="btn btn-success btn-sm px-4" onclick="staffActDone('${t.id}')">Mark Done</button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-success btn-sm px-4" onclick="staffActDone('${t.id}')">Mark Done</button>
+                <button class="btn btn-outline-secondary btn-sm px-3" onclick="reqTransfer('${t.id}','${t.type}')">Transfer</button>
+            </div>
           </div>`;
       });
     }
@@ -357,13 +342,6 @@
   window.staffActDone = staffActDone;
 
   // --- ADMIN PANEL ---
-  function loadAdminPanel() { 
-    if(currentRole === 'admin') {
-      loadUsers(); loadAdminReqs();
-    }
-  }
-  window.loadAdminPanel = loadAdminPanel;
-
   async function loadUsers() {
     const r = await fetchGet("getUsers");
     if(r.result==='success'){
@@ -408,17 +386,6 @@
     document.getElementById('f_date').valueAsDate = new Date();
   }
 
-  function updateDropdowns() {
-    const dd = window.APP_DATA.dropdowns || {};
-    fillSel('f_net', dd.networks || []);
-    updateDropdownOptions();
-    
-    const ex = document.getElementById('f_extra'); ex.innerHTML='';
-    if(dd.extraCharges) {
-        dd.extraCharges.forEach(x => ex.innerHTML += `<div class="form-check form-check-inline bg-light border px-2 py-1 rounded small"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1">${x}</label></div>`);
-    }
-  }
-
   function updateDropdownOptions() {
     const dd = window.APP_DATA.dropdowns || {};
     if(window.tomInstances.client && dd.clients) {
@@ -430,6 +397,17 @@
       window.tomInstances.dest.clearOptions();
       dd.destinations.forEach(d => window.tomInstances.dest.addOption({value:d, text:d}));
       window.tomInstances.dest.refreshOptions(false);
+    }
+  }
+
+  function updateDropdowns() {
+    const dd = window.APP_DATA.dropdowns || {};
+    fillSel('f_net', dd.networks || []);
+    updateDropdownOptions();
+    
+    const ex = document.getElementById('f_extra'); ex.innerHTML='';
+    if(dd.extraCharges) {
+        dd.extraCharges.forEach(x => ex.innerHTML += `<div class="form-check form-check-inline bg-light border px-2 py-1 rounded small"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1">${x}</label></div>`);
     }
   }
 
@@ -459,22 +437,20 @@
     }
   }
 
-  function genBoxes() {
+  window.genBoxes = function() {
     const n = document.getElementById('f_boxes').value;
     if(!n || n<1) return alert("Enter Total Boxes first");
     const tb = document.getElementById('boxTable'); tb.innerHTML='';
     for(let i=1; i<=n; i++) tb.innerHTML += `<tr><td>${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="text-end val-chg small fw-bold">0.00</td></tr>`;
   }
-  window.genBoxes = genBoxes;
-
-  function cBox(el) {
+  
+  window.cBox = function(el) {
     const r=el.closest('tr'), i=r.querySelectorAll('input');
     const w=parseFloat(i[0].value)||0, l=parseFloat(i[1].value)||0, b=parseFloat(i[2].value)||0, h=parseFloat(i[3].value)||0;
     const chg=Math.max(w, (l*b*h)/5000); r.querySelector('.val-chg').textContent=chg.toFixed(2);
     let tot=0; document.querySelectorAll('.val-chg').forEach(x=>tot+=parseFloat(x.textContent));
     document.getElementById('f_totalChg').value=tot.toFixed(2);
   }
-  window.cBox = cBox;
 
   document.getElementById('shipForm').onsubmit = async (e) => {
     e.preventDefault();
@@ -527,15 +503,6 @@
         e.innerHTML += opts;
     }
   }
-  
-  function loadOverview() { renderOverview(); }
-  window.loadOverview = loadOverview;
-  
-  function loadTaskHub() { renderTaskHub(); }
-  window.loadTaskHub = loadTaskHub;
-  
-  function logout() { location.reload(); }
-  window.logout = logout;
   
   function submitReassign() {
     const to = document.getElementById('reassignStaff').value; if(!to) return;
