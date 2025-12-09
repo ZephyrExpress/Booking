@@ -207,7 +207,7 @@
 
   function showSpin(x){document.getElementById('spinner').style.display=x?'flex':'none';}
   async function callApi(d){ try{const r=await fetch(API_URL,{method:"POST",body:JSON.stringify(d)}); return await r.json();}catch(e){return{result:"error"};}}
-  async function fetchGet(a){ try{const r=await fetch(`${API_URL}?action=${a}&user=${currentUser}`); return await r.json();}catch(e){return{result:"error"};}}
+  async function fetchGet(a){ try{const r=await fetch(`${API_URL}?action=${a}&user=${encodeURIComponent(currentUser)}`); return await r.json();}catch(e){return{result:"error"};}}
 
   // --- LOGIN ---
   async function doLogin(){
@@ -229,7 +229,7 @@
   async function syncData(firstLoad=false){
     if(firstLoad) showSpin(true);
     try {
-      const url = `${API_URL}?action=getAllData&user=${currentUser}`;
+      const url = `${API_URL}?action=getAllData&user=${encodeURIComponent(currentUser)}`;
       const r = await fetch(url).then(res => res.json());
       if(r.result === "success") {
         window.APP_DATA = { ...window.APP_DATA, ...r };
@@ -287,16 +287,15 @@
       list.forEach(x => {
         let userBadge = x.user ? `<div class="small text-secondary mb-1"><i class="bi bi-person me-1"></i>${x.user}</div>` : '';
         let assigneeBadge = x.assignee ? `<div class="small text-success fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i>Assigned to: ${x.assignee}</div>` : (x.autoDoer ? `<div class="small text-secondary mb-1"><i class="bi bi-robot me-1"></i>Auto by: ${x.autoDoer}</div>` : '');
-        // Removed netHtml variable usage here as it was causing duplication. 
-        // The netNo is already part of x.details from backend.
-        
+        let netHtml = x.netNo ? ` | Net# ${x.netNo}` : '';
+
         el.innerHTML += `
           <div class="list-group-item">
             <div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div>
             <div class="small fw-bold">${x.client}</div>
             ${userBadge}
             ${assigneeBadge}
-            <div class="small text-primary">${x.details}</div>
+            <div class="small text-primary">${x.details}${netHtml}</div>
           </div>`;
       });
     };
@@ -307,6 +306,7 @@
   function renderTaskHub() {
     if(currentRole === 'admin') {
       const tb = document.getElementById('poolTable'); tb.innerHTML='';
+      // Use adminPool for global view
       const pool = window.APP_DATA.adminPool || window.APP_DATA.overview.paper || [];
       
       pool.forEach(t => {
