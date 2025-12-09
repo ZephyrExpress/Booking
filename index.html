@@ -117,7 +117,7 @@
     <div class="tab-pane fade" id="overview-tab">
       
       <div class="d-flex justify-content-end mb-3">
-        <button class="btn btn-success btn-sm rounded-pill px-3 shadow-sm" onclick="exportOverviewExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Export Excel</button>
+        <button class="btn btn-success btn-sm rounded-pill px-3 shadow-sm" onclick="exportOverviewExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Export Detailed Report</button>
       </div>
 
       <div class="row g-4 mb-4">
@@ -155,7 +155,7 @@
         <div class="panel-card p-3">
           <div class="d-flex justify-content-between align-items-center mb-3">
              <h6 class="fw-bold m-0">Global Task Assignment Pool (Paperwork Only)</h6>
-             <button class="btn btn-success btn-sm" onclick="exportAdminPoolExcel()"><i class="bi bi-file-earmark-excel me-1"></i> Export Excel</button>
+             <button class="btn btn-success btn-sm" onclick="exportAdminPoolExcel()"><i class="bi bi-file-earmark-excel"></i> Export Pool</button>
           </div>
           <div class="table-responsive"><table class="table table-hover align-middle"><thead class="bg-light"><tr><th>ID</th><th>Type</th><th>Details</th><th>Assign To</th><th>Action</th></tr></thead><tbody id="poolTable"></tbody></table></div>
         </div>
@@ -278,27 +278,29 @@
     document.getElementById('ovAuto').textContent = d.auto.length;
     document.getElementById('ovPaper').textContent = d.paper.length;
     
+    // Sort: Unassigned first, then Assigned
+    const sortedPaper = [...d.paper].sort((a,b) => (a.assignee ? 1 : -1) - (b.assignee ? 1 : -1));
+
     const fill = (id, list) => {
       const el=document.getElementById(id); el.innerHTML='';
       if(!list.length) el.innerHTML='<div class="text-center p-3 text-muted small">All clear!</div>';
       list.forEach(x => {
         let userBadge = x.user ? `<div class="small text-secondary mb-1"><i class="bi bi-person me-1"></i>${x.user}</div>` : '';
         let assigneeBadge = x.assignee ? `<div class="small text-success fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i>Assigned to: ${x.assignee}</div>` : (x.autoDoer ? `<div class="small text-secondary mb-1"><i class="bi bi-robot me-1"></i>Auto by: ${x.autoDoer}</div>` : '');
-        let netHtml = x.netNo ? ` | Net# ${x.netNo}` : '';
-
+        // Removed netHtml variable usage here as it was causing duplication. 
+        // The netNo is already part of x.details from backend.
+        
         el.innerHTML += `
           <div class="list-group-item">
             <div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div>
             <div class="small fw-bold">${x.client}</div>
             ${userBadge}
             ${assigneeBadge}
-            <div class="small text-primary">${x.details}${netHtml}</div>
+            <div class="small text-primary">${x.details}</div>
           </div>`;
       });
     };
     fill('listAuto', d.auto);
-    
-    const sortedPaper = [...d.paper].sort((a,b) => (a.assignee ? 1 : -1) - (b.assignee ? 1 : -1));
     fill('listPaper', sortedPaper);
   }
 
@@ -310,7 +312,20 @@
       pool.forEach(t => {
         let opts = `<option value="">Assign...</option>`;
         if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(s => opts += `<option value="${s}">${s}</option>`);
-        tb.innerHTML += `<tr><td>${t.id}</td><td><span class="badge ${t.type==='Automation'?'bg-danger':'bg-warning text-dark'}">${t.type}</span></td><td><small>${t.details}</small></td><td><select id="as_${t.id}" class="form-select form-select-sm">${opts}</select></td><td><button class="btn btn-sm btn-success" onclick="actAssign('${t.id}','${t.type}')">✓</button></td></tr>`;
+        
+        let assignedVal = t.assignee || ""; 
+        let buttonLabel = t.assignee ? "Reassign" : "Assign";
+        let btnClass = t.assignee ? "btn-warning" : "btn-success";
+
+        tb.innerHTML += `
+          <tr>
+            <td class="fw-bold">${t.id}</td>
+            <td><div class="small fw-bold">${t.client}</div><small class="text-muted">${t.net}</small></td>
+            <td><span class="small text-muted">${t.details}</span></td>
+            <td><select id="as_${t.id}" class="form-select form-select-sm">${opts}</select></td>
+            <td><button class="btn btn-sm ${btnClass} shadow-sm" onclick="actAssign('${t.id}','${t.type}')">${buttonLabel}</button></td>
+          </tr>`;
+          if(assignedVal) document.getElementById(`as_${t.id}`).value = assignedVal;
       });
     } else {
       const toAssign = window.APP_DATA.workflow.toAssign;
@@ -394,7 +409,17 @@
     const el = document.getElementById('adminReqList'); el.innerHTML='';
     if(r.requests && r.requests.length > 0) {
       r.requests.forEach(x => {
-        el.innerHTML += `<div class="list-group-item d-flex justify-content-between align-items-center"><small><b>${x.taskId}</b> <span class="badge bg-secondary text-light" style="font-size:0.6rem">${x.type}</span><br>${x.by} <i class="bi bi-arrow-right"></i> ${x.to}</small><div><button class="btn btn-sm btn-outline-success py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">✓</button><button class="btn btn-sm btn-outline-danger py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">✕</button></div></div>`;
+        el.innerHTML += `
+          <div class="list-group-item d-flex justify-content-between align-items-center">
+            <small>
+               <span class="fw-bold text-dark">${x.taskId}</span> <span class="badge bg-secondary text-light ms-1" style="font-size:0.6rem">${x.type}</span>
+               <div class="mt-1 d-flex align-items-center text-muted">${x.by} <i class="bi bi-arrow-right mx-2 small"></i> <strong class="text-dark">${x.to}</strong></div>
+            </small>
+            <div class="d-flex gap-2">
+               <button class="btn btn-sm btn-success py-1 px-2 shadow-sm" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')"><i class="bi bi-check-lg"></i></button>
+               <button class="btn btn-sm btn-danger py-1 px-2 shadow-sm" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')"><i class="bi bi-x-lg"></i></button>
+            </div>
+          </div>`;
       });
     } else {
       el.innerHTML = '<div class="text-center p-3 text-muted small">No pending requests</div>';
