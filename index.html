@@ -287,7 +287,8 @@
       list.forEach(x => {
         let userBadge = x.user ? `<div class="small text-secondary mb-1"><i class="bi bi-person me-1"></i>${x.user}</div>` : '';
         let assigneeBadge = x.assignee ? `<div class="small text-success fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i>Assigned to: ${x.assignee}</div>` : (x.autoDoer ? `<div class="small text-secondary mb-1"><i class="bi bi-robot me-1"></i>Auto by: ${x.autoDoer}</div>` : '');
-        let netHtml = x.netNo ? ` | Net# ${x.netNo}` : '';
+        // Removed netHtml variable usage here as it was causing duplication.
+        // The netNo is already part of x.details from backend.
 
         el.innerHTML += `
           <div class="list-group-item">
@@ -295,7 +296,7 @@
             <div class="small fw-bold">${x.client}</div>
             ${userBadge}
             ${assigneeBadge}
-            <div class="small text-primary">${x.details}${netHtml}</div>
+            <div class="small text-primary">${x.details}</div>
           </div>`;
       });
     };
@@ -572,7 +573,7 @@
   window.exportOverviewExcel = function() {
     const d = window.APP_DATA.overview;
     
-    // Auto Map: Ensure date/boxes/weights are passed
+    // Detailed Mapping for Automation
     const auto = d.auto.map(x => ({ 
         "AWB": x.id, "Date": x.date, "Type": x.type, "Network": x.net, 
         "Client": x.client, "Dest": x.dest, "Boxes": x.boxes, 
@@ -580,7 +581,7 @@
         "Entry User": x.user, "Extra": x.extra, "Remarks": x.rem
     }));
     
-    // Paper Map
+    // Detailed Mapping for Paperwork
     const paper = d.paper.map(x => ({ 
         "AWB": x.id, "Date": x.date, "Type": x.type, "Network": x.net, "Net No": x.netNo,
         "Client": x.client, "Dest": x.dest, "Boxes": x.boxes, 
