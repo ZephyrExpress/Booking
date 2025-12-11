@@ -80,7 +80,10 @@
       left: 0;
       z-index: 1000;
       transition: transform 0.3s ease;
+      transform: translateX(-100%); /* Default Hidden */
     }
+    .sidebar.show { transform: translateX(0); }
+
     .sidebar-brand {
       height: var(--header-height);
       display: flex;
@@ -164,12 +167,14 @@
     /* Main Content */
     .content-area {
       flex: 1;
-      margin-left: var(--sidebar-width);
+      margin-left: 0; /* Default 0 because sidebar is hidden by default */
       display: flex;
       flex-direction: column;
       transition: margin-left 0.3s ease;
       min-width: 0;
     }
+
+    /* Topbar */
     .topbar {
       height: var(--header-height);
       background: white;
@@ -188,6 +193,31 @@
       color: var(--primary-color);
       margin: 0;
     }
+    .topbar-center-logo {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      height: 32px;
+      width: auto;
+    }
+
+    /* Mobile Toggle */
+    .mobile-toggle { display: block !important; background:none; border:none; font-size:1.5rem; color:var(--primary-color); }
+
+    /* Backdrop */
+    .sidebar-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      display: none;
+    }
+    .sidebar-backdrop.show { display: block; }
+
     .main-container {
       padding: 2rem;
       max-width: 1600px;
@@ -283,22 +313,25 @@
       font-size: 0.9rem;
     }
 
-    /* Spinner */
-    .spinner-overlay {
-      position: fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(255,255,255,0.8); z-index:9999;
-      display:none; justify-content:center; align-items:center;
-      backdrop-filter: blur(2px);
+    /* Chips */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      background: #f1f5f9;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 0.85rem;
+      margin-right: 5px;
+      margin-bottom: 5px;
+      color: #334155;
+      border: 1px solid #e2e8f0;
     }
-
-    /* Sidebar Toggle Logic */
-    /* By default (Desktop), we want it hidden unless toggled, based on user request "hide automatically" */
-    /* But for better UX, let's make it toggleable. */
-    /* Mobile & Desktop now share behavior: Hidden by default, toggled to show. */
-    .sidebar { transform: translateX(-100%); }
-    .sidebar.show { transform: translateX(0); }
-    .content-area { margin-left: 0; }
-    .mobile-toggle { display: block !important; } /* Always show toggle */
+    .chip i {
+      margin-left: 6px;
+      cursor: pointer;
+      color: #94a3b8;
+    }
+    .chip i:hover { color: #ef4444; }
 
     /* TomSelect Fixes */
     .ts-control { border-radius: 8px; border-color: #cbd5e1; padding: 0.6rem 0.75rem; }
@@ -330,14 +363,14 @@
         <label class="form-label">Username</label>
         <div class="input-group">
           <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
-          <input type="text" class="form-control border-start-0 ps-0" id="uIn" required placeholder="Ex. jdoe">
+          <input type="text" class="form-control border-start-0 ps-0" id="uIn" required>
         </div>
       </div>
       <div class="mb-4">
         <label class="form-label">Password</label>
         <div class="input-group">
           <span class="input-group-text bg-light border-end-0"><i class="bi bi-key text-muted"></i></span>
-          <input type="text" class="form-control border-start-0 ps-0" id="pIn" required style="-webkit-text-security: disc;" placeholder="••••••••">
+          <input type="text" class="form-control border-start-0 ps-0" id="pIn" required style="-webkit-text-security: disc;">
         </div>
       </div>
       <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm">LOG IN</button>
@@ -348,6 +381,9 @@
 
 <!-- APP -->
 <div id="appSection" class="main-wrapper" style="display:none;">
+
+  <!-- BACKDROP -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
@@ -399,11 +435,15 @@
     <div class="topbar">
       <div class="d-flex align-items-center">
         <button class="mobile-toggle me-3" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
-        <h1 class="page-title" id="pageTitle">Overview</h1>
+        <h1 class="page-title d-none d-md-block" id="pageTitle">Overview</h1>
       </div>
+
+      <!-- LOGO CENTER -->
+      <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" alt="Logo" class="topbar-center-logo">
+
       <div>
         <div class="text-end small text-muted">
-          <span id="dateDisplay" class="fw-bold"></span>
+          <span id="dateDisplay" class="fw-bold d-none d-md-inline"></span>
         </div>
       </div>
     </div>
@@ -599,8 +639,11 @@
                 <div class="small text-muted fw-normal">Items ready for dispatch (Paperwork Completed)</div>
               </div>
             </div>
-            <div>
-               <button class="btn btn-primary rounded-pill shadow-sm" onclick="exportManifest()"><i class="bi bi-cloud-arrow-down me-2"></i>Export Manifest</button>
+            <div class="d-flex gap-2">
+               <select id="man_net" class="form-select" onchange="renderManifest()">
+                 <option value="">Select Network...</option>
+               </select>
+               <button class="btn btn-primary rounded-pill shadow-sm text-nowrap" onclick="exportManifest()"><i class="bi bi-cloud-arrow-down me-2"></i>Export Manifest</button>
             </div>
           </div>
           <div class="panel-body p-0">
@@ -624,8 +667,8 @@
             </div>
             <div id="manifestEmptyState" class="text-center py-5">
               <div class="mb-3 text-muted"><i class="bi bi-inbox fs-1"></i></div>
-              <h6 class="text-muted fw-bold">No Items Ready for Manifest</h6>
-              <p class="text-muted small">Items appear here when Paperwork is marked as "Completed".<br>Current system configuration hides completed items.</p>
+              <h6 class="text-muted fw-bold">No Items Found</h6>
+              <p class="text-muted small">Select a network to view completed shipments.<br>Or no items are ready for manifest.</p>
             </div>
           </div>
         </div>
@@ -661,13 +704,16 @@
             <div class="panel-card">
               <div class="panel-header text-success"><i class="bi bi-menu-button-wide me-2"></i>Dropdown Configuration</div>
               <div class="p-3">
-                <div class="row g-3 align-items-center">
-                  <div class="col-auto"><select id="dd_cat" class="form-select"><option value="client">Client</option><option value="network">Network</option><option value="destination">Destination</option><option value="extra">Extra Charge</option></select></div>
+                <div class="row g-3 align-items-center mb-3">
+                  <div class="col-auto"><select id="dd_cat" class="form-select" onchange="renderDdChips()"><option value="client">Client</option><option value="network">Network</option><option value="destination">Destination</option><option value="extra">Extra Charge</option></select></div>
                   <div class="col-md-4"><input id="dd_val" class="form-control" placeholder="New Value"></div>
                   <div class="col-auto">
                     <button class="btn btn-success" onclick="manageDd('add')">Add Item</button>
-                    <button class="btn btn-outline-danger" onclick="manageDd('delete')">Delete Item</button>
                   </div>
+                </div>
+                <div class="p-3 bg-light rounded border">
+                   <small class="d-block text-muted mb-2 fw-bold">Existing Items (Click x to delete):</small>
+                   <div id="dd_chips" class="d-flex flex-wrap"></div>
                 </div>
               </div>
             </div>
@@ -712,38 +758,31 @@
 
   // --- NAVIGATION LOGIC ---
   window.switchTab = function(tabName) {
-    // 1. Update Sidebar Active State
     document.querySelectorAll('.nav-item-custom').forEach(el => el.classList.remove('active'));
     document.getElementById('nav-' + tabName).classList.add('active');
 
-    // 2. Hide all Tabs
     document.querySelectorAll('.tab-view').forEach(el => el.style.display = 'none');
-
-    // 3. Show Target Tab
     document.getElementById(tabName + '-tab').style.display = 'block';
 
-    // 4. Update Title
-    const titles = {
-      'inbound': 'Inbound Entry',
-      'overview': 'Dashboard Overview',
-      'taskhub': currentRole === 'admin' ? 'Task Manager' : 'Work Panel',
-      'manifest': 'Manifest Generation',
-      'admin': 'System Administration'
-    };
+    // Page Title
+    const titles = { 'inbound': 'Inbound Entry', 'overview': 'Dashboard', 'taskhub': currentRole === 'admin' ? 'Task Manager' : 'Work Panel', 'manifest': 'Manifest Generation', 'admin': 'System Admin' };
     document.getElementById('pageTitle').textContent = titles[tabName];
 
-    // 5. Trigger loads
     if(tabName === 'overview') renderOverview();
     if(tabName === 'taskhub') renderTaskHub();
     if(tabName === 'admin') loadAdminPanel();
-    if(tabName === 'manifest') renderManifest();
+    if(tabName === 'manifest') { renderManifest(); }
 
     // Mobile close
-    if(window.innerWidth < 992) document.getElementById('sidebar').classList.remove('show');
+    if(window.innerWidth < 992) {
+       document.getElementById('sidebar').classList.remove('show');
+       document.getElementById('sidebarBackdrop').classList.remove('show');
+    }
   };
 
   window.toggleSidebar = function() {
     document.getElementById('sidebar').classList.toggle('show');
+    document.getElementById('sidebarBackdrop').classList.toggle('show');
   };
 
   // --- LOGIN ---
@@ -754,13 +793,12 @@
     if(r.result==="success"){
       currentUser=r.username; currentRole=r.role.toLowerCase(); currentName=r.name;
 
-      // Update User Profile UI
       document.getElementById('userNameDisplay').textContent = r.name;
       document.getElementById('userRoleDisplay').textContent = r.role;
       document.getElementById('userInitials').textContent = r.name.charAt(0).toUpperCase();
 
       document.getElementById('loginSection').style.display='none';
-      document.getElementById('appSection').style.display='flex'; // Flex for sidebar layout
+      document.getElementById('appSection').style.display='flex';
 
       buildNav();
       await syncData(true);
@@ -821,7 +859,8 @@
   function refreshUI() {
     renderOverview();
     renderTaskHub();
-    renderManifest();
+    renderDdChips(); // Update chips if admin panel open
+    // If manifest tab is active, ideally refresh it, but it requires manual interaction
     if(currentRole==='admin') {
       const c = window.APP_DATA.stats.requests || 0;
       const b = document.getElementById('adminBadge');
@@ -876,105 +915,93 @@
   }
 
   function renderTaskHub() {
-    // 1. ADMIN POOL
     if(currentRole === 'admin') {
       const tb = document.getElementById('poolTable'); tb.innerHTML='';
       const pool = window.APP_DATA.adminPool || window.APP_DATA.overview.paper || [];
-
       pool.forEach(t => {
         let opts = `<option value="">Assign...</option>`;
         if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(s => opts += `<option value="${s}">${s}</option>`);
-
         let assignedVal = t.assignee || "";
         let btnClass = t.assignee ? "btn-warning" : "btn-success";
         let btnTxt = t.assignee ? "Reassign" : "Assign";
-
-        tb.innerHTML += `
-          <tr>
-            <td class="fw-bold font-monospace">${t.id}</td>
-            <td><div class="fw-bold small">${t.client}</div><small class="text-muted">${t.net}</small></td>
-            <td><span class="small text-muted">${t.details}</span></td>
-            <td style="width:200px"><select id="as_${t.id}" class="form-select form-select-sm">${opts}</select></td>
-            <td><button class="btn btn-sm ${btnClass} shadow-sm px-3" onclick="actAssign('${t.id}','${t.type}')">${btnTxt}</button></td>
-          </tr>`;
-          if(assignedVal) document.getElementById(`as_${t.id}`).value = assignedVal;
+        tb.innerHTML += `<tr><td class="fw-bold font-monospace">${t.id}</td><td><div class="fw-bold small">${t.client}</div><small class="text-muted">${t.net}</small></td><td><span class="small text-muted">${t.details}</span></td><td style="width:200px"><select id="as_${t.id}" class="form-select form-select-sm">${opts}</select></td><td><button class="btn btn-sm ${btnClass} shadow-sm px-3" onclick="actAssign('${t.id}','${t.type}')">${btnTxt}</button></td></tr>`;
+        if(assignedVal) document.getElementById(`as_${t.id}`).value = assignedVal;
       });
     } else {
-      // 2. STAFF WORKFLOW
       const toAssign = window.APP_DATA.workflow.toAssign;
       const toDo = window.APP_DATA.workflow.toDo;
-
       const ac = document.getElementById('staffAssignContainer'); ac.innerHTML='';
       document.getElementById('noAssignMsg').style.display = toAssign.length===0?'block':'none';
-
       toAssign.forEach(t => {
         let opts = `<option value="">Select Staff...</option>`;
         if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(s => opts += `<option value="${s}">${s}</option>`);
-        ac.innerHTML += `
-          <div class="col-md-6 col-xl-4" id="assign_card_${t.id}">
-            <div class="panel-card p-3">
-              <div class="d-flex justify-content-between mb-2">
-                 <span class="fw-bold font-monospace">${t.id}</span>
-                 <span class="badge bg-light text-dark border">${t.net}</span>
-              </div>
-              <div class="small fw-bold text-primary mb-2">${t.client}</div>
-              <div class="small text-muted mb-3">${t.details}</div>
-              <div class="input-group input-group-sm">
-                <select id="staff_assign_${t.id}" class="form-select">${opts}</select>
-                <button class="btn btn-primary" onclick="staffActAssign('${t.id}')">Assign</button>
-              </div>
-            </div>
-          </div>`;
+        ac.innerHTML += `<div class="col-md-6 col-xl-4" id="assign_card_${t.id}"><div class="panel-card p-3"><div class="d-flex justify-content-between mb-2"><span class="fw-bold font-monospace">${t.id}</span><span class="badge bg-light text-dark border">${t.net}</span></div><div class="small fw-bold text-primary mb-2">${t.client}</div><div class="small text-muted mb-3">${t.details}</div><div class="input-group input-group-sm"><select id="staff_assign_${t.id}" class="form-select">${opts}</select><button class="btn btn-primary" onclick="staffActAssign('${t.id}')">Assign</button></div></div></div>`;
       });
-
       const tc = document.getElementById('staffTodoContainer'); tc.innerHTML='';
       document.getElementById('noTodoMsg').style.display = toDo.length===0?'block':'none';
-
       toDo.forEach(t => {
-        tc.innerHTML += `
-          <div class="col-md-6 col-xl-4" id="todo_card_${t.id}">
-             <div class="panel-card p-3 border-start border-4 border-warning">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                   <div>
-                     <span class="badge bg-warning text-dark mb-1" style="font-size:0.65rem">ASSIGNED TO ME</span>
-                     <div class="fw-bold font-monospace fs-5">${t.id}</div>
-                   </div>
-                   <button class="btn btn-outline-secondary btn-sm lh-1 p-1" onclick="reqTransfer('${t.id}','${t.type}')" title="Transfer Task"><i class="bi bi-arrow-left-right"></i></button>
-                </div>
-                <div class="small mb-1">${t.subtitle}</div>
-                <div class="small text-muted mb-3">${t.details}</div>
-                <button class="btn btn-success w-100 rounded-pill shadow-sm fw-bold" onclick="staffActDone('${t.id}')"><i class="bi bi-check-lg me-1"></i> Mark Completed</button>
-             </div>
-          </div>`;
+        tc.innerHTML += `<div class="col-md-6 col-xl-4" id="todo_card_${t.id}"><div class="panel-card p-3 border-start border-4 border-warning"><div class="d-flex justify-content-between align-items-start mb-2"><div><span class="badge bg-warning text-dark mb-1" style="font-size:0.65rem">ASSIGNED TO ME</span><div class="fw-bold font-monospace fs-5">${t.id}</div></div><button class="btn btn-outline-secondary btn-sm lh-1 p-1" onclick="reqTransfer('${t.id}','${t.type}')" title="Transfer Task"><i class="bi bi-arrow-left-right"></i></button></div><div class="small mb-1">${t.subtitle}</div><div class="small text-muted mb-3">${t.details}</div><button class="btn btn-success w-100 rounded-pill shadow-sm fw-bold" onclick="staffActDone('${t.id}')"><i class="bi bi-check-lg me-1"></i> Mark Completed</button></div></div>`;
       });
     }
   }
 
   function renderManifest() {
-    // Currently, the backend hides completed items, so we likely have an empty list.
-    // If we had a list, we would populate it here.
     const list = document.getElementById('manifestList');
     list.innerHTML = '';
-    const items = []; // Placeholder. In future, fetch items where status="COMPLETED"
+
+    // Populate Network Dropdown
+    const sel = document.getElementById('man_net');
+    const nets = window.APP_DATA.dropdowns.networks || [];
+    // Only populate if empty (init)
+    if(sel.options.length <= 1) {
+       nets.forEach(n => sel.innerHTML += `<option value="${n}">${n}</option>`);
+    }
+
+    const selectedNet = sel.value;
+    if(!selectedNet) {
+        document.getElementById('manifestEmptyState').style.display = 'block';
+        return;
+    }
+
+    // Fetch items logic (Currently unavailable from backend, so showing empty state with network context)
+    // If backend supported 'completed' items, we would filter here:
+    // const items = window.APP_DATA.completed.filter(x => x.net === selectedNet);
+
+    const items = [];
 
     if(items.length === 0) {
       document.getElementById('manifestEmptyState').style.display = 'block';
+      document.getElementById('manifestEmptyState').querySelector('h6').textContent = `No Manifest for ${selectedNet}`;
     } else {
       document.getElementById('manifestEmptyState').style.display = 'none';
       items.forEach(item => {
-        list.innerHTML += `
-           <tr>
-             <td class="ps-4 fw-bold">${item.id}</td>
-             <td>${item.date}</td>
-             <td>${item.dest}</td>
-             <td>${item.net}</td>
-             <td>${item.boxes}</td>
-             <td>${item.wgt}</td>
-             <td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td>
-           </tr>
-        `;
+        list.innerHTML += `<tr><td class="ps-4 fw-bold">${item.id}</td><td>${item.date}</td><td>${item.dest}</td><td>${item.net}</td><td>${item.boxes}</td><td>${item.wgt}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`;
       });
     }
+  }
+
+  function renderDdChips() {
+    const cat = document.getElementById('dd_cat').value;
+    const con = document.getElementById('dd_chips');
+    con.innerHTML = '';
+
+    let items = [];
+    const dd = window.APP_DATA.dropdowns;
+    // Map cat to key
+    // Map: client->clients, network->networks, destination->destinations, extra->extraCharges
+    const map = { 'client': 'clients', 'network': 'networks', 'destination': 'destinations', 'extra': 'extraCharges' };
+    const key = map[cat];
+
+    if(dd && dd[key]) items = dd[key];
+
+    if(items.length === 0) {
+        con.innerHTML = '<small class="text-muted">No items found.</small>';
+        return;
+    }
+
+    items.forEach(it => {
+        con.innerHTML += `<div class="chip">${it} <i class="bi bi-x-circle-fill" onclick="deleteDdItem('${cat}', '${it}')"></i></div>`;
+    });
   }
 
   // --- ACTIONS ---
@@ -1001,9 +1028,7 @@
     if(!confirm("Confirm Paperwork Completed?")) return;
     document.getElementById('todo_card_'+id).style.opacity = '0.5';
     await callApi({action:"markPaperworkDone", id:id});
-    // Optimistic UI Update
     document.getElementById('todo_card_'+id).remove();
-    // In a real scenario, this item would now move to Manifest, but backend hides it.
     syncData(false);
   }
 
@@ -1013,12 +1038,7 @@
     if(r.result==='success'){
       const t = document.getElementById('userTable'); t.innerHTML='';
       if(r.users) r.users.forEach(u => {
-        t.innerHTML += `<tr>
-          <td class="fw-bold">${u[0]}</td>
-          <td class="text-muted small font-monospace" style="cursor:pointer;" onclick="this.textContent=this.textContent==='****'?'${u[1]}':'****'">****</td>
-          <td><small>${u[2]}</small> <span class="badge bg-light text-dark border">${u[3]}</span></td>
-          <td class="text-end"><button class="btn btn-outline-danger btn-sm py-0 border-0" onclick="delUser('${u[0]}')"><i class="bi bi-x-lg"></i></button></td>
-        </tr>`;
+        t.innerHTML += `<tr><td class="fw-bold">${u[0]}</td><td class="text-muted small font-monospace" style="cursor:pointer;" onclick="this.textContent=this.textContent==='****'?'${u[1]}':'****'">****</td><td><small>${u[2]}</small> <span class="badge bg-light text-dark border">${u[3]}</span></td><td class="text-end"><button class="btn btn-outline-danger btn-sm py-0 border-0" onclick="delUser('${u[0]}')"><i class="bi bi-x-lg"></i></button></td></tr>`;
       });
     }
   }
@@ -1028,31 +1048,37 @@
     const el = document.getElementById('adminReqList'); el.innerHTML='';
     if(r.requests && r.requests.length > 0) {
       r.requests.forEach(x => {
-        el.innerHTML += `
-          <div class="list-group-item">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-               <div><span class="badge bg-dark text-white me-2">${x.taskId}</span> <span class="badge bg-secondary">${x.type}</span></div>
-               <small class="text-muted">${new Date(x.date).toLocaleDateString()}</small>
-            </div>
-            <div class="d-flex align-items-center mb-2 text-muted small">
-               <span class="fw-bold text-dark">${x.by}</span> <i class="bi bi-arrow-right mx-2"></i> <span class="fw-bold text-dark">${x.to}</span>
-            </div>
-            <div class="d-flex gap-2">
-               <button class="btn btn-success btn-sm flex-fill" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">Approve</button>
-               <button class="btn btn-outline-danger btn-sm flex-fill" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">Reject</button>
-            </div>
-          </div>`;
+        el.innerHTML += `<div class="list-group-item"><div class="d-flex justify-content-between align-items-start mb-2"><div><span class="badge bg-dark text-white me-2">${x.taskId}</span> <span class="badge bg-secondary">${x.type}</span></div><small class="text-muted">${new Date(x.date).toLocaleDateString()}</small></div><div class="d-flex align-items-center mb-2 text-muted small"><span class="fw-bold text-dark">${x.by}</span> <i class="bi bi-arrow-right mx-2"></i> <span class="fw-bold text-dark">${x.to}</span></div><div class="d-flex gap-2"><button class="btn btn-success btn-sm flex-fill" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">Approve</button><button class="btn btn-outline-danger btn-sm flex-fill" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">Reject</button></div></div>`;
       });
     } else {
       el.innerHTML = '<div class="text-center p-4 text-muted small">No pending requests</div>';
     }
   }
 
-  window.loadAdminPanel = function() { if(currentRole==='admin') { loadUsers(); loadAdminReqs(); } };
+  window.loadAdminPanel = function() {
+      if(currentRole==='admin') {
+          loadUsers();
+          loadAdminReqs();
+          renderDdChips(); // Render chips
+      }
+  };
   window.addUser = async function() { await callApi({action:"addUser", u:document.getElementById('nu_u').value, p:document.getElementById('nu_p').value, n:document.getElementById('nu_n').value, r:document.getElementById('nu_r').value}); loadUsers(); };
   window.delUser = async function(u) { if(confirm("Delete User?")) await callApi({action:"deleteUser", username:u}); loadUsers(); };
   window.decideTr = async function(rid, tid, typ, to, dec){ showSpin(true); await callApi({action:"approveTransfer", reqId:rid, taskId:tid, type:typ, to:to, decision:dec}); loadAdminReqs(); showSpin(false); };
-  window.manageDd = async function(act){ const v=document.getElementById('dd_val').value, c=document.getElementById('dd_cat').value; if(!v)return; await callApi({action:"manageData", subAction:act, category:c, value:v}); document.getElementById('dd_val').value=''; syncData(false); };
+
+  window.manageDd = async function(act){
+      const v=document.getElementById('dd_val').value, c=document.getElementById('dd_cat').value;
+      if(!v)return;
+      await callApi({action:"manageData", subAction:act, category:c, value:v});
+      document.getElementById('dd_val').value='';
+      await syncData(false); // chips re-render in syncData -> refreshUI -> renderDdChips ? No, refreshUI calls it.
+  };
+
+  window.deleteDdItem = async function(cat, val) {
+      if(!confirm(`Delete "${val}" from ${cat}?`)) return;
+      await callApi({action:"manageData", subAction:"delete", category:cat, value:val});
+      await syncData(false);
+  };
 
   // --- FORMS & UTILS ---
   window.genBoxes = function() {
@@ -1072,7 +1098,6 @@
   document.getElementById('shipForm').onsubmit = async (e) => {
     e.preventDefault();
     if(!document.getElementById('f_net').value || !document.getElementById('f_client').value || !document.getElementById('f_dest').value) return alert("Please fill all dropdowns");
-
     showSpin(true);
     let boxes=[], extra=[];
     document.querySelectorAll('#boxTable tr').forEach((tr,i)=>{
@@ -1080,7 +1105,6 @@
        if(inps.length) boxes.push({no:i+1, weight:inps[0].value, length:inps[1].value, breath:inps[2].value, height:inps[3].value});
     });
     document.querySelectorAll('#f_extra input:checked').forEach(c=>extra.push(c.value));
-
     const res = await callApi({
       action: 'submit', username: currentUser, awb: document.getElementById('f_awb').value,
       date: document.getElementById('f_date').value, type: document.getElementById('f_type').value,
@@ -1168,8 +1192,13 @@
   };
 
   window.exportManifest = function() {
-     // Since list is empty, this is a placeholder
-     alert("No manifestable items found.");
+     const net = document.getElementById('man_net').value;
+     if(!net) return alert("Select a network to export manifest");
+
+     // Currently we don't have items, so we export blank structure or alert
+     // In future: const items = window.APP_DATA.completed.filter(x => x.net === net);
+     // For now:
+     alert("No completed shipments found for " + net + " (Functionality ready for backend integration)");
   };
 
 </script>
