@@ -495,7 +495,7 @@
                      <div class="col-md-3">
                         <label class="form-label">Total Boxes *</label>
                         <div class="input-group">
-                           <input type="number" id="f_boxes" class="form-control" min="1" required placeholder="Qty">
+                           <input type="number" id="f_boxes" class="form-control" min="1" required placeholder="Quantity">
                            <button type="button" class="btn btn-success fw-bold" onclick="genBoxes()">Generate Rows</button>
                         </div>
                      </div>
@@ -510,7 +510,7 @@
                        <h6 class="fw-bold small mb-3 text-uppercase text-muted">Dimensions & Weight</h6>
                        <div class="table-responsive bg-white rounded border">
                          <table class="table table-sm mb-0 align-middle">
-                           <thead><tr><th style="width:50px">#</th><th>Weight (KG) *</th><th>L (cm)</th><th>B (cm)</th><th>H (cm)</th><th class="text-end">Vol. Wgt</th></tr></thead>
+                           <thead><tr><th style="width:50px">#</th><th>Weight (KG) *</th><th>Length (cm)</th><th>Width (cm)</th><th>Height (cm)</th><th class="text-end">Chargeable Weight</th></tr></thead>
                            <tbody id="boxTable"></tbody>
                          </table>
                        </div>
@@ -569,7 +569,7 @@
         <div class="row g-4">
           <div class="col-lg-6">
             <div class="panel-card h-100">
-              <div class="panel-header"><span><i class="bi bi-robot me-2 text-danger"></i>Automation Queue</span> <span class="badge bg-secondary rounded-pill" id="badgeAuto">0</span></div>
+              <div class="panel-header"><span><i class="bi bi-robot me-2 text-danger"></i>Pending for Automation</span> <span class="badge bg-secondary rounded-pill" id="badgeAuto">0</span></div>
               <div style="height: 500px; overflow-y: auto;">
                 <div class="list-group list-group-flush" id="listAuto"></div>
               </div>
@@ -577,7 +577,7 @@
           </div>
           <div class="col-lg-6">
             <div class="panel-card h-100">
-              <div class="panel-header"><span><i class="bi bi-files me-2 text-warning"></i>Paperwork Queue</span> <span class="badge bg-secondary rounded-pill" id="badgePaper">0</span></div>
+              <div class="panel-header"><span><i class="bi bi-files me-2 text-warning"></i>Pending for Paperwork & Label Pasting</span> <span class="badge bg-secondary rounded-pill" id="badgePaper">0</span></div>
               <div style="height: 500px; overflow-y: auto;">
                 <div class="list-group list-group-flush" id="listPaper"></div>
               </div>
@@ -705,15 +705,18 @@
               <div class="panel-header text-success"><i class="bi bi-menu-button-wide me-2"></i>Dropdown Configuration</div>
               <div class="p-3">
                 <div class="row g-3 align-items-center mb-3">
-                  <div class="col-auto"><select id="dd_cat" class="form-select" onchange="renderDdChips()"><option value="client">Client</option><option value="network">Network</option><option value="destination">Destination</option><option value="extra">Extra Charge</option></select></div>
+                  <div class="col-auto"><select id="dd_cat" class="form-select" onchange="updateAdminDel()"><option value="client">Client</option><option value="network">Network</option><option value="destination">Destination</option><option value="extra">Extra Charge</option></select></div>
                   <div class="col-md-4"><input id="dd_val" class="form-control" placeholder="New Value"></div>
                   <div class="col-auto">
                     <button class="btn btn-success" onclick="manageDd('add')">Add Item</button>
                   </div>
                 </div>
-                <div class="p-3 bg-light rounded border">
-                   <small class="d-block text-muted mb-2 fw-bold">Existing Items (Click x to delete):</small>
-                   <div id="dd_chips" class="d-flex flex-wrap"></div>
+                <div class="p-3 bg-light rounded border mt-3">
+                   <label class="form-label mb-2 small fw-bold text-muted">Search & Delete Item:</label>
+                   <div class="d-flex gap-2">
+                      <div style="flex:1"><select id="dd_del_sel" placeholder="Select item to delete..."></select></div>
+                      <button class="btn btn-danger" onclick="actDeleteDd()"><i class="bi bi-trash"></i></button>
+                   </div>
                 </div>
               </div>
             </div>
@@ -749,7 +752,7 @@
   let currentUser="", currentRole="", currentName="", tsClient, tsDest, currentReassign={};
 
   window.APP_DATA = { staff: [], dropdowns: {}, overview: { auto:[], paper:[] }, workflow: { toAssign:[], toDo:[] }, stats: {} };
-  window.tomInstances = { client: null, dest: null };
+  window.tomInstances = { client: null, dest: null, adminDel: null };
 
   // --- INITIALIZATION ---
   document.addEventListener('DOMContentLoaded', () => {
@@ -859,7 +862,7 @@
   function refreshUI() {
     renderOverview();
     renderTaskHub();
-    renderDdChips(); // Update chips if admin panel open
+    updateAdminDel(); // Update delete dropdown if admin panel open
     // If manifest tab is active, ideally refresh it, but it requires manual interaction
     if(currentRole==='admin') {
       const c = window.APP_DATA.stats.requests || 0;
@@ -895,7 +898,7 @@
               : '');
 
         el.innerHTML += `
-          <div class="list-group-item px-0 py-3">
+          <div class="list-group-item py-3">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <span class="fw-bold text-dark">${x.id}</span>
               <span class="small fw-bold text-muted">${x.net}</span>
@@ -980,29 +983,41 @@
     }
   }
 
-  function renderDdChips() {
+  function initAdminDel() {
+    if(!window.tomInstances.adminDel) {
+       window.tomInstances.adminDel = new TomSelect("#dd_del_sel", { create: false, dropdownParent: 'body' });
+    }
+  }
+
+  function updateAdminDel() {
     const cat = document.getElementById('dd_cat').value;
-    const con = document.getElementById('dd_chips');
-    con.innerHTML = '';
+    const ts = window.tomInstances.adminDel;
+    if(!ts) return;
+
+    ts.clear();
+    ts.clearOptions();
 
     let items = [];
     const dd = window.APP_DATA.dropdowns;
-    // Map cat to key
-    // Map: client->clients, network->networks, destination->destinations, extra->extraCharges
     const map = { 'client': 'clients', 'network': 'networks', 'destination': 'destinations', 'extra': 'extraCharges' };
     const key = map[cat];
 
     if(dd && dd[key]) items = dd[key];
-
-    if(items.length === 0) {
-        con.innerHTML = '<small class="text-muted">No items found.</small>';
-        return;
-    }
-
-    items.forEach(it => {
-        con.innerHTML += `<div class="chip">${it} <i class="bi bi-x-circle-fill" onclick="deleteDdItem('${cat}', '${it}')"></i></div>`;
-    });
+    items.forEach(it => ts.addOption({value:it, text:it}));
+    ts.refreshOptions(false);
   }
+
+  window.actDeleteDd = async function() {
+    const ts = window.tomInstances.adminDel;
+    const val = ts.getValue();
+    const cat = document.getElementById('dd_cat').value;
+
+    if(!val) return alert("Please select an item to delete.");
+    if(!confirm(`Delete "${val}" from ${cat}?`)) return;
+
+    await callApi({action:"manageData", subAction:"delete", category:cat, value:val});
+    await syncData(false);
+  };
 
   // --- ACTIONS ---
   async function callApi(d){ try{const r=await fetch(API_URL,{method:"POST",body:JSON.stringify(d)}); return await r.json();}catch(e){console.error(e); return{result:"error", message: e.toString()};}}
@@ -1059,7 +1074,8 @@
       if(currentRole==='admin') {
           loadUsers();
           loadAdminReqs();
-          renderDdChips(); // Render chips
+          initAdminDel(); // Init delete dropdown
+          updateAdminDel(); // Populate
       }
   };
   window.addUser = async function() { await callApi({action:"addUser", u:document.getElementById('nu_u').value, p:document.getElementById('nu_p').value, n:document.getElementById('nu_n').value, r:document.getElementById('nu_r').value}); loadUsers(); };
