@@ -291,14 +291,14 @@
       backdrop-filter: blur(2px);
     }
 
-    /* Mobile */
-    @media (max-width: 991px) {
-      .sidebar { transform: translateX(-100%); }
-      .sidebar.show { transform: translateX(0); }
-      .content-area { margin-left: 0; }
-      .mobile-toggle { display: block !important; }
-    }
-    .mobile-toggle { display: none; background:none; border:none; font-size:1.5rem; color:var(--primary-color); }
+    /* Sidebar Toggle Logic */
+    /* By default (Desktop), we want it hidden unless toggled, based on user request "hide automatically" */
+    /* But for better UX, let's make it toggleable. */
+    /* Mobile & Desktop now share behavior: Hidden by default, toggled to show. */
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.show { transform: translateX(0); }
+    .content-area { margin-left: 0; }
+    .mobile-toggle { display: block !important; } /* Always show toggle */
 
     /* TomSelect Fixes */
     .ts-control { border-radius: 8px; border-color: #cbd5e1; padding: 0.6rem 0.75rem; }
@@ -354,6 +354,8 @@
     <div class="sidebar-brand">
       <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png" alt="Icon">
       <span>ZEPHYR <span style="color:var(--accent-color)">PORTAL</span></span>
+      <button class="btn btn-link text-white p-0 ms-auto d-lg-none" onclick="toggleSidebar()"><i class="bi bi-x-lg"></i></button>
+      <button class="btn btn-link text-white p-0 ms-auto d-none d-lg-block" onclick="toggleSidebar()"><i class="bi bi-x-lg"></i></button>
     </div>
 
     <div class="sidebar-nav">
@@ -411,7 +413,7 @@
       <!-- 1. INBOUND TAB -->
       <div id="inbound-tab" class="tab-view" style="display:none;">
         <div class="row justify-content-center">
-          <div class="col-xxl-9 col-xl-11">
+          <div class="col-12">
             <div class="panel-card">
               <div class="panel-header bg-white">
                 <div><i class="bi bi-plus-circle-fill text-primary me-2"></i>New Shipment Entry</div>
@@ -454,7 +456,7 @@
                         <label class="form-label">Total Boxes *</label>
                         <div class="input-group">
                            <input type="number" id="f_boxes" class="form-control" min="1" required placeholder="Qty">
-                           <button type="button" class="btn btn-secondary" onclick="genBoxes()">Set</button>
+                           <button type="button" class="btn btn-success fw-bold" onclick="genBoxes()">Generate Rows</button>
                         </div>
                      </div>
                      <div class="col-md-3">
@@ -477,10 +479,10 @@
 
                   <div class="mb-4">
                     <label class="form-label mb-2">Extra Charges</label>
-                    <div id="f_extra" class="d-flex flex-wrap gap-2"></div>
+                    <div id="f_extra" class="row g-2 border rounded p-3 bg-light m-0"></div>
                   </div>
                   <div class="mb-4">
-                    <label class="form-label">Remarks</label>
+                    <label class="form-label">Extra Charges Remarks (If Applicable)</label>
                     <textarea id="f_remarks" class="form-control" rows="2" placeholder="Optional notes..."></textarea>
                   </div>
 
@@ -777,12 +779,13 @@
        adminGroup.style.display = 'block';
        document.getElementById('adminTaskView').style.display='block';
        document.getElementById('taskHubLabel').textContent = "Task Manager";
+       switchTab('overview');
     } else {
        adminGroup.style.display = 'none';
        document.getElementById('staffTaskView').style.display='block';
        document.getElementById('taskHubLabel').textContent = "Work Panel";
+       switchTab('inbound');
     }
-    switchTab('overview');
   }
 
   // --- DATA SYNC ---
@@ -1100,7 +1103,7 @@
     updateDropdownOptions();
 
     const ex = document.getElementById('f_extra'); ex.innerHTML='';
-    if(dd.extraCharges) dd.extraCharges.forEach(x => ex.innerHTML += `<div class="form-check form-check-inline bg-white border px-2 py-1 rounded small"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1">${x}</label></div>`);
+    if(dd.extraCharges) dd.extraCharges.forEach(x => ex.innerHTML += `<div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1 small fw-bold text-secondary">${x}</label></div></div>`);
     document.getElementById('f_date').valueAsDate = new Date();
   }
 
