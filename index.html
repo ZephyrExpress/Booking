@@ -890,6 +890,7 @@
          el.innerHTML='<div class="text-center p-4 text-muted small">Queue is empty</div>';
          return;
       }
+      let html = '';
       list.forEach(x => {
         let userBadge = x.user 
            ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 ms-2"><i class="bi bi-person-fill me-1"></i>${x.user}</span>` 
@@ -901,7 +902,7 @@
               ? `<span class="badge bg-secondary bg-opacity-10 text-secondary border ms-2"><i class="bi bi-robot me-1"></i>${x.autoDoer}</span>` 
               : '');
         
-        el.innerHTML += `
+        html += `
           <div class="list-group-item py-3">
             <div class="d-flex justify-content-between align-items-center mb-1">
               <span class="fw-bold text-dark">${x.id}</span>
@@ -916,6 +917,7 @@
             </div>
           </div>`;
       });
+      el.innerHTML = html;
     };
     fill('listAuto', d.auto);
     fill('listPaper', [...d.paper].sort((a,b) => (a.assignee ? 1 : -1) - (b.assignee ? 1 : -1)));
@@ -925,30 +927,36 @@
     if(currentRole === 'admin') {
       const tb = document.getElementById('poolTable'); tb.innerHTML='';
       const pool = window.APP_DATA.adminPool || window.APP_DATA.overview.paper || [];
+      let html = '';
       pool.forEach(t => {
-        let opts = `<option value="">Assign...</option>`;
-        if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(s => opts += `<option value="${s}">${s}</option>`);
-        let assignedVal = t.assignee || ""; 
+        let opts = `<option value="">Assign...</option>` + (window.APP_DATA.staff ? window.APP_DATA.staff.map(s => `<option value="${s}">${s}</option>`).join('') : '');
         let btnClass = t.assignee ? "btn-warning" : "btn-success";
         let btnTxt = t.assignee ? "Reassign" : "Assign";
-        tb.innerHTML += `<tr><td class="fw-bold font-monospace">${t.id}</td><td><div class="fw-bold small">${t.client}</div><small class="text-muted">${t.net}</small></td><td><span class="small text-muted">${t.details}</span></td><td style="width:200px"><select id="as_${t.id}" class="form-select form-select-sm">${opts}</select></td><td><button class="btn btn-sm ${btnClass} shadow-sm px-3" onclick="actAssign('${t.id}','${t.type}')">${btnTxt}</button></td></tr>`;
-        if(assignedVal) document.getElementById(`as_${t.id}`).value = assignedVal;
+        html += `<tr><td class="fw-bold font-monospace">${t.id}</td><td><div class="fw-bold small">${t.client}</div><small class="text-muted">${t.net}</small></td><td><span class="small text-muted">${t.details}</span></td><td style="width:200px"><select id="as_${t.id}" class="form-select form-select-sm">${opts}</select></td><td><button class="btn btn-sm ${btnClass} shadow-sm px-3" onclick="actAssign('${t.id}','${t.type}')">${btnTxt}</button></td></tr>`;
+      });
+      tb.innerHTML = html;
+      pool.forEach(t => {
+        if(t.assignee) document.getElementById(`as_${t.id}`).value = t.assignee;
       });
     } else {
       const toAssign = window.APP_DATA.workflow.toAssign;
       const toDo = window.APP_DATA.workflow.toDo;
-      const ac = document.getElementById('staffAssignContainer'); ac.innerHTML='';
+      const ac = document.getElementById('staffAssignContainer');
       document.getElementById('noAssignMsg').style.display = toAssign.length===0?'block':'none';
+      let acHtml = '';
       toAssign.forEach(t => {
-        let opts = `<option value="">Select Staff...</option>`;
-        if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(s => opts += `<option value="${s}">${s}</option>`);
-        ac.innerHTML += `<div class="col-md-6 col-xl-4" id="assign_card_${t.id}"><div class="panel-card p-3"><div class="d-flex justify-content-between mb-2"><span class="fw-bold font-monospace">${t.id}</span><span class="badge bg-light text-dark border">${t.net}</span></div><div class="small fw-bold text-primary mb-2">${t.client}</div><div class="small text-muted mb-3">${t.details}</div><div class="input-group input-group-sm"><select id="staff_assign_${t.id}" class="form-select">${opts}</select><button class="btn btn-primary" onclick="staffActAssign('${t.id}')">Assign</button></div></div></div>`;
+        let opts = `<option value="">Select Staff...</option>` + (window.APP_DATA.staff ? window.APP_DATA.staff.map(s => `<option value="${s}">${s}</option>`).join('') : '');
+        acHtml += `<div class="col-md-6 col-xl-4" id="assign_card_${t.id}"><div class="panel-card p-3"><div class="d-flex justify-content-between mb-2"><span class="fw-bold font-monospace">${t.id}</span><span class="badge bg-light text-dark border">${t.net}</span></div><div class="small fw-bold text-primary mb-2">${t.client}</div><div class="small text-muted mb-3">${t.details}</div><div class="input-group input-group-sm"><select id="staff_assign_${t.id}" class="form-select">${opts}</select><button class="btn btn-primary" onclick="staffActAssign('${t.id}')">Assign</button></div></div></div>`;
       });
-      const tc = document.getElementById('staffTodoContainer'); tc.innerHTML='';
+      ac.innerHTML = acHtml;
+
+      const tc = document.getElementById('staffTodoContainer');
       document.getElementById('noTodoMsg').style.display = toDo.length===0?'block':'none';
+      let tcHtml = '';
       toDo.forEach(t => {
-        tc.innerHTML += `<div class="col-md-6 col-xl-4" id="todo_card_${t.id}"><div class="panel-card p-3 border-start border-4 border-warning"><div class="d-flex justify-content-between align-items-start mb-2"><div><span class="badge bg-warning text-dark mb-1" style="font-size:0.65rem">ASSIGNED TO ME</span><div class="fw-bold font-monospace fs-5">${t.id}</div></div><button class="btn btn-outline-secondary btn-sm lh-1 p-1" onclick="reqTransfer('${t.id}','${t.type}')" title="Transfer Task"><i class="bi bi-arrow-left-right"></i></button></div><div class="small mb-1">${t.subtitle}</div><div class="small text-muted mb-3">${t.details}</div><button class="btn btn-success w-100 rounded-pill shadow-sm fw-bold" onclick="staffActDone('${t.id}')"><i class="bi bi-check-lg me-1"></i> Mark Completed</button></div></div>`;
+        tcHtml += `<div class="col-md-6 col-xl-4" id="todo_card_${t.id}"><div class="panel-card p-3 border-start border-4 border-warning"><div class="d-flex justify-content-between align-items-start mb-2"><div><span class="badge bg-warning text-dark mb-1" style="font-size:0.65rem">ASSIGNED TO ME</span><div class="fw-bold font-monospace fs-5">${t.id}</div></div><button class="btn btn-outline-secondary btn-sm lh-1 p-1" onclick="reqTransfer('${t.id}','${t.type}')" title="Transfer Task"><i class="bi bi-arrow-left-right"></i></button></div><div class="small mb-1">${t.subtitle}</div><div class="small text-muted mb-3">${t.details}</div><button class="btn btn-success w-100 rounded-pill shadow-sm fw-bold" onclick="staffActDone('${t.id}')"><i class="bi bi-check-lg me-1"></i> Mark Completed</button></div></div>`;
       });
+      tc.innerHTML = tcHtml;
     }
   }
 
@@ -961,7 +969,9 @@
     const nets = window.APP_DATA.dropdowns.networks || [];
     // Only populate if empty (init)
     if(sel.options.length <= 1) {
-       nets.forEach(n => sel.innerHTML += `<option value="${n}">${n}</option>`);
+       let opts = '';
+       nets.forEach(n => opts += `<option value="${n}">${n}</option>`);
+       sel.innerHTML += opts;
     }
     
     const selectedNet = sel.value;
@@ -981,9 +991,11 @@
       document.getElementById('manifestEmptyState').querySelector('h6').textContent = `No Manifest for ${selectedNet}`;
     } else {
       document.getElementById('manifestEmptyState').style.display = 'none';
+      let html = '';
       items.forEach(item => {
-        list.innerHTML += `<tr><td class="ps-4 fw-bold">${item.id}</td><td>${item.date}</td><td>${item.dest}</td><td>${item.net}</td><td>${item.boxes}</td><td>${item.wgt}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`;
+        html += `<tr><td class="ps-4 fw-bold">${item.id}</td><td>${item.date}</td><td>${item.dest}</td><td>${item.net}</td><td>${item.boxes}</td><td>${item.wgt}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`;
       });
+      list.innerHTML = html;
     }
   }
   
@@ -1055,10 +1067,12 @@
   async function loadUsers() {
     const r = await fetchGet("getUsers");
     if(r.result==='success'){
-      const t = document.getElementById('userTable'); t.innerHTML='';
+      const t = document.getElementById('userTable');
+      let html = '';
       if(r.users) r.users.forEach(u => {
-        t.innerHTML += `<tr><td class="fw-bold">${u[0]}</td><td class="text-muted small font-monospace" style="cursor:pointer;" onclick="this.textContent=this.textContent==='****'?'${u[1]}':'****'">****</td><td><small>${u[2]}</small> <span class="badge bg-light text-dark border">${u[3]}</span></td><td class="text-end"><button class="btn btn-outline-danger btn-sm py-0 border-0" onclick="delUser('${u[0]}')"><i class="bi bi-x-lg"></i></button></td></tr>`;
+        html += `<tr><td class="fw-bold">${u[0]}</td><td class="text-muted small font-monospace" style="cursor:pointer;" onclick="this.textContent=this.textContent==='****'?'${u[1]}':'****'">****</td><td><small>${u[2]}</small> <span class="badge bg-light text-dark border">${u[3]}</span></td><td class="text-end"><button class="btn btn-outline-danger btn-sm py-0 border-0" onclick="delUser('${u[0]}')"><i class="bi bi-x-lg"></i></button></td></tr>`;
       });
+      t.innerHTML = html;
     }
   }
 
@@ -1066,9 +1080,11 @@
     const r = await fetchGet("getAdminRequests");
     const el = document.getElementById('adminReqList'); el.innerHTML='';
     if(r.requests && r.requests.length > 0) {
+      let html = '';
       r.requests.forEach(x => {
-        el.innerHTML += `<div class="list-group-item"><div class="d-flex justify-content-between align-items-start mb-2"><div><span class="badge bg-dark text-white me-2">${x.taskId}</span> <span class="badge bg-secondary">${x.type}</span></div><small class="text-muted">${new Date(x.date).toLocaleDateString()}</small></div><div class="d-flex align-items-center mb-2 text-muted small"><span class="fw-bold text-dark">${x.by}</span> <i class="bi bi-arrow-right mx-2"></i> <span class="fw-bold text-dark">${x.to}</span></div><div class="d-flex gap-2"><button class="btn btn-success btn-sm flex-fill" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">Approve</button><button class="btn btn-outline-danger btn-sm flex-fill" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">Reject</button></div></div>`;
+        html += `<div class="list-group-item"><div class="d-flex justify-content-between align-items-start mb-2"><div><span class="badge bg-dark text-white me-2">${x.taskId}</span> <span class="badge bg-secondary">${x.type}</span></div><small class="text-muted">${new Date(x.date).toLocaleDateString()}</small></div><div class="d-flex align-items-center mb-2 text-muted small"><span class="fw-bold text-dark">${x.by}</span> <i class="bi bi-arrow-right mx-2"></i> <span class="fw-bold text-dark">${x.to}</span></div><div class="d-flex gap-2"><button class="btn btn-success btn-sm flex-fill" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">Approve</button><button class="btn btn-outline-danger btn-sm flex-fill" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">Reject</button></div></div>`;
       });
+      el.innerHTML = html;
     } else {
       el.innerHTML = '<div class="text-center p-4 text-muted small">No pending requests</div>';
     }
@@ -1104,8 +1120,10 @@
   window.genBoxes = function() {
     const n = document.getElementById('f_boxes').value;
     if(!n || n<1) return;
-    const tb = document.getElementById('boxTable'); tb.innerHTML='';
-    for(let i=1; i<=n; i++) tb.innerHTML += `<tr><td class="text-muted fw-bold">${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="text-end val-chg small fw-bold text-primary">0.00</td></tr>`;
+    const tb = document.getElementById('boxTable');
+    let html = '';
+    for(let i=1; i<=n; i++) html += `<tr><td class="text-muted fw-bold">${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="text-end val-chg small fw-bold text-primary">0.00</td></tr>`;
+    tb.innerHTML = html;
   };
   window.cBox = function(el) {
     const r=el.closest('tr'), i=r.querySelectorAll('input');
@@ -1147,7 +1165,11 @@
     updateDropdownOptions();
     
     const ex = document.getElementById('f_extra'); ex.innerHTML='';
-    if(dd.extraCharges) dd.extraCharges.forEach(x => ex.innerHTML += `<div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1 small fw-bold text-secondary">${x}</label></div></div>`);
+    if(dd.extraCharges) {
+       let html = '';
+       dd.extraCharges.forEach(x => html += `<div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1 small fw-bold text-secondary">${x}</label></div></div>`);
+       ex.innerHTML = html;
+    }
     document.getElementById('f_date').valueAsDate = new Date();
   }
 
@@ -1163,8 +1185,9 @@
      // Update Extra Charges
      const ex = document.getElementById('f_extra'); 
      if(ex) {
-         ex.innerHTML='';
-         if(dd.extraCharges) dd.extraCharges.forEach(x => ex.innerHTML += `<div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1 small fw-bold text-secondary">${x}</label></div></div>`);
+         let html = '';
+         if(dd.extraCharges) dd.extraCharges.forEach(x => html += `<div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1 small fw-bold text-secondary">${x}</label></div></div>`);
+         ex.innerHTML = html;
      }
   }
 
@@ -1185,16 +1208,19 @@
   function fillSel(id, arr) { 
     let e=document.getElementById(id); 
     if(!e) return;
-    e.innerHTML='<option value="">Select...</option>'; 
-    if(arr) arr.forEach(x=>e.innerHTML += `<option value="${x}">${x}</option>`);
+    let html = '<option value="">Select...</option>';
+    if(arr) arr.forEach(x=>html += `<option value="${x}">${x}</option>`);
+    e.innerHTML = html;
   }
 
   // --- TRANSFERS ---
   window.reqTransfer = function(id, type){
     currentReassign={id:id, type:type};
     document.getElementById('reassignId').textContent=id;
-    const s=document.getElementById('reassignStaff'); s.innerHTML='<option value="">Select Staff...</option>';
-    if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(x=>s.innerHTML+=`<option value="${x}">${x}</option>`);
+    const s=document.getElementById('reassignStaff');
+    let html = '<option value="">Select Staff...</option>';
+    if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(x=>html += `<option value="${x}">${x}</option>`);
+    s.innerHTML = html;
     new bootstrap.Modal(document.getElementById('reassignModal')).show();
   }
   window.submitReassign = function() {
