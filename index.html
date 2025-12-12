@@ -751,7 +751,7 @@
   const API_URL="https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
   let currentUser="", currentRole="", currentName="", tsClient, tsDest, currentReassign={};
   
-  window.APP_DATA = { staff: [], dropdowns: {}, overview: { auto:[], paper:[] }, workflow: { toAssign:[], toDo:[] }, stats: {} };
+  window.APP_DATA = { staff: [], dropdowns: {}, overview: { auto:[], paper:[] }, workflow: { toAssign:[], toDo:[] }, completed: [], stats: {} };
   window.tomInstances = { client: null, dest: null, adminDel: null };
 
   // --- INITIALIZATION ---
@@ -803,8 +803,9 @@
       document.getElementById('loginSection').style.display='none';
       document.getElementById('appSection').style.display='flex';
       
+      showSpin(false); // Hide spinner immediately for better perceived speed
       buildNav();
-      await syncData(true);
+      syncData(true); // Run in background
     } else { 
       showSpin(false); 
       const err = document.getElementById('loginError');
@@ -831,7 +832,7 @@
 
   // --- DATA SYNC ---
   async function syncData(firstLoad=false){
-    if(firstLoad) showSpin(true);
+    // Removed showSpin(true) to allow background loading for perceived performance
     try {
       const url = `${API_URL}?action=getAllData&user=${encodeURIComponent(currentUser)}`;
       const r = await fetch(url).then(res => res.json());
@@ -855,8 +856,11 @@
         }
         refreshUI();
       }
-    } catch(e) { console.error("Sync Failed", e); }
-    if(firstLoad) showSpin(false);
+    } catch(e) { 
+       console.error("Sync Failed", e); 
+       if(firstLoad) document.getElementById('pageTitle').innerHTML += ' <span class="badge bg-danger">Offline</span>';
+    }
+    // Removed showSpin(false) as we manage it in doLogin for first load now
   }
 
   function refreshUI() {
@@ -980,11 +984,8 @@
         return;
     }
     
-    // Fetch items logic (Currently unavailable from backend, so showing empty state with network context)
-    // If backend supported 'completed' items, we would filter here:
-    // const items = window.APP_DATA.completed.filter(x => x.net === selectedNet);
-    
-    const items = []; 
+    // Use completed items from APP_DATA
+    const items = window.APP_DATA.completed ? window.APP_DATA.completed.filter(x => x.net === selectedNet) : [];
     
     if(items.length === 0) {
       document.getElementById('manifestEmptyState').style.display = 'block';
@@ -993,7 +994,7 @@
       document.getElementById('manifestEmptyState').style.display = 'none';
       let html = '';
       items.forEach(item => {
-        html += `<tr><td class="ps-4 fw-bold">${item.id}</td><td>${item.date}</td><td>${item.dest}</td><td>${item.net}</td><td>${item.boxes}</td><td>${item.wgt}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`;
+        html += `<tr><td class="ps-4 fw-bold">${item.id || '-'}</td><td>${item.date || '-'}</td><td>${item.dest || '-'}</td><td>${item.net || '-'}</td><td>${item.boxes || '-'}</td><td>${item.wgt || '-'}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`;
       });
       list.innerHTML = html;
     }
@@ -1208,7 +1209,7 @@
   function fillSel(id, arr) { 
     let e=document.getElementById(id); 
     if(!e) return;
-    let html = '<option value="">Select...</option>';
+    let html = '<option value="">Select...</option>'; 
     if(arr) arr.forEach(x=>html += `<option value="${x}">${x}</option>`);
     e.innerHTML = html;
   }
@@ -1217,7 +1218,7 @@
   window.reqTransfer = function(id, type){
     currentReassign={id:id, type:type};
     document.getElementById('reassignId').textContent=id;
-    const s=document.getElementById('reassignStaff');
+    const s=document.getElementById('reassignStaff'); 
     let html = '<option value="">Select Staff...</option>';
     if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(x=>html += `<option value="${x}">${x}</option>`);
     s.innerHTML = html;
@@ -1259,10 +1260,15 @@
      const net = document.getElementById('man_net').value;
      if(!net) return alert("Select a network to export manifest");
      
-     // Currently we don't have items, so we export blank structure or alert
-     // In future: const items = window.APP_DATA.completed.filter(x => x.net === selectedNet);
-     // For now:
-     alert("No completed shipments found for " + net + " (Functionality ready for backend integration)");
+     const items = window.APP_DATA.completed ? window.APP_DATA.completed.filter(x => x.net === net) : [];
+     if(items.length === 0) return alert("No items found for " + net);
+
+     const data = items.map(x => ({
+        "AWB": x.id, "Date": x.date, "Dest": x.dest, "Net": x.net, "Pcs": x.boxes, "Wgt": x.wgt
+     }));
+     const wb = XLSX.utils.book_new();
+     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Manifest " + net);
+     XLSX.writeFile(wb, "Manifest_" + net + ".xlsx");
   };
 
 </script>
