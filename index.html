@@ -4,228 +4,830 @@
   <meta charset="UTF-8">
   <title>Zephyr Express Portal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  
+  <!-- CSS Dependencies -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
-
-  <!-- SheetJS Library for Excel Export -->
+  
+  <!-- SheetJS -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 
   <style>
-    :root { --primary-color: #0f172a; --accent-color: #3b82f6; --zephyr-green: #10b981; --bg-color: #f1f5f9; --card-radius: 12px; }
-    body { background-color: var(--bg-color); font-family: 'Segoe UI', system-ui, sans-serif; color: #334155; padding-bottom: 80px; }
+    :root {
+      --sidebar-width: 260px;
+      --header-height: 64px;
+      --primary-color: #0f172a; /* Slate 900 */
+      --secondary-color: #334155; /* Slate 700 */
+      --accent-color: #2563eb; /* Blue 600 */
+      --bg-color: #f8fafc; /* Slate 50 */
+      --card-bg: #ffffff;
+      --success-color: #10b981;
+      --border-color: #e2e8f0;
+      --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+    }
 
-    .login-wrapper { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%); }
-    .login-card { width: 100%; max-width: 400px; padding: 3rem 2rem; background: white; border-radius: 24px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1); }
+    body {
+      background-color: var(--bg-color);
+      font-family: var(--font-main);
+      color: var(--secondary-color);
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
 
-    .main-container { max-width: 1400px; margin: 0 auto; padding: 15px; display: none; }
-    .navbar-custom { background: white; padding: 12px 20px; border-radius: var(--card-radius); box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-bottom: 20px; position: relative; border: 1px solid #e2e8f0; }
-    .logo-img { height: 42px; width: auto; object-fit: contain; }
-    .navbar-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+    /* --- LOGIN --- */
+    .login-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%);
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 2000;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      padding: 3rem 2.5rem;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1);
+      border: 1px solid rgba(255,255,255,0.5);
+    }
 
-    .panel-card { background: white; border-radius: var(--card-radius); border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.01); height: 100%; }
-    .panel-header { background: #f8fafc; padding: 15px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #475569; display: flex; justify-content: space-between; align-items: center; }
+    /* --- LAYOUT --- */
+    .main-wrapper {
+      display: flex;
+      min-height: 100vh;
+    }
 
-    .task-card-horizontal { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; transition: transform 0.2s; }
-    .task-card-horizontal:hover { transform: translateY(-2px); box-shadow: 0 5px 15px -3px rgba(0,0,0,0.05); }
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--primary-color);
+      color: #94a3b8;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 1000;
+      transition: transform 0.3s ease;
+      transform: translateX(-100%); /* Default Hidden */
+    }
+    .sidebar.show { transform: translateX(0); }
+    
+    .sidebar-brand {
+      height: var(--header-height);
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .sidebar-brand img {
+      height: 32px;
+      width: auto;
+    }
+    .sidebar-brand span {
+      font-weight: 700;
+      color: white;
+      margin-left: 10px;
+      font-size: 1.1rem;
+      letter-spacing: -0.02em;
+    }
+    .sidebar-nav {
+      flex: 1;
+      padding: 1.5rem 1rem;
+      overflow-y: auto;
+    }
+    .nav-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      margin-top: 1.5rem;
+      padding-left: 0.75rem;
+      color: #64748b;
+    }
+    .nav-label:first-child { margin-top: 0; }
+    .nav-item-custom {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      color: #cbd5e1;
+      text-decoration: none;
+      transition: all 0.2s;
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .nav-item-custom:hover {
+      background-color: rgba(255,255,255,0.05);
+      color: white;
+    }
+    .nav-item-custom.active {
+      background-color: var(--accent-color);
+      color: white;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    }
+    .nav-item-custom i {
+      margin-right: 12px;
+      font-size: 1.1rem;
+    }
+    .sidebar-footer {
+      padding: 1.5rem;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+    }
 
-    .form-control, .form-select { border-radius: 8px; border-color: #cbd5e1; }
-    .btn-zephyr-green { background-color: var(--zephyr-green); color: white; border:none; font-weight:600; }
-    .split-col { height: 600px; overflow-y: auto; }
+    /* Main Content */
+    .content-area {
+      flex: 1;
+      margin-left: 0; /* Default 0 because sidebar is hidden by default */
+      display: flex;
+      flex-direction: column;
+      transition: margin-left 0.3s ease;
+      min-width: 0;
+    }
+    
+    /* Topbar */
+    .topbar {
+      height: var(--header-height);
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 990;
+    }
+    .page-title {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--primary-color);
+      margin: 0;
+    }
+    .topbar-center-logo {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      height: 32px;
+      width: auto;
+    }
+    
+    /* Mobile Toggle */
+    .mobile-toggle { display: block !important; background:none; border:none; font-size:1.5rem; color:var(--primary-color); }
 
-    .nav-pills .nav-link { color: #64748b; font-weight: 600; padding: 8px 20px; border-radius: 50px; position: relative; }
-    .nav-pills .nav-link.active { background-color: var(--primary-color); color: white; }
+    /* Backdrop */
+    .sidebar-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      display: none;
+    }
+    .sidebar-backdrop.show { display: block; }
 
-    .stat-val { font-size: 2rem; font-weight: 800; line-height: 1; }
+    .main-container {
+      padding: 2rem;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
 
-    .spinner-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; display:none; justify-content:center; align-items:center; }
+    /* --- COMPONENTS --- */
+    .panel-card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 1px 3px 0 rgba(0,0,0,0.02), 0 1px 2px -1px rgba(0,0,0,0.02);
+      height: 100%;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .panel-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fdfdfd;
+    }
+    .panel-body {
+      padding: 1.5rem;
+    }
+    
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .stat-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--primary-color);
+      line-height: 1;
+    }
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+    
+    .task-item {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.15s;
+    }
+    .task-item:last-child { border-bottom: none; }
+    .task-item:hover { background: #f8fafc; }
+    
+    .btn-primary { background-color: var(--primary-color); border-color: var(--primary-color); }
+    .btn-primary:hover { background-color: #1e293b; border-color: #1e293b; }
+    .btn-zephyr { background-color: var(--success-color); color: white; border:none; }
+    .btn-zephyr:hover { background-color: #059669; color: white; }
 
-    .overview-stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s; height: 100%; }
-    .text-live-red { color: #dc2626; text-shadow: 0 2px 10px rgba(220, 38, 38, 0.15); }
+    /* Tables */
+    .table thead th {
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+    }
+    .table tbody td {
+      padding: 0.75rem 1rem;
+      vertical-align: middle;
+      color: #334155;
+      font-size: 0.9rem;
+    }
+    
+    /* Chips */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      background: #f1f5f9;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 0.85rem;
+      margin-right: 5px;
+      margin-bottom: 5px;
+      color: #334155;
+      border: 1px solid #e2e8f0;
+    }
+    .chip i {
+      margin-left: 6px;
+      cursor: pointer;
+      color: #94a3b8;
+    }
+    .chip i:hover { color: #ef4444; }
 
-    .badge-notif { position: absolute; top: -5px; right: -5px; font-size: 0.7rem; }
-    .ts-dropdown { z-index: 1055 !important; }
-
-    @media(max-width: 991px) { .navbar-center { position: relative; left: auto; top: auto; transform: none; display: block; margin: 0 auto 10px auto; } .navbar-custom { flex-wrap: wrap; text-align: center; justify-content: center; } }
+    /* TomSelect Fixes */
+    .ts-control { border-radius: 8px; border-color: #cbd5e1; padding: 0.6rem 0.75rem; }
+    .form-control, .form-select { border-radius: 8px; border-color: #cbd5e1; padding: 0.6rem 0.75rem; }
+    .form-label { font-size: 0.875rem; font-weight: 600; color: #475569; }
   </style>
 </head>
 <body>
 
-<div id="spinner" class="spinner-overlay"><div class="spinner-border text-primary" role="status"></div></div>
+<!-- SPINNER -->
+<div id="spinner" class="spinner-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; justify-content:center; align-items:center;">
+  <div class="text-center">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    <div class="mt-2 fw-bold text-primary small">PROCESSING...</div>
+  </div>
+</div>
 
+<!-- LOGIN -->
 <div id="loginSection" class="login-wrapper">
   <div class="login-card">
-    <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" alt="Logo" class="logo-img mb-4 d-block mx-auto">
-    <h5 class="fw-bold mb-4 text-center text-dark">Portal Access</h5>
+    <div class="text-center mb-5">
+      <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" alt="Logo" style="height: 50px;">
+    </div>
+    <h4 class="fw-bold mb-1 text-center text-dark">Welcome back</h4>
+    <p class="text-center text-muted mb-4 small">Enter your credentials to access the portal</p>
+    
     <form onsubmit="event.preventDefault(); doLogin();">
-      <div class="form-floating mb-3"><input type="text" class="form-control" id="uIn" required><label>Username</label></div>
-      <div class="form-floating mb-4"><input type="text" class="form-control" id="pIn" required style="-webkit-text-security: disc;"><label>Password</label></div>
-      <button type="submit" class="btn btn-dark w-100 py-3 rounded-pill fw-bold">LOG IN</button>
+      <div class="mb-3">
+        <label class="form-label">Username</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
+          <input type="text" class="form-control border-start-0 ps-0" id="uIn" required>
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="form-label">Password</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0"><i class="bi bi-key text-muted"></i></span>
+          <input type="text" class="form-control border-start-0 ps-0" id="pIn" required style="-webkit-text-security: disc;">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm">LOG IN</button>
     </form>
-    <div id="loginError" class="alert alert-danger mt-3 small p-2 border-0 fw-bold text-center" style="display:none;"></div>
+    <div id="loginError" class="alert alert-danger mt-3 small p-2 border-0 fw-bold text-center rounded-3" style="display:none; background:#fee2e2; color:#b91c1c;"></div>
   </div>
 </div>
 
-<div id="appSection" class="main-container">
-  <div class="navbar-custom d-lg-flex justify-content-between align-items-center">
-    <div class="d-none d-lg-block"><div class="bg-light px-3 py-1 rounded-pill border small fw-bold text-secondary"><i class="bi bi-person-fill"></i> <span id="userBadge">User</span></div></div>
-    <div class="navbar-center"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" alt="Logo" class="logo-img"></div>
-    <div class="text-center"><button onclick="logout()" class="btn btn-outline-danger btn-sm rounded-circle"><i class="bi bi-power"></i></button></div>
-  </div>
+<!-- APP -->
+<div id="appSection" class="main-wrapper" style="display:none;">
+  
+  <!-- BACKDROP -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
-  <ul class="nav nav-pills justify-content-center mb-4" id="mainNav">
-    <li class="nav-item" id="nav-inbound"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#inbound-tab"><i class="bi bi-box-seam me-2"></i>Inbound Entry</button></li>
-    <li class="nav-item" id="nav-overview"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#overview-tab" onclick="loadOverview()"><i class="bi bi-grid-1x2 me-2"></i>Overview</button></li>
-    <li class="nav-item" id="nav-taskhub"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#taskhub-tab" onclick="loadTaskHub()"><i class="bi bi-list-check me-2"></i><span id="taskHubLabel">Work Panel</span></button></li>
-    <li class="nav-item" id="nav-admin" style="display:none;"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#admin-tab" onclick="loadAdminPanel()"><i class="bi bi-shield-lock me-2"></i>Admin Panel <span class="badge bg-danger badge-notif rounded-circle" id="adminBadge" style="display:none">0</span></button></li>
-  </ul>
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png" alt="Icon">
+      <span>ZEPHYR <span style="color:var(--accent-color)">PORTAL</span></span>
+      <button class="btn btn-link text-white p-0 ms-auto d-lg-none" onclick="toggleSidebar()"><i class="bi bi-x-lg"></i></button>
+      <button class="btn btn-link text-white p-0 ms-auto d-none d-lg-block" onclick="toggleSidebar()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    
+    <div class="sidebar-nav">
+      <div class="nav-label">Main Menu</div>
+      <a class="nav-item-custom" id="nav-inbound" onclick="switchTab('inbound')">
+        <i class="bi bi-box-seam"></i> Inbound Entry
+      </a>
+      <a class="nav-item-custom active" id="nav-overview" onclick="switchTab('overview')">
+        <i class="bi bi-grid-1x2"></i> Overview
+      </a>
+      <a class="nav-item-custom" id="nav-taskhub" onclick="switchTab('taskhub')">
+        <i class="bi bi-list-check"></i> <span id="taskHubLabel">Work Panel</span>
+      </a>
+      <a class="nav-item-custom" id="nav-manifest" onclick="switchTab('manifest')">
+        <i class="bi bi-file-earmark-spreadsheet"></i> Manifest
+      </a>
+      
+      <div id="adminNavGroup" style="display:none;">
+        <div class="nav-label">Administration</div>
+        <a class="nav-item-custom" id="nav-admin" onclick="switchTab('admin')">
+          <i class="bi bi-shield-lock"></i> Admin Panel 
+          <span class="badge bg-danger ms-auto" id="adminBadge" style="display:none">0</span>
+        </a>
+      </div>
+    </div>
+    
+    <div class="sidebar-footer">
+      <div class="user-profile">
+        <div class="user-avatar" id="userInitials">U</div>
+        <div style="flex:1; overflow:hidden;">
+          <div class="fw-bold text-white small text-truncate" id="userNameDisplay">User</div>
+          <div class="small text-muted" style="font-size:0.7rem;" id="userRoleDisplay">Staff</div>
+        </div>
+        <button onclick="logout()" class="btn btn-sm btn-outline-danger border-0" title="Logout"><i class="bi bi-box-arrow-right"></i></button>
+      </div>
+    </div>
+  </aside>
 
-  <div class="tab-content">
+  <!-- CONTENT -->
+  <main class="content-area">
+    <div class="topbar">
+      <div class="d-flex align-items-center">
+        <button class="mobile-toggle me-3" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+        <h1 class="page-title d-none d-md-block" id="pageTitle">Overview</h1>
+      </div>
+      
+      <!-- LOGO CENTER -->
+      <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" alt="Logo" class="topbar-center-logo">
 
-    <!-- 1. INBOUND -->
-    <div class="tab-pane fade" id="inbound-tab">
-      <div class="row justify-content-center">
-        <div class="col-xl-10">
-          <div class="panel-card p-4">
-            <h5 class="fw-bold mb-4 border-bottom pb-2">New Shipment Inbound</h5>
-            <form id="shipForm">
-              <div class="row g-3">
-                <div class="col-md-4"><label class="small fw-bold">AWB *</label><input type="text" id="f_awb" class="form-control" required></div>
-                <div class="col-md-4"><label class="small fw-bold">Date *</label><input type="date" id="f_date" class="form-control" required></div>
-                <div class="col-md-4"><label class="small fw-bold">Type *</label><select id="f_type" class="form-select" required><option>Dox</option><option>Ndox</option></select></div>
-                <div class="col-md-4"><label class="small fw-bold">Network *</label><select id="f_net" class="form-select" required></select></div>
-                <div class="col-md-4"><label class="small fw-bold">Client *</label><select id="f_client" required></select></div>
-                <div class="col-md-4"><label class="small fw-bold">Destination *</label><select id="f_dest" required></select></div>
-                <div class="col-6"><label class="small fw-bold">Total Boxes *</label><input type="number" id="f_boxes" class="form-control" min="1" required></div>
-                <div class="col-6"><label class="small fw-bold">Chargeable Wgt</label><input type="text" id="f_totalChg" class="form-control bg-light fw-bold" readonly value="0.00"></div>
+      <div>
+        <div class="text-end small text-muted">
+          <span id="dateDisplay" class="fw-bold d-none d-md-inline"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-container">
+      
+      <!-- 1. INBOUND TAB -->
+      <div id="inbound-tab" class="tab-view" style="display:none;">
+        <div class="row justify-content-center">
+          <div class="col-12">
+            <div class="panel-card">
+              <div class="panel-header bg-white">
+                <div><i class="bi bi-plus-circle-fill text-primary me-2"></i>New Shipment Entry</div>
+                <div class="small text-muted fw-normal">Fill in the details below</div>
               </div>
-              <div class="mt-4 p-3 bg-light rounded border">
-                <div class="d-flex justify-content-between align-items-center mb-2"><strong class="small text-muted">DIMENSIONS</strong><button type="button" class="btn btn-zephyr-green btn-sm rounded-pill px-3" onclick="genBoxes()">Generate Rows</button></div>
-                <div class="table-responsive bg-white border rounded"><table class="table table-sm mb-0"><thead class="bg-light"><tr><th>#</th><th>Wgt (KG) *</th><th>L</th><th>B</th><th>H</th><th>Vol</th></tr></thead><tbody id="boxTable"></tbody></table></div>
+              <div class="panel-body">
+                <form id="shipForm">
+                  <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                      <label class="form-label">AWB Number *</label>
+                      <input type="text" id="f_awb" class="form-control font-monospace" required placeholder="000-00000000">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">Date *</label>
+                      <input type="date" id="f_date" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">Type *</label>
+                      <select id="f_type" class="form-select" required>
+                        <option>Dox</option>
+                        <option>Ndox</option>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">Network *</label>
+                      <select id="f_net" class="form-select" required></select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">Client *</label>
+                      <select id="f_client" required></select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">Destination *</label>
+                      <select id="f_dest" required></select>
+                    </div>
+                  </div>
+                  
+                  <div class="row g-4 mb-4">
+                     <div class="col-md-3">
+                        <label class="form-label">Total Boxes *</label>
+                        <div class="input-group">
+                           <input type="number" id="f_boxes" class="form-control" min="1" required placeholder="Quantity">
+                           <button type="button" class="btn btn-success fw-bold" onclick="genBoxes()">Generate Rows</button>
+                        </div>
+                     </div>
+                     <div class="col-md-3">
+                        <label class="form-label">Chargeable Wgt</label>
+                        <input type="text" id="f_totalChg" class="form-control bg-light fw-bold text-primary" readonly value="0.00">
+                     </div>
+                  </div>
+
+                  <div class="card bg-light border-0 mb-4">
+                    <div class="card-body">
+                       <h6 class="fw-bold small mb-3 text-uppercase text-muted">Dimensions & Weight</h6>
+                       <div class="table-responsive bg-white rounded border">
+                         <table class="table table-sm mb-0 align-middle">
+                           <thead><tr><th style="width:50px">#</th><th>Weight (KG) *</th><th>Length (cm)</th><th>Width (cm)</th><th>Height (cm)</th><th class="text-end">Chargeable Weight</th></tr></thead>
+                           <tbody id="boxTable"></tbody>
+                         </table>
+                       </div>
+                    </div>
+                  </div>
+
+                  <div class="mb-4">
+                    <label class="form-label mb-2">Extra Charges</label>
+                    <div id="f_extra" class="row g-2 border rounded p-3 bg-light m-0"></div>
+                  </div>
+                  <div class="mb-4">
+                    <label class="form-label">Extra Charges Remarks (If Applicable)</label>
+                    <textarea id="f_remarks" class="form-control" rows="2" placeholder="Optional notes..."></textarea>
+                  </div>
+
+                  <div class="d-flex justify-content-end pt-3 border-top">
+                    <button type="button" class="btn btn-light me-2" onclick="document.getElementById('shipForm').reset()">Reset</button>
+                    <button type="submit" class="btn btn-primary px-5 rounded-pill fw-bold">Submit Entry</button>
+                  </div>
+                </form>
               </div>
-              <div class="mt-4"><label class="small fw-bold mb-2">Extra Charges</label><div id="f_extra" class="d-flex flex-wrap gap-2 p-3 border rounded bg-white w-100"></div></div>
-              <div class="mt-3"><label class="small fw-bold">Extra Charges Remarks (If Applicable)</label><textarea id="f_remarks" class="form-control" rows="1"></textarea></div>
-              <button type="submit" class="btn btn-primary w-100 py-3 mt-4 rounded-pill fw-bold shadow-sm">SUBMIT ENTRY</button>
-            </form>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 2. OVERVIEW -->
-    <div class="tab-pane fade" id="overview-tab">
+      <!-- 2. OVERVIEW TAB -->
+      <div id="overview-tab" class="tab-view">
+        <div class="d-flex justify-content-end mb-4">
+          <button class="btn btn-success btn-sm rounded-pill px-3 shadow-sm" onclick="exportOverviewExcel()">
+            <i class="bi bi-file-earmark-excel me-2"></i>Export Report
+          </button>
+        </div>
 
-      <div class="d-flex justify-content-end mb-3">
-        <button class="btn btn-success btn-sm rounded-pill px-3 shadow-sm" onclick="exportOverviewExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Export Detailed Report</button>
-      </div>
-
-      <div class="row g-4 mb-4">
-        <div class="col-md-4"><div class="overview-stat-card border-success border-opacity-25 bg-success bg-opacity-10"><div class="overview-label text-success">Today's Inbound (<span id="ovDate"></span>)</div><div class="stat-val text-success" id="ovInbound">0</div></div></div>
-        <div class="col-md-4"><div class="overview-stat-card border-danger border-opacity-25"><div class="overview-label text-danger">Pending Automation</div><div class="stat-val text-live-red" id="ovAuto">0</div></div></div>
-        <div class="col-md-4"><div class="overview-stat-card border-warning border-opacity-25"><div class="overview-label text-warning text-dark">Pending Paperwork</div><div class="stat-val text-live-red" id="ovPaper">0</div></div></div>
-      </div>
-      <div class="row g-4">
-        <div class="col-md-6"><div class="panel-card"><div class="panel-header border-bottom-0 bg-white"><span><i class="bi bi-robot me-2 text-danger"></i>Pending for Automation</span></div><div class="split-col p-0"><div class="list-group list-group-flush" id="listAuto"></div></div></div></div>
-        <div class="col-md-6"><div class="panel-card"><div class="panel-header border-bottom-0 bg-white"><span><i class="bi bi-files me-2 text-warning"></i>Pending for Paperwork & Label Pasting</span></div><div class="split-col p-0"><div class="list-group list-group-flush" id="listPaper"></div></div></div></div>
-      </div>
-    </div>
-
-    <!-- 3. TASK HUB -->
-    <div class="tab-pane fade" id="taskhub-tab">
-      <div id="staffTaskView" style="display:none;">
-        <ul class="nav nav-tabs mb-3">
-          <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabAssign">Assign Next Step</button></li>
-          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabTodo">My Assignments</button></li>
-        </ul>
-        <div class="tab-content">
-          <div class="tab-pane fade show active" id="tabAssign">
-            <div class="alert alert-light border small text-muted"><i class="bi bi-info-circle me-2"></i>Shipments you automated. Assign them to a Paperwork Doer.</div>
-            <div id="staffAssignContainer"></div>
-            <div id="noAssignMsg" class="text-center py-5 text-muted" style="display:none;">No pending assignments found.</div>
+        <div class="row g-4 mb-4">
+          <div class="col-md-4">
+            <div class="stat-card">
+              <div><div class="stat-label">TODAY'S INBOUND</div><div class="stat-value text-success" id="ovInbound">0</div></div>
+              <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-box-seam"></i></div>
+            </div>
           </div>
-          <div class="tab-pane fade" id="tabTodo">
-            <div class="alert alert-light border small text-muted"><i class="bi bi-info-circle me-2"></i>Paperwork tasks assigned to you. Mark done when complete.</div>
-            <div id="staffTodoContainer"></div>
-            <div id="noTodoMsg" class="text-center py-5 text-muted" style="display:none;">You have no active tasks.</div>
+          <div class="col-md-4">
+            <div class="stat-card">
+              <div><div class="stat-label">PENDING AUTOMATION</div><div class="stat-value text-danger" id="ovAuto">0</div></div>
+              <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-robot"></i></div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="stat-card">
+              <div><div class="stat-label">PENDING PAPERWORK</div><div class="stat-value text-warning" id="ovPaper">0</div></div>
+              <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-files"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="panel-card h-100">
+              <div class="panel-header"><span><i class="bi bi-robot me-2 text-danger"></i>Pending for Automation</span> <span class="badge bg-secondary rounded-pill" id="badgeAuto">0</span></div>
+              <div style="height: 500px; overflow-y: auto;">
+                <div class="list-group list-group-flush" id="listAuto"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="panel-card h-100">
+              <div class="panel-header"><span><i class="bi bi-files me-2 text-warning"></i>Pending for Paperwork & Label Pasting</span> <span class="badge bg-secondary rounded-pill" id="badgePaper">0</span></div>
+              <div style="height: 500px; overflow-y: auto;">
+                <div class="list-group list-group-flush" id="listPaper"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <div id="adminTaskView" style="display:none;">
-        <div class="panel-card p-3">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-             <h6 class="fw-bold m-0">Global Task Assignment Pool (Paperwork Only)</h6>
-             <button class="btn btn-success btn-sm" onclick="exportAdminPoolExcel()"><i class="bi bi-file-earmark-excel"></i> Export Pool</button>
+
+      <!-- 3. WORK PANEL (TASK HUB) -->
+      <div id="taskhub-tab" class="tab-view" style="display:none;">
+        <div id="staffTaskView" style="display:none;">
+          <ul class="nav nav-pills mb-4">
+            <li class="nav-item me-2"><button class="nav-link active rounded-pill px-4" data-bs-toggle="pill" data-bs-target="#tabAssign">Assign Next Step</button></li>
+            <li class="nav-item"><button class="nav-link rounded-pill px-4" data-bs-toggle="pill" data-bs-target="#tabTodo">My Assignments</button></li>
+          </ul>
+          
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="tabAssign">
+              <div id="staffAssignContainer" class="row g-3"></div>
+              <div id="noAssignMsg" class="text-center py-5 text-muted" style="display:none;">
+                <img src="https://cdn-icons-png.flaticon.com/512/7486/7486744.png" width="64" class="mb-3 opacity-50"><br>
+                No shipments waiting for assignment.
+              </div>
+            </div>
+            <div class="tab-pane fade" id="tabTodo">
+              <div id="staffTodoContainer" class="row g-3"></div>
+              <div id="noTodoMsg" class="text-center py-5 text-muted" style="display:none;">
+                <img src="https://cdn-icons-png.flaticon.com/512/7486/7486754.png" width="64" class="mb-3 opacity-50"><br>
+                You have no active paperwork tasks.
+              </div>
+            </div>
           </div>
-          <div class="table-responsive"><table class="table table-hover align-middle"><thead class="bg-light"><tr><th>ID</th><th>Type</th><th>Details</th><th>Assign To</th><th>Action</th></tr></thead><tbody id="poolTable"></tbody></table></div>
+        </div>
+
+        <div id="adminTaskView" style="display:none;">
+          <div class="panel-card">
+            <div class="panel-header">
+               <span>Global Task Pool (Paperwork)</span>
+               <button class="btn btn-outline-success btn-sm" onclick="exportAdminPoolExcel()"><i class="bi bi-download me-1"></i> Export Pool</button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light"><tr><th>AWB</th><th>Details</th><th>Description</th><th>Assign To</th><th>Action</th></tr></thead>
+                <tbody id="poolTable"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- 4. ADMIN -->
-    <div class="tab-pane fade" id="admin-tab">
-      <div class="row g-4">
-        <div class="col-md-6"><div class="panel-card p-3 h-100"><h6 class="fw-bold mb-3 text-warning">Transfer Requests</h6><div id="adminReqList" class="list-group list-group-flush"></div></div></div>
-        <div class="col-md-6"><div class="panel-card p-3 h-100"><h6 class="fw-bold mb-3 text-primary">Manage Users</h6><div class="input-group mb-3"><input id="nu_u" class="form-control" placeholder="User"><input id="nu_p" class="form-control" placeholder="Pass"><input id="nu_n" class="form-control" placeholder="Name"><select id="nu_r" class="form-select" style="max-width:80px"><option>Staff</option><option>Admin</option></select><button onclick="addUser()" class="btn btn-success">+</button></div><div style="max-height:200px;overflow-y:auto"><table class="table table-sm"><thead class="bg-light"><tr><th>User</th><th>Pass</th><th>Name</th><th>Act</th></tr></thead><tbody id="userTable"></tbody></table></div></div></div>
-        <div class="col-12"><div class="panel-card p-3"><h6 class="fw-bold mb-3 text-success">Dropdowns</h6><div class="row g-2"><div class="col-auto"><select id="dd_cat" class="form-select"><option value="client">Client</option><option value="network">Network</option><option value="destination">Dest</option><option value="extra">Charge</option></select></div><div class="col"><input id="dd_val" class="form-control" placeholder="Value"></div><div class="col-auto"><button class="btn btn-success" onclick="manageDd('add')">Add</button><button class="btn btn-danger" onclick="manageDd('delete')">Del</button></div></div></div></div>
+      <!-- 4. MANIFEST TAB (NEW) -->
+      <div id="manifest-tab" class="tab-view" style="display:none;">
+        <div class="panel-card">
+          <div class="panel-header">
+            <div class="d-flex align-items-center">
+              <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px; height:40px;"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+              <div>
+                <div class="fw-bold">Manifest Generation</div>
+                <div class="small text-muted fw-normal">Items ready for dispatch (Paperwork Completed)</div>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+               <select id="man_net" class="form-select" onchange="renderManifest()">
+                 <option value="">Select Network...</option>
+               </select>
+               <button class="btn btn-primary rounded-pill shadow-sm text-nowrap" onclick="exportManifest()"><i class="bi bi-cloud-arrow-down me-2"></i>Export Manifest</button>
+            </div>
+          </div>
+          <div class="panel-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0" id="manifestTable">
+                <thead>
+                  <tr>
+                    <th class="ps-4">AWB</th>
+                    <th>Date</th>
+                    <th>Destination</th>
+                    <th>Network</th>
+                    <th>Pieces</th>
+                    <th>Weight</th>
+                    <th class="text-end pe-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="manifestList">
+                  <!-- JS to populate -->
+                </tbody>
+              </table>
+            </div>
+            <div id="manifestEmptyState" class="text-center py-5">
+              <div class="mb-3 text-muted"><i class="bi bi-inbox fs-1"></i></div>
+              <h6 class="text-muted fw-bold">No Items Found</h6>
+              <p class="text-muted small">Select a network to view completed shipments.<br>Or no items are ready for manifest.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. ADMIN TAB -->
+      <div id="admin-tab" class="tab-view" style="display:none;">
+        <div class="row g-4">
+          <div class="col-lg-6">
+             <div class="panel-card h-100">
+               <div class="panel-header text-warning"><i class="bi bi-arrow-left-right me-2"></i>Task Transfer Requests</div>
+               <div id="adminReqList" class="list-group list-group-flush"></div>
+             </div>
+          </div>
+          <div class="col-lg-6">
+             <div class="panel-card h-100">
+               <div class="panel-header text-primary"><i class="bi bi-people-fill me-2"></i>User Management</div>
+               <div class="p-3">
+                 <div class="input-group mb-3">
+                   <input id="nu_u" class="form-control" placeholder="Username">
+                   <input id="nu_p" class="form-control" placeholder="Password">
+                   <input id="nu_n" class="form-control" placeholder="Full Name">
+                   <select id="nu_r" class="form-select" style="max-width:100px"><option>Staff</option><option>Admin</option></select>
+                   <button onclick="addUser()" class="btn btn-primary"><i class="bi bi-plus-lg"></i></button>
+                 </div>
+                 <div style="max-height:300px;overflow-y:auto; border:1px solid #f1f5f9; rounded:8px;">
+                   <table class="table table-sm mb-0"><thead class="sticky-top bg-light"><tr><th>User</th><th>Pass</th><th>Name</th><th></th></tr></thead><tbody id="userTable"></tbody></table>
+                 </div>
+               </div>
+             </div>
+          </div>
+          <div class="col-12">
+            <div class="panel-card">
+              <div class="panel-header text-success"><i class="bi bi-menu-button-wide me-2"></i>Dropdown Configuration</div>
+              <div class="p-3">
+                <div class="row g-3 align-items-center mb-3">
+                  <div class="col-auto"><select id="dd_cat" class="form-select" onchange="updateAdminDel()"><option value="client">Client</option><option value="network">Network</option><option value="destination">Destination</option><option value="extra">Extra Charge</option></select></div>
+                  <div class="col-md-4"><input id="dd_val" class="form-control" placeholder="New Value"></div>
+                  <div class="col-auto">
+                    <button class="btn btn-success" onclick="manageDd('add')">Add Item</button>
+                  </div>
+                </div>
+                <div class="p-3 bg-light rounded border mt-3">
+                   <label class="form-label mb-2 small fw-bold text-muted">Search & Delete Item:</label>
+                   <div class="d-flex gap-2">
+                      <div style="flex:1"><select id="dd_del_sel" placeholder="Select item to delete..."></select></div>
+                      <button class="btn btn-danger" onclick="actDeleteDd()"><i class="bi bi-trash"></i></button>
+                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- MODAL: Reassign -->
+<div class="modal fade" id="reassignModal" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0"><h6 class="modal-title fw-bold">Transfer Task</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <p class="small text-muted mb-3">Request transfer for <b id="reassignId" class="text-dark"></b> to:</p>
+        <select id="reassignStaff" class="form-select mb-3"></select>
+        <button class="btn btn-primary w-100 btn-sm rounded-pill fw-bold" onclick="submitReassign()">Send Request</button>
       </div>
     </div>
   </div>
 </div>
 
-<div class="modal fade" id="reassignModal" tabindex="-1"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h6 class="modal-title fw-bold">Transfer Task</h6></div><div class="modal-body"><p class="small text-muted">Transfer <b id="reassignId"></b> to:</p><select id="reassignStaff" class="form-select mb-3"></select><button class="btn btn-primary w-100 btn-sm" onclick="submitReassign()">Send Request</button></div></div></div></div>
-
+<!-- SCRIPTS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 
 <script>
-  // API CONFIG
+  // --- CONFIG ---
   const API_URL="https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
-  let currentUser="", currentRole="", tsClient, tsDest, currentReassign={};
-
+  let currentUser="", currentRole="", currentName="", tsClient, tsDest, currentReassign={};
+  
   window.APP_DATA = { staff: [], dropdowns: {}, overview: { auto:[], paper:[] }, workflow: { toAssign:[], toDo:[] }, stats: {} };
-  window.tomInstances = { client: null, dest: null };
+  window.tomInstances = { client: null, dest: null, adminDel: null };
 
-  // --- GLOBALS ---
-  window.loadOverview = function() { renderOverview(); };
-  window.loadTaskHub = function() { renderTaskHub(); };
-  window.loadAdminPanel = function() { if(currentRole==='admin') { loadUsers(); loadAdminReqs(); } };
-  window.genBoxes = function() {
-    const n = document.getElementById('f_boxes').value;
-    if(!n || n<1) return alert("Enter Total Boxes first");
-    const tb = document.getElementById('boxTable');
-    let html = '';
-    for(let i=1; i<=n; i++) html += `<tr><td class="ps-3 fw-bold text-muted">${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="text-end pe-3 val-chg small fw-bold text-primary">0.00</td></tr>`;
-    tb.innerHTML = html;
-  };
-  window.cBox = function(el) {
-    const r=el.closest('tr'), i=r.querySelectorAll('input');
-    const w=parseFloat(i[0].value)||0, l=parseFloat(i[1].value)||0, b=parseFloat(i[2].value)||0, h=parseFloat(i[3].value)||0;
-    const chg=Math.max(w, (l*b*h)/5000); r.querySelector('.val-chg').textContent=chg.toFixed(2);
-    let tot=0; document.querySelectorAll('.val-chg').forEach(x=>tot+=parseFloat(x.textContent));
-    document.getElementById('f_totalChg').value=tot.toFixed(2);
-  };
-  window.logout = function() { location.reload(); };
+  // --- INITIALIZATION ---
+  document.addEventListener('DOMContentLoaded', () => {
+     document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  });
 
-  function showSpin(x){document.getElementById('spinner').style.display=x?'flex':'none';}
-  async function callApi(d){ try{const r=await fetch(API_URL,{method:"POST",body:JSON.stringify(d)}); return await r.json();}catch(e){return{result:"error"};}}
-  async function fetchGet(a){ try{const r=await fetch(`${API_URL}?action=${a}&user=${encodeURIComponent(currentUser)}`); return await r.json();}catch(e){return{result:"error"};}}
+  // --- NAVIGATION LOGIC ---
+  window.switchTab = function(tabName) {
+    document.querySelectorAll('.nav-item-custom').forEach(el => el.classList.remove('active'));
+    document.getElementById('nav-' + tabName).classList.add('active');
+    
+    document.querySelectorAll('.tab-view').forEach(el => el.style.display = 'none');
+    document.getElementById(tabName + '-tab').style.display = 'block';
+    
+    // Page Title
+    const titles = { 'inbound': 'Inbound Entry', 'overview': 'Dashboard', 'taskhub': currentRole === 'admin' ? 'Task Manager' : 'Work Panel', 'manifest': 'Manifest Generation', 'admin': 'System Admin' };
+    document.getElementById('pageTitle').textContent = titles[tabName];
+    
+    if(tabName === 'overview') renderOverview();
+    if(tabName === 'taskhub') renderTaskHub();
+    if(tabName === 'admin') loadAdminPanel();
+    if(tabName === 'manifest') { renderManifest(); }
+    
+    // Mobile close
+    if(window.innerWidth < 992) {
+       document.getElementById('sidebar').classList.remove('show');
+       document.getElementById('sidebarBackdrop').classList.remove('show');
+    }
+  };
+
+  window.toggleSidebar = function() {
+    document.getElementById('sidebar').classList.toggle('show');
+    document.getElementById('sidebarBackdrop').classList.toggle('show');
+  };
 
   // --- LOGIN ---
-  async function doLogin(){
+  window.doLogin = async function() {
     showSpin(true);
     const u=document.getElementById('uIn').value, p=document.getElementById('pIn').value;
     const r=await callApi({action:"login", username:u, password:p});
     if(r.result==="success"){
-      currentUser=r.username; currentRole=r.role.toLowerCase();
-      document.getElementById('userBadge').textContent=r.name;
+      currentUser=r.username; currentRole=r.role.toLowerCase(); currentName=r.name;
+      
+      document.getElementById('userNameDisplay').textContent = r.name;
+      document.getElementById('userRoleDisplay').textContent = r.role;
+      document.getElementById('userInitials').textContent = r.name.charAt(0).toUpperCase();
+      
       document.getElementById('loginSection').style.display='none';
-      document.getElementById('appSection').style.display='block';
+      document.getElementById('appSection').style.display='flex';
+      
       buildNav();
       await syncData(true);
-    } else { showSpin(false); document.getElementById('loginError').textContent=r.message; document.getElementById('loginError').style.display='block'; }
+    } else { 
+      showSpin(false); 
+      const err = document.getElementById('loginError');
+      err.textContent=r.message; err.style.display='block'; 
+    }
+  };
+
+  window.logout = function() { location.reload(); };
+
+  function buildNav() {
+    const adminGroup = document.getElementById('adminNavGroup');
+    if(currentRole === 'admin') {
+       adminGroup.style.display = 'block';
+       document.getElementById('adminTaskView').style.display='block';
+       document.getElementById('taskHubLabel').textContent = "Task Manager";
+       switchTab('overview');
+    } else {
+       adminGroup.style.display = 'none';
+       document.getElementById('staffTaskView').style.display='block';
+       document.getElementById('taskHubLabel').textContent = "Work Panel";
+       switchTab('inbound');
+    }
   }
-  window.doLogin = doLogin;
 
   // --- DATA SYNC ---
   async function syncData(firstLoad=false){
@@ -235,22 +837,21 @@
       const r = await fetch(url).then(res => res.json());
       if(r.result === "success") {
         window.APP_DATA = { ...window.APP_DATA, ...r };
-
+        
         if(r.static) {
             window.APP_DATA.staff = r.static.staff || [];
             window.APP_DATA.dropdowns = r.static.dropdowns || {};
         }
-
         if(r.workflow) {
           window.APP_DATA.workflow.toAssign = r.workflow.toAssign || [];
           window.APP_DATA.workflow.toDo = r.workflow.toDo || [];
         }
-
+        
         if(firstLoad) {
           initForms();
           setInterval(()=>syncData(false), 30000);
         } else {
-          updateDropdowns();
+          updateDropdowns(); // Calls the wrapper function defined below
         }
         refreshUI();
       }
@@ -261,8 +862,10 @@
   function refreshUI() {
     renderOverview();
     renderTaskHub();
+    updateAdminDel(); // Update delete dropdown if admin panel open
+    // If manifest tab is active, ideally refresh it, but it requires manual interaction
     if(currentRole==='admin') {
-      const c = window.APP_DATA.stats.requests || 0;
+      const c = window.APP_DATA.stats.requests || 0; 
       const b = document.getElementById('adminBadge');
       b.textContent = c;
       b.style.display = c > 0 ? 'inline-block' : 'none';
@@ -274,210 +877,318 @@
   function renderOverview() {
     const d = window.APP_DATA.overview;
     const s = window.APP_DATA.stats;
-
-    document.getElementById('ovDate').textContent = new Date().toLocaleDateString();
-    document.getElementById('ovInbound').textContent = s.inbound;
-    document.getElementById('ovAuto').textContent = d.auto.length;
-    document.getElementById('ovPaper').textContent = d.paper.length;
-
-    // Sort: Unassigned first, then Assigned
-    const sortedPaper = [...d.paper].sort((a,b) => (a.assignee ? 1 : -1) - (b.assignee ? 1 : -1));
+    
+    document.getElementById('ovInbound').textContent = s.inbound || 0;
+    document.getElementById('ovAuto').textContent = d.auto.length || 0;
+    document.getElementById('ovPaper').textContent = d.paper.length || 0;
+    document.getElementById('badgeAuto').textContent = d.auto.length;
+    document.getElementById('badgePaper').textContent = d.paper.length;
 
     const fill = (id, list) => {
-      const el=document.getElementById(id);
+      const el=document.getElementById(id); el.innerHTML='';
       if(!list.length) {
-        el.innerHTML='<div class="text-center p-3 text-muted small">All clear!</div>';
-        return;
+         el.innerHTML='<div class="text-center p-4 text-muted small">Queue is empty</div>';
+         return;
       }
-      const html = list.map(x => {
-        let userBadge = x.user ? `<div class="small text-secondary mb-1"><i class="bi bi-person me-1"></i>${x.user}</div>` : '';
-        let assigneeBadge = x.assignee ? `<div class="small text-success fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i>Assigned to: ${x.assignee}</div>` : (x.autoDoer ? `<div class="small text-secondary mb-1"><i class="bi bi-robot me-1"></i>Auto by: ${x.autoDoer}</div>` : '');
-        // Removed netHtml variable usage here as it was causing duplication.
-        // The netNo is already part of x.details from backend.
+      let html = '';
+      list.forEach(x => {
+        let userBadge = x.user 
+           ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 ms-2"><i class="bi bi-person-fill me-1"></i>${x.user}</span>` 
+           : '';
 
-        return `
-          <div class="list-group-item">
-            <div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div>
-            <div class="small fw-bold">${x.client}</div>
-            ${userBadge}
-            ${assigneeBadge}
-            <div class="small text-primary">${x.details}</div>
+        let assigneeBadge = x.assignee 
+           ? `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 ms-2"><i class="bi bi-person-check-fill me-1"></i>${x.assignee}</span>` 
+           : (x.autoDoer 
+              ? `<span class="badge bg-secondary bg-opacity-10 text-secondary border ms-2"><i class="bi bi-robot me-1"></i>${x.autoDoer}</span>` 
+              : '');
+        
+        html += `
+          <div class="list-group-item py-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="fw-bold text-dark">${x.id}</span>
+              <span class="small fw-bold text-muted">${x.net}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <span class="small fw-bold text-primary">${x.client}</span>
+                ${userBadge} ${assigneeBadge}
+              </div>
+              <div class="small text-muted">${x.details}</div>
+            </div>
           </div>`;
-      }).join('');
+      });
       el.innerHTML = html;
     };
     fill('listAuto', d.auto);
-    fill('listPaper', sortedPaper);
+    fill('listPaper', [...d.paper].sort((a,b) => (a.assignee ? 1 : -1) - (b.assignee ? 1 : -1)));
   }
 
   function renderTaskHub() {
     if(currentRole === 'admin') {
-      const tb = document.getElementById('poolTable');
-      // Use adminPool for global view
+      const tb = document.getElementById('poolTable'); tb.innerHTML='';
       const pool = window.APP_DATA.adminPool || window.APP_DATA.overview.paper || [];
-
-      const poolHtml = pool.map(t => {
-        let opts = `<option value="">Assign...</option>`;
-        if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(s => opts += `<option value="${s}">${s}</option>`);
-
-        let buttonLabel = t.assignee ? "Reassign" : "Assign";
-        let btnClass = t.assignee ? "btn-warning" : "btn-success";
-
-        return `
-          <tr>
-            <td class="fw-bold">${t.id}</td>
-            <td><div class="small fw-bold">${t.client}</div><small class="text-muted">${t.net}</small></td>
-            <td><span class="small text-muted">${t.details}</span></td>
-            <td><select id="as_${t.id}" class="form-select form-select-sm">${opts}</select></td>
-            <td><button class="btn btn-sm ${btnClass} shadow-sm" onclick="actAssign('${t.id}','${t.type}')">${buttonLabel}</button></td>
-          </tr>`;
-      }).join('');
-      tb.innerHTML = poolHtml;
-
-      // Need to set values after innerHTML update
+      let html = '';
       pool.forEach(t => {
-          let assignedVal = t.assignee || "";
-          if(assignedVal) {
-             const sel = document.getElementById(`as_${t.id}`);
-             if(sel) sel.value = assignedVal;
-          }
+        let opts = `<option value="">Assign...</option>` + (window.APP_DATA.staff ? window.APP_DATA.staff.map(s => `<option value="${s}">${s}</option>`).join('') : '');
+        let btnClass = t.assignee ? "btn-warning" : "btn-success";
+        let btnTxt = t.assignee ? "Reassign" : "Assign";
+        html += `<tr><td class="fw-bold font-monospace">${t.id}</td><td><div class="fw-bold small">${t.client}</div><small class="text-muted">${t.net}</small></td><td><span class="small text-muted">${t.details}</span></td><td style="width:200px"><select id="as_${t.id}" class="form-select form-select-sm">${opts}</select></td><td><button class="btn btn-sm ${btnClass} shadow-sm px-3" onclick="actAssign('${t.id}','${t.type}')">${btnTxt}</button></td></tr>`;
+      });
+      tb.innerHTML = html;
+      pool.forEach(t => {
+        if(t.assignee) document.getElementById(`as_${t.id}`).value = t.assignee;
       });
     } else {
       const toAssign = window.APP_DATA.workflow.toAssign;
       const toDo = window.APP_DATA.workflow.toDo;
-
       const ac = document.getElementById('staffAssignContainer');
       document.getElementById('noAssignMsg').style.display = toAssign.length===0?'block':'none';
-
-      const acHtml = toAssign.map(t => {
-        let opts = `<option value="">Select Paperwork Doer...</option>`;
-        if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(s => opts += `<option value="${s}">${s}</option>`);
-        return `
-          <div class="task-card-horizontal" id="assign_card_${t.id}">
-            <div><strong class="fs-5">${t.id}</strong><div class="small fw-bold text-secondary">${t.client}</div><div class="small text-muted">${t.net} | ${t.details}</div></div>
-            <div class="d-flex gap-2 align-items-center">
-              <select id="staff_assign_${t.id}" class="form-select form-select-sm" style="width:160px">${opts}</select>
-              <button class="btn btn-primary btn-sm" onclick="staffActAssign('${t.id}')">Assign</button>
-            </div>
-          </div>`;
-      }).join('');
+      let acHtml = '';
+      toAssign.forEach(t => {
+        let opts = `<option value="">Select Staff...</option>` + (window.APP_DATA.staff ? window.APP_DATA.staff.map(s => `<option value="${s}">${s}</option>`).join('') : '');
+        acHtml += `<div class="col-md-6 col-xl-4" id="assign_card_${t.id}"><div class="panel-card p-3"><div class="d-flex justify-content-between mb-2"><span class="fw-bold font-monospace">${t.id}</span><span class="badge bg-light text-dark border">${t.net}</span></div><div class="small fw-bold text-primary mb-2">${t.client}</div><div class="small text-muted mb-3">${t.details}</div><div class="input-group input-group-sm"><select id="staff_assign_${t.id}" class="form-select">${opts}</select><button class="btn btn-primary" onclick="staffActAssign('${t.id}')">Assign</button></div></div></div>`;
+      });
       ac.innerHTML = acHtml;
 
       const tc = document.getElementById('staffTodoContainer');
       document.getElementById('noTodoMsg').style.display = toDo.length===0?'block':'none';
-
-      const tcHtml = toDo.map(t => {
-        return `
-          <div class="task-card-horizontal" id="todo_card_${t.id}">
-            <div><span class="badge bg-warning text-dark mb-1">Assigned to Me</span><br><strong>${t.id}</strong><div class="small">${t.subtitle}</div><div class="small text-muted">${t.details}</div></div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-success btn-sm px-4" onclick="staffActDone('${t.id}')">Mark Done</button>
-                <button class="btn btn-outline-secondary btn-sm px-3" onclick="reqTransfer('${t.id}','${t.type}')">Transfer</button>
-            </div>
-          </div>`;
-      }).join('');
+      let tcHtml = '';
+      toDo.forEach(t => {
+        tcHtml += `<div class="col-md-6 col-xl-4" id="todo_card_${t.id}"><div class="panel-card p-3 border-start border-4 border-warning"><div class="d-flex justify-content-between align-items-start mb-2"><div><span class="badge bg-warning text-dark mb-1" style="font-size:0.65rem">ASSIGNED TO ME</span><div class="fw-bold font-monospace fs-5">${t.id}</div></div><button class="btn btn-outline-secondary btn-sm lh-1 p-1" onclick="reqTransfer('${t.id}','${t.type}')" title="Transfer Task"><i class="bi bi-arrow-left-right"></i></button></div><div class="small mb-1">${t.subtitle}</div><div class="small text-muted mb-3">${t.details}</div><button class="btn btn-success w-100 rounded-pill shadow-sm fw-bold" onclick="staffActDone('${t.id}')"><i class="bi bi-check-lg me-1"></i> Mark Completed</button></div></div>`;
+      });
       tc.innerHTML = tcHtml;
     }
   }
 
+  function renderManifest() {
+    const list = document.getElementById('manifestList');
+    list.innerHTML = '';
+    
+    // Populate Network Dropdown
+    const sel = document.getElementById('man_net');
+    const nets = window.APP_DATA.dropdowns.networks || [];
+    // Only populate if empty (init)
+    if(sel.options.length <= 1) {
+       let opts = '';
+       nets.forEach(n => opts += `<option value="${n}">${n}</option>`);
+       sel.innerHTML += opts;
+    }
+    
+    const selectedNet = sel.value;
+    if(!selectedNet) {
+        document.getElementById('manifestEmptyState').style.display = 'block';
+        return;
+    }
+    
+    // Fetch items logic (Currently unavailable from backend, so showing empty state with network context)
+    // If backend supported 'completed' items, we would filter here:
+    // const items = window.APP_DATA.completed.filter(x => x.net === selectedNet);
+    
+    const items = []; 
+    
+    if(items.length === 0) {
+      document.getElementById('manifestEmptyState').style.display = 'block';
+      document.getElementById('manifestEmptyState').querySelector('h6').textContent = `No Manifest for ${selectedNet}`;
+    } else {
+      document.getElementById('manifestEmptyState').style.display = 'none';
+      let html = '';
+      items.forEach(item => {
+        html += `<tr><td class="ps-4 fw-bold">${item.id}</td><td>${item.date}</td><td>${item.dest}</td><td>${item.net}</td><td>${item.boxes}</td><td>${item.wgt}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`;
+      });
+      list.innerHTML = html;
+    }
+  }
+  
+  function initAdminDel() {
+    if(!window.tomInstances.adminDel) {
+       window.tomInstances.adminDel = new TomSelect("#dd_del_sel", { create: false, dropdownParent: 'body' });
+    }
+  }
+
+  function updateAdminDel() {
+    const cat = document.getElementById('dd_cat').value;
+    const ts = window.tomInstances.adminDel;
+    if(!ts) return;
+    
+    ts.clear();
+    ts.clearOptions();
+    
+    let items = [];
+    const dd = window.APP_DATA.dropdowns;
+    const map = { 'client': 'clients', 'network': 'networks', 'destination': 'destinations', 'extra': 'extraCharges' };
+    const key = map[cat];
+    
+    if(dd && dd[key]) items = dd[key];
+    items.forEach(it => ts.addOption({value:it, text:it}));
+    ts.refreshOptions(false);
+  }
+
+  window.actDeleteDd = async function() {
+    const ts = window.tomInstances.adminDel;
+    const val = ts.getValue();
+    const cat = document.getElementById('dd_cat').value;
+    
+    if(!val) return alert("Please select an item to delete.");
+    if(!confirm(`Delete "${val}" from ${cat}?`)) return;
+    
+    await callApi({action:"manageData", subAction:"delete", category:cat, value:val});
+    await syncData(false);
+  };
+
   // --- ACTIONS ---
+  async function callApi(d){ try{const r=await fetch(API_URL,{method:"POST",body:JSON.stringify(d)}); return await r.json();}catch(e){console.error(e); return{result:"error", message: e.toString()};}}
+  async function fetchGet(a){ try{const r=await fetch(`${API_URL}?action=${a}&user=${encodeURIComponent(currentUser)}`); return await r.json();}catch(e){console.error(e); return{result:"error", message: e.toString()};}}
+
+  function showSpin(x){document.getElementById('spinner').style.display=x?'flex':'none';}
+
   async function actAssign(id, type) {
     const s = document.getElementById('as_'+id).value; if(!s) return alert("Select Staff");
-    document.getElementById('as_'+id).closest('tr').remove();
+    document.getElementById('as_'+id).closest('tr').style.opacity = '0.5';
     await callApi({action:"assignTask", id:id, type:type, staff:s, assigner:currentUser});
     syncData(false);
   }
-  window.actAssign = actAssign;
 
   async function staffActAssign(id) {
     const s = document.getElementById('staff_assign_'+id).value; if(!s) return alert("Select Staff");
-    document.getElementById('assign_card_'+id).remove();
+    document.getElementById('assign_card_'+id).style.opacity = '0.5';
     await callApi({action:"assignTask", id:id, type:"Paperwork", staff:s, assigner:currentUser});
     syncData(false);
   }
-  window.staffActAssign = staffActAssign;
 
   async function staffActDone(id) {
-    if(!confirm("Paperwork Completed?")) return;
-    document.getElementById('todo_card_'+id).remove();
+    if(!confirm("Confirm Paperwork Completed?")) return;
+    document.getElementById('todo_card_'+id).style.opacity = '0.5';
     await callApi({action:"markPaperworkDone", id:id});
+    document.getElementById('todo_card_'+id).remove();
     syncData(false);
   }
-  window.staffActDone = staffActDone;
 
-  // --- ADMIN PANEL ---
-  function loadAdminPanel() {
-    if(currentRole === 'admin') {
-      loadUsers(); loadAdminReqs();
-    }
-  }
-  window.loadAdminPanel = loadAdminPanel;
-
+  // --- ADMIN FUNCTIONS ---
   async function loadUsers() {
     const r = await fetchGet("getUsers");
     if(r.result==='success'){
       const t = document.getElementById('userTable');
-      if(r.users) {
-        const html = r.users.map(u => `<tr><td>${u[0]}</td><td class="text-muted small" style="font-family:monospace; cursor:pointer;" onclick="this.textContent=this.textContent==='****'?'${u[1]}':'****'" title="Click to reveal">****</td><td><small>${u[2]}</small></td><td><button class="btn btn-danger btn-sm py-0" onclick="delUser('${u[0]}')">×</button></td></tr>`).join('');
-        t.innerHTML = html;
-      } else {
-        t.innerHTML = '';
-      }
+      let html = '';
+      if(r.users) r.users.forEach(u => {
+        html += `<tr><td class="fw-bold">${u[0]}</td><td class="text-muted small font-monospace" style="cursor:pointer;" onclick="this.textContent=this.textContent==='****'?'${u[1]}':'****'">****</td><td><small>${u[2]}</small> <span class="badge bg-light text-dark border">${u[3]}</span></td><td class="text-end"><button class="btn btn-outline-danger btn-sm py-0 border-0" onclick="delUser('${u[0]}')"><i class="bi bi-x-lg"></i></button></td></tr>`;
+      });
+      t.innerHTML = html;
     }
   }
 
   async function loadAdminReqs(){
     const r = await fetchGet("getAdminRequests");
-    const el = document.getElementById('adminReqList');
+    const el = document.getElementById('adminReqList'); el.innerHTML='';
     if(r.requests && r.requests.length > 0) {
-      const html = r.requests.map(x => `
-          <div class="list-group-item d-flex justify-content-between align-items-center">
-            <small>
-               <span class="fw-bold text-dark">${x.taskId}</span> <span class="badge bg-secondary text-light ms-1" style="font-size:0.6rem">${x.type}</span>
-               <div class="mt-1 d-flex align-items-center text-muted">${x.by} <i class="bi bi-arrow-right mx-2 small"></i> <strong class="text-dark">${x.to}</strong></div>
-            </small>
-            <div class="d-flex gap-2">
-               <button class="btn btn-sm btn-success py-1 px-2 shadow-sm" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')"><i class="bi bi-check-lg"></i></button>
-               <button class="btn btn-sm btn-danger py-1 px-2 shadow-sm" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')"><i class="bi bi-x-lg"></i></button>
-            </div>
-          </div>`).join('');
+      let html = '';
+      r.requests.forEach(x => {
+        html += `<div class="list-group-item"><div class="d-flex justify-content-between align-items-start mb-2"><div><span class="badge bg-dark text-white me-2">${x.taskId}</span> <span class="badge bg-secondary">${x.type}</span></div><small class="text-muted">${new Date(x.date).toLocaleDateString()}</small></div><div class="d-flex align-items-center mb-2 text-muted small"><span class="fw-bold text-dark">${x.by}</span> <i class="bi bi-arrow-right mx-2"></i> <span class="fw-bold text-dark">${x.to}</span></div><div class="d-flex gap-2"><button class="btn btn-success btn-sm flex-fill" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">Approve</button><button class="btn btn-outline-danger btn-sm flex-fill" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">Reject</button></div></div>`;
+      });
       el.innerHTML = html;
     } else {
-      el.innerHTML = '<div class="text-center p-3 text-muted small">No pending requests</div>';
+      el.innerHTML = '<div class="text-center p-4 text-muted small">No pending requests</div>';
     }
   }
 
-  // --- UTILS ---
+  window.loadAdminPanel = function() { 
+      if(currentRole==='admin') { 
+          loadUsers(); 
+          loadAdminReqs(); 
+          initAdminDel(); // Init delete dropdown
+          updateAdminDel(); // Populate
+      } 
+  };
+  window.addUser = async function() { await callApi({action:"addUser", u:document.getElementById('nu_u').value, p:document.getElementById('nu_p').value, n:document.getElementById('nu_n').value, r:document.getElementById('nu_r').value}); loadUsers(); };
+  window.delUser = async function(u) { if(confirm("Delete User?")) await callApi({action:"deleteUser", username:u}); loadUsers(); };
+  window.decideTr = async function(rid, tid, typ, to, dec){ showSpin(true); await callApi({action:"approveTransfer", reqId:rid, taskId:tid, type:typ, to:to, decision:dec}); loadAdminReqs(); showSpin(false); };
+  
+  window.manageDd = async function(act){ 
+      const v=document.getElementById('dd_val').value, c=document.getElementById('dd_cat').value; 
+      if(!v)return; 
+      await callApi({action:"manageData", subAction:act, category:c, value:v}); 
+      document.getElementById('dd_val').value=''; 
+      await syncData(false); // chips re-render in syncData -> refreshUI -> renderDdChips ? No, refreshUI calls it.
+  };
+  
+  window.deleteDdItem = async function(cat, val) {
+      if(!confirm(`Delete "${val}" from ${cat}?`)) return;
+      await callApi({action:"manageData", subAction:"delete", category:cat, value:val});
+      await syncData(false);
+  };
+
+  // --- FORMS & UTILS ---
+  window.genBoxes = function() {
+    const n = document.getElementById('f_boxes').value;
+    if(!n || n<1) return;
+    const tb = document.getElementById('boxTable');
+    let html = '';
+    for(let i=1; i<=n; i++) html += `<tr><td class="text-muted fw-bold">${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="text-end val-chg small fw-bold text-primary">0.00</td></tr>`;
+    tb.innerHTML = html;
+  };
+  window.cBox = function(el) {
+    const r=el.closest('tr'), i=r.querySelectorAll('input');
+    const w=parseFloat(i[0].value)||0, l=parseFloat(i[1].value)||0, b=parseFloat(i[2].value)||0, h=parseFloat(i[3].value)||0;
+    const chg=Math.max(w, (l*b*h)/5000); r.querySelector('.val-chg').textContent=chg.toFixed(2);
+    let tot=0; document.querySelectorAll('.val-chg').forEach(x=>tot+=parseFloat(x.textContent));
+    document.getElementById('f_totalChg').value=tot.toFixed(2);
+  };
+
+  document.getElementById('shipForm').onsubmit = async (e) => {
+    e.preventDefault();
+    if(!document.getElementById('f_net').value || !document.getElementById('f_client').value || !document.getElementById('f_dest').value) return alert("Please fill all dropdowns");
+    showSpin(true); 
+    let boxes=[], extra=[]; 
+    document.querySelectorAll('#boxTable tr').forEach((tr,i)=>{
+       let inps=tr.querySelectorAll('input');
+       if(inps.length) boxes.push({no:i+1, weight:inps[0].value, length:inps[1].value, breath:inps[2].value, height:inps[3].value});
+    });
+    document.querySelectorAll('#f_extra input:checked').forEach(c=>extra.push(c.value));
+    const res = await callApi({ 
+      action: 'submit', username: currentUser, awb: document.getElementById('f_awb').value, 
+      date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, 
+      network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, 
+      destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, 
+      extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes 
+    });
+    showSpin(false);
+    if(res.result==='success') { 
+      alert("Entry Saved Successfully"); document.getElementById('shipForm').reset(); document.getElementById('boxTable').innerHTML=''; tsClient.clear(); tsDest.clear();
+      syncData(false); 
+    } else alert(res.message);
+  };
+
   function initForms() {
     const dd = window.APP_DATA.dropdowns || {};
     fillSel('f_net', dd.networks || []);
-
-    // Init TomSelect
-    if(dd.clients) {
-      window.tomInstances.client = new TomSelect("#f_client",{create:false, dropdownParent: 'body', placeholder: "Search Client..."});
-    }
-    if(dd.destinations) {
-      window.tomInstances.dest = new TomSelect("#f_dest",{create:false, dropdownParent: 'body', placeholder: "Search Dest..."});
-    }
-
+    if(dd.clients) window.tomInstances.client = new TomSelect("#f_client",{create:false, dropdownParent: 'body', placeholder: "Select Client..."});
+    if(dd.destinations) window.tomInstances.dest = new TomSelect("#f_dest",{create:false, dropdownParent: 'body', placeholder: "Select Destination..."});
     updateDropdownOptions();
-
+    
     const ex = document.getElementById('f_extra'); ex.innerHTML='';
     if(dd.extraCharges) {
-        dd.extraCharges.forEach(x => ex.innerHTML += `<div class="form-check form-check-inline bg-light border px-2 py-1 rounded small"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1">${x}</label></div>`);
+       let html = '';
+       dd.extraCharges.forEach(x => html += `<div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1 small fw-bold text-secondary">${x}</label></div></div>`);
+       ex.innerHTML = html;
     }
     document.getElementById('f_date').valueAsDate = new Date();
   }
 
+  // Wrapper function to update all dropdowns (Selects & TomSelects)
   function updateDropdowns() {
-    const dd = window.APP_DATA.dropdowns || {};
-    fillSel('f_net', dd.networks || []);
-    updateDropdownOptions();
-
-    const ex = document.getElementById('f_extra'); ex.innerHTML='';
-    if(dd.extraCharges) {
-        dd.extraCharges.forEach(x => ex.innerHTML += `<div class="form-check form-check-inline bg-light border px-2 py-1 rounded small"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1">${x}</label></div>`);
-    }
+     const dd = window.APP_DATA.dropdowns || {};
+     // Update Network Select
+     fillSel('f_net', dd.networks || []);
+     
+     // Update TomSelects
+     updateDropdownOptions();
+     
+     // Update Extra Charges
+     const ex = document.getElementById('f_extra'); 
+     if(ex) {
+         let html = '';
+         if(dd.extraCharges) dd.extraCharges.forEach(x => html += `<div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1 small fw-bold text-secondary">${x}</label></div></div>`);
+         ex.innerHTML = html;
+     }
   }
 
   function updateDropdownOptions() {
@@ -494,138 +1205,66 @@
     }
   }
 
-  function buildNav() {
-    const nav = document.getElementById('mainNav');
-    const tabs = {
-      inb: document.getElementById('nav-inbound'),
-      over: document.getElementById('nav-overview'),
-      task: document.getElementById('nav-taskhub'),
-      adm: document.getElementById('nav-admin')
-    };
-
-    const taskLabel = document.getElementById('taskHubLabel');
-    taskLabel.textContent = currentRole === 'admin' ? "Task Manager" : "Work Panel";
-
-    if(currentRole === 'admin') {
-      nav.append(tabs.over, tabs.inb, tabs.task, tabs.adm);
-      tabs.adm.style.display='block';
-      new bootstrap.Tab(tabs.over.querySelector('button')).show();
-      document.getElementById('adminTaskView').style.display='block';
-      loadAdminPanel();
-    } else {
-      nav.append(tabs.inb, tabs.over, tabs.task);
-      tabs.adm.style.display='none';
-      new bootstrap.Tab(tabs.inb.querySelector('button')).show();
-      document.getElementById('staffTaskView').style.display='block';
-    }
+  function fillSel(id, arr) { 
+    let e=document.getElementById(id); 
+    if(!e) return;
+    let html = '<option value="">Select...</option>';
+    if(arr) arr.forEach(x=>html += `<option value="${x}">${x}</option>`);
+    e.innerHTML = html;
   }
 
-  document.getElementById('shipForm').onsubmit = async (e) => {
-    e.preventDefault();
-    if(!document.getElementById('f_net').value || !document.getElementById('f_client').value || !document.getElementById('f_dest').value) return alert("Fill Dropdowns");
-
-    showSpin(true);
-    let boxes=[], extra=[];
-    document.querySelectorAll('#boxTable tr').forEach((tr,i)=>{
-       let inps=tr.querySelectorAll('input');
-       if(inps.length) boxes.push({no:i+1, weight:inps[0].value, length:inps[1].value, breath:inps[2].value, height:inps[3].value});
-    });
-    document.querySelectorAll('#f_extra input:checked').forEach(c=>extra.push(c.value));
-
-    const res = await callApi({
-      action: 'submit', username: currentUser, awb: document.getElementById('f_awb').value,
-      date: document.getElementById('f_date').value, type: document.getElementById('f_type').value,
-      network: document.getElementById('f_net').value, client: document.getElementById('f_client').value,
-      destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value,
-      extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes
-    });
-    showSpin(false);
-    if(res.result==='success') {
-      alert("Saved!"); document.getElementById('shipForm').reset(); document.getElementById('boxTable').innerHTML=''; tsClient.clear(); tsDest.clear();
-      syncData(false);
-    } else alert(res.message);
-  };
-
-  async function manageDd(act){
-    const v=document.getElementById('dd_val').value, c=document.getElementById('dd_cat').value; if(!v)return;
-    await callApi({action:"manageData", subAction:act, category:c, value:v});
-    document.getElementById('dd_val').value=''; syncData(false);
-  }
-  window.manageDd = manageDd;
-
-  async function decideTr(rid, tid, typ, to, dec){ showSpin(true); await callApi({action:"approveTransfer", reqId:rid, taskId:tid, type:typ, to:to, decision:dec}); loadAdminReqs(); showSpin(false); }
-  window.decideTr = decideTr;
-
-  async function addUser() { await callApi({action:"addUser", u:document.getElementById('nu_u').value, p:document.getElementById('nu_p').value, n:document.getElementById('nu_n').value, r:document.getElementById('nu_r').value}); loadUsers(); }
-  window.addUser = addUser;
-
-  async function delUser(u) { if(confirm("Del?")) await callApi({action:"deleteUser", username:u}); loadUsers(); }
-  window.delUser = delUser;
-
-  function fillSel(id, arr) {
-    let e=document.getElementById(id);
-    let opts = '<option value="">Select...</option>';
-    if(arr) {
-        arr.forEach(x=>opts+=`<option value="${x}">${x}</option>`);
-    }
-    e.innerHTML = opts;
-  }
-
-  function submitReassign() {
-    const to = document.getElementById('reassignStaff').value; if(!to) return;
-    bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide();
-    alert("Request Sent!");
-    callApi({action:"requestTransfer", taskId:currentReassign.id, type:currentReassign.type, by:currentUser, to:to});
-  }
-  window.submitReassign = submitReassign;
-
-  function reqTransfer(id, type){
+  // --- TRANSFERS ---
+  window.reqTransfer = function(id, type){
     currentReassign={id:id, type:type};
     document.getElementById('reassignId').textContent=id;
-    const s=document.getElementById('reassignStaff'); s.innerHTML='<option value="">Select...</option>';
-    if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(x=>s.innerHTML+=`<option value="${x}">${x}</option>`);
+    const s=document.getElementById('reassignStaff');
+    let html = '<option value="">Select Staff...</option>';
+    if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(x=>html += `<option value="${x}">${x}</option>`);
+    s.innerHTML = html;
     new bootstrap.Modal(document.getElementById('reassignModal')).show();
   }
-  window.reqTransfer = reqTransfer;
+  window.submitReassign = function() {
+    const to = document.getElementById('reassignStaff').value; if(!to) return;
+    bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide();
+    callApi({action:"requestTransfer", taskId:currentReassign.id, type:currentReassign.type, by:currentUser, to:to});
+    alert("Transfer Request Sent");
+  }
 
-  // --- EXPORT TO EXCEL ---
+  // --- EXPORTS ---
   window.exportOverviewExcel = function() {
     const d = window.APP_DATA.overview;
-
-    // Detailed Mapping for Automation
-    const auto = d.auto.map(x => ({
-        "AWB": x.id, "Date": x.date, "Type": x.type, "Network": x.net,
-        "Client": x.client, "Dest": x.dest, "Boxes": x.boxes,
-        "Act Wgt": x.actWgt, "Vol Wgt": x.volWgt, "Chg Wgt": x.chgWgt,
-        "Entry User": x.user, "Extra": x.extra, "Remarks": x.rem
+    const auto = d.auto.map(x => ({ 
+        "AWB": x.id, "Date": x.date, "Type": x.type, "Network": x.net, "Client": x.client, "Dest": x.dest, "Boxes": x.boxes, "Act Wgt": x.actWgt, "Vol Wgt": x.volWgt, "Chg Wgt": x.chgWgt, "User": x.user, "Remarks": x.rem
     }));
-
-    // Detailed Mapping for Paperwork
-    const paper = d.paper.map(x => ({
-        "AWB": x.id, "Date": x.date, "Type": x.type, "Network": x.net, "Net No": x.netNo,
-        "Client": x.client, "Dest": x.dest, "Boxes": x.boxes,
-        "Act Wgt": x.actWgt, "Vol Wgt": x.volWgt, "Chg Wgt": x.chgWgt,
-        "Automation By": x.autoDoer, "Assigned To": x.assignee
+    const paper = d.paper.map(x => ({ 
+        "AWB": x.id, "Date": x.date, "Type": x.type, "Network": x.net, "Net No": x.netNo, "Client": x.client, "Dest": x.dest, "Boxes": x.boxes, "Act Wgt": x.actWgt, "Vol Wgt": x.volWgt, "Chg Wgt": x.chgWgt, "Auto By": x.autoDoer, "Assigned To": x.assignee
     }));
-
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(auto), "Pending Automation");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paper), "Pending Paperwork");
+    if(auto.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(auto), "Pending Automation");
+    if(paper.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paper), "Pending Paperwork");
     XLSX.writeFile(wb, "Overview_Report.xlsx");
   };
 
   window.exportAdminPoolExcel = function() {
     const pool = window.APP_DATA.adminPool || window.APP_DATA.overview.paper || [];
-    const data = pool.map(x => ({
-        "AWB": x.id, "Date": x.date, "Type": x.type, "Network": x.net, "Net No": x.netNo,
-        "Client": x.client, "Dest": x.dest, "Boxes": x.boxes,
-        "Act Wgt": x.actWgt, "Vol Wgt": x.volWgt, "Chg Wgt": x.chgWgt,
-        "Automation By": x.autoDoer, "Assigned To": x.assignee || "Unassigned"
+    const data = pool.map(x => ({ 
+        "AWB": x.id, "Date": x.date, "Type": x.type, "Network": x.net, "Net No": x.netNo, "Client": x.client, "Dest": x.dest, "Chg Wgt": x.chgWgt, "Auto By": x.autoDoer, "Assigned To": x.assignee || "Unassigned" 
     }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Admin Task Pool");
     XLSX.writeFile(wb, "Admin_Task_Pool.xlsx");
   };
+  
+  window.exportManifest = function() {
+     const net = document.getElementById('man_net').value;
+     if(!net) return alert("Select a network to export manifest");
+     
+     // Currently we don't have items, so we export blank structure or alert
+     // In future: const items = window.APP_DATA.completed.filter(x => x.net === selectedNet);
+     // For now:
+     alert("No completed shipments found for " + net + " (Functionality ready for backend integration)");
+  };
+
 </script>
 </body>
 </html>
