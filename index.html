@@ -630,46 +630,71 @@
 
       <!-- 4. MANIFEST TAB (NEW) -->
       <div id="manifest-tab" class="tab-view" style="display:none;">
-        <div class="panel-card">
-          <div class="panel-header">
-            <div class="d-flex align-items-center">
-              <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px; height:40px;"><i class="bi bi-file-earmark-spreadsheet"></i></div>
-              <div>
-                <div class="fw-bold">Manifest Generation</div>
-                <div class="small text-muted fw-normal">Items ready for dispatch (Paperwork Completed)</div>
+        <!-- TABS -->
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active rounded-pill px-4" onclick="switchManifestView('pending')">Pending Manifest</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link rounded-pill px-4" onclick="switchManifestView('history')">Manifest History</button>
+          </li>
+        </ul>
+
+        <!-- PENDING VIEW -->
+        <div id="man-pending-view">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div class="d-flex align-items-center">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width:40px; height:40px;"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+                <div>
+                  <div class="fw-bold">Ready to Manifest</div>
+                  <div class="small text-muted fw-normal">Shipments with paperwork completed</div>
+                </div>
+              </div>
+              <div class="d-flex gap-2 align-items-center">
+                 <select id="man_net" class="form-select" onchange="renderManifest()">
+                   <option value="">Select Network...</option>
+                 </select>
+                 <div class="vr mx-2"></div>
+                 <button class="btn btn-primary rounded-pill shadow-sm text-nowrap" onclick="createBatch()"><i class="bi bi-collection me-2"></i>Generate Batch</button>
               </div>
             </div>
-            <div class="d-flex gap-2">
-               <select id="man_net" class="form-select" onchange="renderManifest()">
-                 <option value="">Select Network...</option>
-               </select>
-               <button class="btn btn-primary rounded-pill shadow-sm text-nowrap" onclick="exportManifest()"><i class="bi bi-cloud-arrow-down me-2"></i>Export Manifest</button>
+            <div class="panel-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="bg-light">
+                    <tr>
+                      <th class="ps-4" style="width:40px"><input type="checkbox" class="form-check-input" id="checkAllMan" onclick="toggleAllMan(this)"></th>
+                      <th>AWB</th>
+                      <th>Date</th>
+                      <th>Dest</th>
+                      <th>Network</th>
+                      <th>Pcs</th>
+                      <th>Weight</th>
+                      <th class="text-end pe-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="manifestList"></tbody>
+                </table>
+              </div>
+              <div id="manifestEmptyState" class="text-center py-5">
+                <div class="mb-3 text-muted"><i class="bi bi-inbox fs-1"></i></div>
+                <h6 class="text-muted fw-bold">No Items Ready</h6>
+                <p class="text-muted small">Select a network to view items.<br>Only items with "Paperwork Done" appear here.</p>
+              </div>
             </div>
           </div>
-          <div class="panel-body p-0">
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0" id="manifestTable">
-                <thead>
-                  <tr>
-                    <th class="ps-4">AWB</th>
-                    <th>Date</th>
-                    <th>Destination</th>
-                    <th>Network</th>
-                    <th>Pieces</th>
-                    <th>Weight</th>
-                    <th class="text-end pe-4">Status</th>
-                  </tr>
-                </thead>
-                <tbody id="manifestList">
-                  <!-- JS to populate -->
-                </tbody>
-              </table>
-            </div>
-            <div id="manifestEmptyState" class="text-center py-5">
-              <div class="mb-3 text-muted"><i class="bi bi-inbox fs-1"></i></div>
-              <h6 class="text-muted fw-bold">No Items Found</h6>
-              <p class="text-muted small">Select a network to view completed shipments.<br>Or no items are ready for manifest.</p>
-            </div>
+        </div>
+
+        <!-- HISTORY VIEW -->
+        <div id="man-history-view" style="display:none;">
+          <div class="row g-4" id="batchContainer">
+             <!-- Batches go here -->
+          </div>
+          <div id="batchEmptyState" class="text-center py-5">
+             <div class="mb-3 text-muted"><i class="bi bi-clock-history fs-1"></i></div>
+             <h6 class="text-muted fw-bold">No Manifest History</h6>
+             <p class="text-muted small">Generated manifest batches will appear here.</p>
           </div>
         </div>
       </div>
@@ -839,6 +864,9 @@
       if(r.result === "success") {
         window.APP_DATA = { ...window.APP_DATA, ...r };
         
+        // Ensure completed array is populated if backend sends it (top-level or inside another object)
+        if(r.completed) window.APP_DATA.completed = r.completed;
+
         if(r.static) {
             window.APP_DATA.staff = r.static.staff || [];
             window.APP_DATA.dropdowns = r.static.dropdowns || {};
@@ -964,14 +992,26 @@
     }
   }
 
+  window.switchManifestView = function(view) {
+      document.querySelectorAll('#manifest-tab .nav-link').forEach(el => el.classList.remove('active'));
+      if(event && event.target) event.target.classList.add('active');
+      else {
+          // Fallback if called programmatically
+          const idx = view==='pending'?0:1;
+          document.querySelectorAll('#manifest-tab .nav-link')[idx].classList.add('active');
+      }
+      document.getElementById('man-pending-view').style.display = view==='pending'?'block':'none';
+      document.getElementById('man-history-view').style.display = view==='history'?'block':'none';
+      if(view === 'pending') renderManifest();
+      if(view === 'history') renderBatchHistory();
+  };
+
   function renderManifest() {
     const list = document.getElementById('manifestList');
-    list.innerHTML = '';
     
     // Populate Network Dropdown
     const sel = document.getElementById('man_net');
     const nets = window.APP_DATA.dropdowns.networks || [];
-    // Only populate if empty (init)
     if(sel.options.length <= 1) {
        let opts = '';
        nets.forEach(n => opts += `<option value="${n}">${n}</option>`);
@@ -979,26 +1019,156 @@
     }
     
     const selectedNet = sel.value;
+    // Show empty if no network selected, but technically we could show all. Let's show all if no selection, or just wait.
+    // User requested "Select a network". Stick to that for now to avoid clutter.
     if(!selectedNet) {
+        list.innerHTML = '';
         document.getElementById('manifestEmptyState').style.display = 'block';
         return;
     }
     
-    // Use completed items from APP_DATA
-    const items = window.APP_DATA.completed ? window.APP_DATA.completed.filter(x => x.net === selectedNet) : [];
+    // Filter: Completed AND No Batch assigned yet
+    const items = window.APP_DATA.completed ? window.APP_DATA.completed.filter(x => x.net === selectedNet && !x.batchNo) : [];
     
     if(items.length === 0) {
+      list.innerHTML = '';
       document.getElementById('manifestEmptyState').style.display = 'block';
-      document.getElementById('manifestEmptyState').querySelector('h6').textContent = `No Manifest for ${selectedNet}`;
+      document.getElementById('manifestEmptyState').querySelector('h6').textContent = `No Items Ready for ${selectedNet}`;
     } else {
       document.getElementById('manifestEmptyState').style.display = 'none';
       let html = '';
       items.forEach(item => {
-        html += `<tr><td class="ps-4 fw-bold">${item.id || '-'}</td><td>${item.date || '-'}</td><td>${item.dest || '-'}</td><td>${item.net || '-'}</td><td>${item.boxes || '-'}</td><td>${item.wgt || '-'}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`;
+        html += `<tr>
+           <td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${item.id}"></td>
+           <td class="fw-bold font-monospace">${item.id || '-'}</td>
+           <td>${item.date || '-'}</td>
+           <td>${item.dest || '-'}</td>
+           <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${item.net || '-'}</span></td>
+           <td>${item.boxes || '-'}</td>
+           <td>${item.wgt || '-'}</td>
+           <td class="pe-4 text-end"><span class="badge bg-success">Paperwork Done</span></td>
+        </tr>`;
       });
       list.innerHTML = html;
     }
   }
+
+  window.toggleAllMan = function(el) {
+     document.querySelectorAll('.batch-check').forEach(c => c.checked = el.checked);
+  }
+
+  function renderBatchHistory() {
+      const con = document.getElementById('batchContainer');
+      const all = window.APP_DATA.completed || [];
+      // Group by batchNo
+      const batches = {};
+      all.forEach(x => {
+          if(x.batchNo) {
+              if(!batches[x.batchNo]) batches[x.batchNo] = [];
+              batches[x.batchNo].push(x);
+          }
+      });
+
+      const keys = Object.keys(batches).sort().reverse();
+      if(keys.length === 0) {
+          con.innerHTML = '';
+          document.getElementById('batchEmptyState').style.display = 'block';
+          return;
+      }
+      document.getElementById('batchEmptyState').style.display = 'none';
+
+      let html = '';
+      keys.forEach(k => {
+          const group = batches[k];
+          const net = group[0].net;
+          const date = group[0].manifestDate || "N/A";
+          const count = group.length;
+
+          // Generate items list for accordion
+          let rows = '';
+          group.forEach(g => {
+              rows += `<tr><td>${g.id}</td><td>${g.dest}</td><td>${g.wgt}</td></tr>`;
+          });
+
+          html += `
+          <div class="col-md-6 col-xl-4">
+             <div class="panel-card h-100">
+               <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
+                  <div>
+                    <div class="fw-bold text-primary">${k}</div>
+                    <div class="small text-muted">${date} • ${net}</div>
+                  </div>
+                  <span class="badge bg-primary rounded-pill">${count} Items</span>
+               </div>
+               <div class="p-3">
+                  <div class="d-flex gap-2 mb-3">
+                     <button class="btn btn-sm btn-outline-primary flex-fill" onclick="exportBatch('${k}')"><i class="bi bi-download me-1"></i> Re-Export</button>
+                     <button class="btn btn-sm btn-outline-secondary flex-fill" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_${k}">View Items</button>
+                  </div>
+                  <div class="collapse" id="collapse_${k}">
+                     <div class="table-responsive border rounded" style="max-height:200px; overflow-y:auto;">
+                        <table class="table table-sm table-striped mb-0 small">
+                           <thead><tr><th>AWB</th><th>Dest</th><th>Wgt</th></tr></thead>
+                           <tbody>${rows}</tbody>
+                        </table>
+                     </div>
+                  </div>
+               </div>
+             </div>
+          </div>`;
+      });
+      con.innerHTML = html;
+  }
+
+  window.createBatch = async function() {
+     const net = document.getElementById('man_net').value;
+     if(!net) return alert("Select Network");
+
+     const chks = document.querySelectorAll('.batch-check:checked');
+     if(chks.length === 0) return alert("Select at least one item");
+
+     const ids = Array.from(chks).map(c => c.value);
+     const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
+     const manifestDate = new Date().toLocaleDateString();
+
+     if(!confirm(`Generate Manifest Batch "${batchId}" for ${ids.length} items?`)) return;
+
+     // Update Local Data
+     window.APP_DATA.completed.forEach(x => {
+         if(ids.includes(x.id)) {
+             x.batchNo = batchId;
+             x.manifestDate = manifestDate;
+         }
+     });
+
+     // Export Excel
+     exportBatch(batchId);
+
+     // Refresh UI
+     renderManifest();
+
+     // Sync Backend (Fire and Forget)
+     await callApi({
+         action: 'updateManifestBatch',
+         batchNo: batchId,
+         ids: ids,
+         date: manifestDate
+     });
+
+     alert("Batch Created & Exported!");
+  };
+
+  window.exportBatch = function(batchId) {
+      const items = window.APP_DATA.completed.filter(x => x.batchNo === batchId);
+      if(!items.length) return alert("Empty Batch");
+
+      const data = items.map(x => ({
+        "AWB": x.id, "Date": x.date, "Dest": x.dest, "Net": x.net, "Pcs": x.boxes, "Wgt": x.wgt, "Batch": x.batchNo
+     }));
+     const wb = XLSX.utils.book_new();
+     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), batchId);
+     XLSX.writeFile(wb, `Manifest_${batchId}.xlsx`);
+  };
   
   function initAdminDel() {
     if(!window.tomInstances.adminDel) {
@@ -1256,20 +1426,7 @@
     XLSX.writeFile(wb, "Admin_Task_Pool.xlsx");
   };
   
-  window.exportManifest = function() {
-     const net = document.getElementById('man_net').value;
-     if(!net) return alert("Select a network to export manifest");
-     
-     const items = window.APP_DATA.completed ? window.APP_DATA.completed.filter(x => x.net === net) : [];
-     if(items.length === 0) return alert("No items found for " + net);
-
-     const data = items.map(x => ({
-        "AWB": x.id, "Date": x.date, "Dest": x.dest, "Net": x.net, "Pcs": x.boxes, "Wgt": x.wgt
-     }));
-     const wb = XLSX.utils.book_new();
-     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Manifest " + net);
-     XLSX.writeFile(wb, "Manifest_" + net + ".xlsx");
-  };
+  // Replaced by exportBatch and createBatch
 
 </script>
 </body>
