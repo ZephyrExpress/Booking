@@ -8,42 +8,42 @@
   <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <link rel="icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
-  
+
   <!-- SheetJS Library for Excel Export -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 
   <style>
     :root { --primary-color: #0f172a; --accent-color: #3b82f6; --zephyr-green: #10b981; --bg-color: #f1f5f9; --card-radius: 12px; }
     body { background-color: var(--bg-color); font-family: 'Segoe UI', system-ui, sans-serif; color: #334155; padding-bottom: 80px; }
-    
+
     .login-wrapper { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%); }
     .login-card { width: 100%; max-width: 400px; padding: 3rem 2rem; background: white; border-radius: 24px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1); }
-    
+
     .main-container { max-width: 1400px; margin: 0 auto; padding: 15px; display: none; }
     .navbar-custom { background: white; padding: 12px 20px; border-radius: var(--card-radius); box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-bottom: 20px; position: relative; border: 1px solid #e2e8f0; }
     .logo-img { height: 42px; width: auto; object-fit: contain; }
     .navbar-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
-    
+
     .panel-card { background: white; border-radius: var(--card-radius); border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.01); height: 100%; }
     .panel-header { background: #f8fafc; padding: 15px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #475569; display: flex; justify-content: space-between; align-items: center; }
-    
+
     .task-card-horizontal { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; transition: transform 0.2s; }
     .task-card-horizontal:hover { transform: translateY(-2px); box-shadow: 0 5px 15px -3px rgba(0,0,0,0.05); }
-    
+
     .form-control, .form-select { border-radius: 8px; border-color: #cbd5e1; }
     .btn-zephyr-green { background-color: var(--zephyr-green); color: white; border:none; font-weight:600; }
     .split-col { height: 600px; overflow-y: auto; }
-    
+
     .nav-pills .nav-link { color: #64748b; font-weight: 600; padding: 8px 20px; border-radius: 50px; position: relative; }
     .nav-pills .nav-link.active { background-color: var(--primary-color); color: white; }
-    
+
     .stat-val { font-size: 2rem; font-weight: 800; line-height: 1; }
-    
+
     .spinner-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; display:none; justify-content:center; align-items:center; }
-    
+
     .overview-stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s; height: 100%; }
     .text-live-red { color: #dc2626; text-shadow: 0 2px 10px rgba(220, 38, 38, 0.15); }
-    
+
     .badge-notif { position: absolute; top: -5px; right: -5px; font-size: 0.7rem; }
     .ts-dropdown { z-index: 1055 !important; }
 
@@ -82,7 +82,7 @@
   </ul>
 
   <div class="tab-content">
-    
+
     <!-- 1. INBOUND -->
     <div class="tab-pane fade" id="inbound-tab">
       <div class="row justify-content-center">
@@ -115,7 +115,7 @@
 
     <!-- 2. OVERVIEW -->
     <div class="tab-pane fade" id="overview-tab">
-      
+
       <div class="d-flex justify-content-end mb-3">
         <button class="btn btn-success btn-sm rounded-pill px-3 shadow-sm" onclick="exportOverviewExcel()"><i class="bi bi-file-earmark-excel me-1"></i>Export Detailed Report</button>
       </div>
@@ -182,7 +182,7 @@
   // API CONFIG
   const API_URL="https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
   let currentUser="", currentRole="", tsClient, tsDest, currentReassign={};
-  
+
   window.APP_DATA = { staff: [], dropdowns: {}, overview: { auto:[], paper:[] }, workflow: { toAssign:[], toDo:[] }, stats: {} };
   window.tomInstances = { client: null, dest: null };
 
@@ -193,8 +193,10 @@
   window.genBoxes = function() {
     const n = document.getElementById('f_boxes').value;
     if(!n || n<1) return alert("Enter Total Boxes first");
-    const tb = document.getElementById('boxTable'); tb.innerHTML='';
-    for(let i=1; i<=n; i++) tb.innerHTML += `<tr><td class="ps-3 fw-bold text-muted">${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="text-end pe-3 val-chg small fw-bold text-primary">0.00</td></tr>`;
+    const tb = document.getElementById('boxTable');
+    let html = '';
+    for(let i=1; i<=n; i++) html += `<tr><td class="ps-3 fw-bold text-muted">${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="text-end pe-3 val-chg small fw-bold text-primary">0.00</td></tr>`;
+    tb.innerHTML = html;
   };
   window.cBox = function(el) {
     const r=el.closest('tr'), i=r.querySelectorAll('input');
@@ -233,7 +235,7 @@
       const r = await fetch(url).then(res => res.json());
       if(r.result === "success") {
         window.APP_DATA = { ...window.APP_DATA, ...r };
-        
+
         if(r.static) {
             window.APP_DATA.staff = r.static.staff || [];
             window.APP_DATA.dropdowns = r.static.dropdowns || {};
@@ -243,7 +245,7 @@
           window.APP_DATA.workflow.toAssign = r.workflow.toAssign || [];
           window.APP_DATA.workflow.toDo = r.workflow.toDo || [];
         }
-        
+
         if(firstLoad) {
           initForms();
           setInterval(()=>syncData(false), 30000);
@@ -260,7 +262,7 @@
     renderOverview();
     renderTaskHub();
     if(currentRole==='admin') {
-      const c = window.APP_DATA.stats.requests || 0; 
+      const c = window.APP_DATA.stats.requests || 0;
       const b = document.getElementById('adminBadge');
       b.textContent = c;
       b.style.display = c > 0 ? 'inline-block' : 'none';
@@ -272,25 +274,28 @@
   function renderOverview() {
     const d = window.APP_DATA.overview;
     const s = window.APP_DATA.stats;
-    
+
     document.getElementById('ovDate').textContent = new Date().toLocaleDateString();
     document.getElementById('ovInbound').textContent = s.inbound;
     document.getElementById('ovAuto').textContent = d.auto.length;
     document.getElementById('ovPaper').textContent = d.paper.length;
-    
+
     // Sort: Unassigned first, then Assigned
     const sortedPaper = [...d.paper].sort((a,b) => (a.assignee ? 1 : -1) - (b.assignee ? 1 : -1));
 
     const fill = (id, list) => {
-      const el=document.getElementById(id); el.innerHTML='';
-      if(!list.length) el.innerHTML='<div class="text-center p-3 text-muted small">All clear!</div>';
-      list.forEach(x => {
+      const el=document.getElementById(id);
+      if(!list.length) {
+        el.innerHTML='<div class="text-center p-3 text-muted small">All clear!</div>';
+        return;
+      }
+      const html = list.map(x => {
         let userBadge = x.user ? `<div class="small text-secondary mb-1"><i class="bi bi-person me-1"></i>${x.user}</div>` : '';
         let assigneeBadge = x.assignee ? `<div class="small text-success fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i>Assigned to: ${x.assignee}</div>` : (x.autoDoer ? `<div class="small text-secondary mb-1"><i class="bi bi-robot me-1"></i>Auto by: ${x.autoDoer}</div>` : '');
         // Removed netHtml variable usage here as it was causing duplication.
         // The netNo is already part of x.details from backend.
 
-        el.innerHTML += `
+        return `
           <div class="list-group-item">
             <div class="d-flex justify-content-between fw-bold"><span>${x.id}</span><small class="text-muted">${x.net}</small></div>
             <div class="small fw-bold">${x.client}</div>
@@ -298,7 +303,8 @@
             ${assigneeBadge}
             <div class="small text-primary">${x.details}</div>
           </div>`;
-      });
+      }).join('');
+      el.innerHTML = html;
     };
     fill('listAuto', d.auto);
     fill('listPaper', sortedPaper);
@@ -306,19 +312,18 @@
 
   function renderTaskHub() {
     if(currentRole === 'admin') {
-      const tb = document.getElementById('poolTable'); tb.innerHTML='';
+      const tb = document.getElementById('poolTable');
       // Use adminPool for global view
       const pool = window.APP_DATA.adminPool || window.APP_DATA.overview.paper || [];
-      
-      pool.forEach(t => {
+
+      const poolHtml = pool.map(t => {
         let opts = `<option value="">Assign...</option>`;
         if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(s => opts += `<option value="${s}">${s}</option>`);
-        
-        let assignedVal = t.assignee || ""; 
+
         let buttonLabel = t.assignee ? "Reassign" : "Assign";
         let btnClass = t.assignee ? "btn-warning" : "btn-success";
 
-        tb.innerHTML += `
+        return `
           <tr>
             <td class="fw-bold">${t.id}</td>
             <td><div class="small fw-bold">${t.client}</div><small class="text-muted">${t.net}</small></td>
@@ -326,18 +331,28 @@
             <td><select id="as_${t.id}" class="form-select form-select-sm">${opts}</select></td>
             <td><button class="btn btn-sm ${btnClass} shadow-sm" onclick="actAssign('${t.id}','${t.type}')">${buttonLabel}</button></td>
           </tr>`;
-          if(assignedVal) document.getElementById(`as_${t.id}`).value = assignedVal;
+      }).join('');
+      tb.innerHTML = poolHtml;
+
+      // Need to set values after innerHTML update
+      pool.forEach(t => {
+          let assignedVal = t.assignee || "";
+          if(assignedVal) {
+             const sel = document.getElementById(`as_${t.id}`);
+             if(sel) sel.value = assignedVal;
+          }
       });
     } else {
       const toAssign = window.APP_DATA.workflow.toAssign;
       const toDo = window.APP_DATA.workflow.toDo;
-      
-      const ac = document.getElementById('staffAssignContainer'); ac.innerHTML='';
+
+      const ac = document.getElementById('staffAssignContainer');
       document.getElementById('noAssignMsg').style.display = toAssign.length===0?'block':'none';
-      toAssign.forEach(t => {
+
+      const acHtml = toAssign.map(t => {
         let opts = `<option value="">Select Paperwork Doer...</option>`;
         if(window.APP_DATA.staff) window.APP_DATA.staff.forEach(s => opts += `<option value="${s}">${s}</option>`);
-        ac.innerHTML += `
+        return `
           <div class="task-card-horizontal" id="assign_card_${t.id}">
             <div><strong class="fs-5">${t.id}</strong><div class="small fw-bold text-secondary">${t.client}</div><div class="small text-muted">${t.net} | ${t.details}</div></div>
             <div class="d-flex gap-2 align-items-center">
@@ -345,12 +360,14 @@
               <button class="btn btn-primary btn-sm" onclick="staffActAssign('${t.id}')">Assign</button>
             </div>
           </div>`;
-      });
+      }).join('');
+      ac.innerHTML = acHtml;
 
-      const tc = document.getElementById('staffTodoContainer'); tc.innerHTML='';
+      const tc = document.getElementById('staffTodoContainer');
       document.getElementById('noTodoMsg').style.display = toDo.length===0?'block':'none';
-      toDo.forEach(t => {
-        tc.innerHTML += `
+
+      const tcHtml = toDo.map(t => {
+        return `
           <div class="task-card-horizontal" id="todo_card_${t.id}">
             <div><span class="badge bg-warning text-dark mb-1">Assigned to Me</span><br><strong>${t.id}</strong><div class="small">${t.subtitle}</div><div class="small text-muted">${t.details}</div></div>
             <div class="d-flex gap-2">
@@ -358,7 +375,8 @@
                 <button class="btn btn-outline-secondary btn-sm px-3" onclick="reqTransfer('${t.id}','${t.type}')">Transfer</button>
             </div>
           </div>`;
-      });
+      }).join('');
+      tc.innerHTML = tcHtml;
     }
   }
 
@@ -388,7 +406,7 @@
   window.staffActDone = staffActDone;
 
   // --- ADMIN PANEL ---
-  function loadAdminPanel() { 
+  function loadAdminPanel() {
     if(currentRole === 'admin') {
       loadUsers(); loadAdminReqs();
     }
@@ -398,19 +416,21 @@
   async function loadUsers() {
     const r = await fetchGet("getUsers");
     if(r.result==='success'){
-      const t = document.getElementById('userTable'); t.innerHTML='';
-      if(r.users) r.users.forEach(u => {
-        t.innerHTML += `<tr><td>${u[0]}</td><td class="text-muted small" style="font-family:monospace; cursor:pointer;" onclick="this.textContent=this.textContent==='****'?'${u[1]}':'****'" title="Click to reveal">****</td><td><small>${u[2]}</small></td><td><button class="btn btn-danger btn-sm py-0" onclick="delUser('${u[0]}')">×</button></td></tr>`;
-      });
+      const t = document.getElementById('userTable');
+      if(r.users) {
+        const html = r.users.map(u => `<tr><td>${u[0]}</td><td class="text-muted small" style="font-family:monospace; cursor:pointer;" onclick="this.textContent=this.textContent==='****'?'${u[1]}':'****'" title="Click to reveal">****</td><td><small>${u[2]}</small></td><td><button class="btn btn-danger btn-sm py-0" onclick="delUser('${u[0]}')">×</button></td></tr>`).join('');
+        t.innerHTML = html;
+      } else {
+        t.innerHTML = '';
+      }
     }
   }
 
   async function loadAdminReqs(){
     const r = await fetchGet("getAdminRequests");
-    const el = document.getElementById('adminReqList'); el.innerHTML='';
+    const el = document.getElementById('adminReqList');
     if(r.requests && r.requests.length > 0) {
-      r.requests.forEach(x => {
-        el.innerHTML += `
+      const html = r.requests.map(x => `
           <div class="list-group-item d-flex justify-content-between align-items-center">
             <small>
                <span class="fw-bold text-dark">${x.taskId}</span> <span class="badge bg-secondary text-light ms-1" style="font-size:0.6rem">${x.type}</span>
@@ -420,8 +440,8 @@
                <button class="btn btn-sm btn-success py-1 px-2 shadow-sm" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')"><i class="bi bi-check-lg"></i></button>
                <button class="btn btn-sm btn-danger py-1 px-2 shadow-sm" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')"><i class="bi bi-x-lg"></i></button>
             </div>
-          </div>`;
-      });
+          </div>`).join('');
+      el.innerHTML = html;
     } else {
       el.innerHTML = '<div class="text-center p-3 text-muted small">No pending requests</div>';
     }
@@ -430,8 +450,8 @@
   // --- UTILS ---
   function initForms() {
     const dd = window.APP_DATA.dropdowns || {};
-    fillSel('f_net', dd.networks || []); 
-    
+    fillSel('f_net', dd.networks || []);
+
     // Init TomSelect
     if(dd.clients) {
       window.tomInstances.client = new TomSelect("#f_client",{create:false, dropdownParent: 'body', placeholder: "Search Client..."});
@@ -439,9 +459,9 @@
     if(dd.destinations) {
       window.tomInstances.dest = new TomSelect("#f_dest",{create:false, dropdownParent: 'body', placeholder: "Search Dest..."});
     }
-    
+
     updateDropdownOptions();
-    
+
     const ex = document.getElementById('f_extra'); ex.innerHTML='';
     if(dd.extraCharges) {
         dd.extraCharges.forEach(x => ex.innerHTML += `<div class="form-check form-check-inline bg-light border px-2 py-1 rounded small"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1">${x}</label></div>`);
@@ -453,7 +473,7 @@
     const dd = window.APP_DATA.dropdowns || {};
     fillSel('f_net', dd.networks || []);
     updateDropdownOptions();
-    
+
     const ex = document.getElementById('f_extra'); ex.innerHTML='';
     if(dd.extraCharges) {
         dd.extraCharges.forEach(x => ex.innerHTML += `<div class="form-check form-check-inline bg-light border px-2 py-1 rounded small"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label ms-1">${x}</label></div>`);
@@ -482,7 +502,7 @@
       task: document.getElementById('nav-taskhub'),
       adm: document.getElementById('nav-admin')
     };
-    
+
     const taskLabel = document.getElementById('taskHubLabel');
     taskLabel.textContent = currentRole === 'admin' ? "Task Manager" : "Work Panel";
 
@@ -503,26 +523,26 @@
   document.getElementById('shipForm').onsubmit = async (e) => {
     e.preventDefault();
     if(!document.getElementById('f_net').value || !document.getElementById('f_client').value || !document.getElementById('f_dest').value) return alert("Fill Dropdowns");
-    
-    showSpin(true); 
-    let boxes=[], extra=[]; 
+
+    showSpin(true);
+    let boxes=[], extra=[];
     document.querySelectorAll('#boxTable tr').forEach((tr,i)=>{
        let inps=tr.querySelectorAll('input');
        if(inps.length) boxes.push({no:i+1, weight:inps[0].value, length:inps[1].value, breath:inps[2].value, height:inps[3].value});
     });
     document.querySelectorAll('#f_extra input:checked').forEach(c=>extra.push(c.value));
-    
-    const res = await callApi({ 
-      action: 'submit', username: currentUser, awb: document.getElementById('f_awb').value, 
-      date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, 
-      network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, 
-      destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, 
-      extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes 
+
+    const res = await callApi({
+      action: 'submit', username: currentUser, awb: document.getElementById('f_awb').value,
+      date: document.getElementById('f_date').value, type: document.getElementById('f_type').value,
+      network: document.getElementById('f_net').value, client: document.getElementById('f_client').value,
+      destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value,
+      extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes
     });
     showSpin(false);
-    if(res.result==='success') { 
+    if(res.result==='success') {
       alert("Saved!"); document.getElementById('shipForm').reset(); document.getElementById('boxTable').innerHTML=''; tsClient.clear(); tsDest.clear();
-      syncData(false); 
+      syncData(false);
     } else alert(res.message);
   };
 
@@ -541,21 +561,20 @@
 
   async function delUser(u) { if(confirm("Del?")) await callApi({action:"deleteUser", username:u}); loadUsers(); }
   window.delUser = delUser;
-  
-  function fillSel(id, arr) { 
-    let e=document.getElementById(id); 
-    e.innerHTML='<option value="">Select...</option>'; 
+
+  function fillSel(id, arr) {
+    let e=document.getElementById(id);
+    let opts = '<option value="">Select...</option>';
     if(arr) {
-        let opts = '';
         arr.forEach(x=>opts+=`<option value="${x}">${x}</option>`);
-        e.innerHTML += opts;
     }
+    e.innerHTML = opts;
   }
-  
+
   function submitReassign() {
     const to = document.getElementById('reassignStaff').value; if(!to) return;
     bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide();
-    alert("Request Sent!"); 
+    alert("Request Sent!");
     callApi({action:"requestTransfer", taskId:currentReassign.id, type:currentReassign.type, by:currentUser, to:to});
   }
   window.submitReassign = submitReassign;
@@ -568,27 +587,27 @@
     new bootstrap.Modal(document.getElementById('reassignModal')).show();
   }
   window.reqTransfer = reqTransfer;
-  
+
   // --- EXPORT TO EXCEL ---
   window.exportOverviewExcel = function() {
     const d = window.APP_DATA.overview;
-    
+
     // Detailed Mapping for Automation
-    const auto = d.auto.map(x => ({ 
-        "AWB": x.id, "Date": x.date, "Type": x.type, "Network": x.net, 
-        "Client": x.client, "Dest": x.dest, "Boxes": x.boxes, 
+    const auto = d.auto.map(x => ({
+        "AWB": x.id, "Date": x.date, "Type": x.type, "Network": x.net,
+        "Client": x.client, "Dest": x.dest, "Boxes": x.boxes,
         "Act Wgt": x.actWgt, "Vol Wgt": x.volWgt, "Chg Wgt": x.chgWgt,
         "Entry User": x.user, "Extra": x.extra, "Remarks": x.rem
     }));
-    
+
     // Detailed Mapping for Paperwork
-    const paper = d.paper.map(x => ({ 
+    const paper = d.paper.map(x => ({
         "AWB": x.id, "Date": x.date, "Type": x.type, "Network": x.net, "Net No": x.netNo,
-        "Client": x.client, "Dest": x.dest, "Boxes": x.boxes, 
+        "Client": x.client, "Dest": x.dest, "Boxes": x.boxes,
         "Act Wgt": x.actWgt, "Vol Wgt": x.volWgt, "Chg Wgt": x.chgWgt,
         "Automation By": x.autoDoer, "Assigned To": x.assignee
     }));
-    
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(auto), "Pending Automation");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paper), "Pending Paperwork");
@@ -597,11 +616,11 @@
 
   window.exportAdminPoolExcel = function() {
     const pool = window.APP_DATA.adminPool || window.APP_DATA.overview.paper || [];
-    const data = pool.map(x => ({ 
+    const data = pool.map(x => ({
         "AWB": x.id, "Date": x.date, "Type": x.type, "Network": x.net, "Net No": x.netNo,
-        "Client": x.client, "Dest": x.dest, "Boxes": x.boxes, 
+        "Client": x.client, "Dest": x.dest, "Boxes": x.boxes,
         "Act Wgt": x.actWgt, "Vol Wgt": x.volWgt, "Chg Wgt": x.chgWgt,
-        "Automation By": x.autoDoer, "Assigned To": x.assignee || "Unassigned" 
+        "Automation By": x.autoDoer, "Assigned To": x.assignee || "Unassigned"
     }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Admin Task Pool");
