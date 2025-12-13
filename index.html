@@ -1127,10 +1127,21 @@
     tb.innerHTML = html;
   };
   window.cBox = function(el) {
-    const r=el.closest('tr'), i=r.querySelectorAll('input');
+    const r=el.closest('tr');
+    const i=r.getElementsByTagName('input');
     const w=parseFloat(i[0].value)||0, l=parseFloat(i[1].value)||0, b=parseFloat(i[2].value)||0, h=parseFloat(i[3].value)||0;
-    const chg=Math.max(w, (l*b*h)/5000); r.querySelector('.val-chg').textContent=chg.toFixed(2);
-    let tot=0; document.querySelectorAll('.val-chg').forEach(x=>tot+=parseFloat(x.textContent));
+    const chg=Math.max(w, (l*b*h)/5000);
+
+    // Optimization: Batch reads before writes to prevent layout thrashing
+    const currentCell = r.querySelector('.val-chg');
+    const allCells = document.getElementById('boxTable').getElementsByClassName('val-chg');
+    let tot=0;
+    for(let k=0; k<allCells.length; k++) {
+       if(allCells[k] === currentCell) tot += chg;
+       else tot += parseFloat(allCells[k].textContent)||0;
+    }
+
+    if(currentCell.textContent !== chg.toFixed(2)) currentCell.textContent = chg.toFixed(2);
     document.getElementById('f_totalChg').value=tot.toFixed(2);
   };
 
