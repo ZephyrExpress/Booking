@@ -57,10 +57,10 @@
     .fun-label { color: #475569; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; }
     .fun-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
     .fun-section-green { background: #f0fdf4; border-color: #bbf7d0; }
-
+    
     /* Dark Checkboxes */
-    .form-check-input { border-color: #64748b; border-width: 2px; }
     .form-check-input:checked { background-color: var(--primary-color); border-color: var(--primary-color); }
+    .form-check-input { border: 2px solid #cbd5e1; }
   </style>
 </head>
 <body>
@@ -75,7 +75,7 @@
   <div class="login-card">
     <div class="text-center mb-4"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="50"></div>
     <h4 class="text-center fw-bold mb-1">Portal Login</h4>
-    <p class="text-center text-muted small mb-4">v4.2</p>
+    <p class="text-center text-muted small mb-4">v4.1</p>
     <form onsubmit="event.preventDefault(); doLogin();">
       <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required>
       <input type="text" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required>
@@ -174,16 +174,6 @@
                      <div class="col-md-4"><label class="fun-label">Total Amount</label><input type="number" step="0.01" id="f_payTotal" class="form-control fun-input" oninput="cPay()"></div>
                      <div class="col-md-4"><label class="fun-label">Amount Paid</label><input type="number" step="0.01" id="f_payPaid" class="form-control fun-input" oninput="cPay()"></div>
                      <div class="col-md-4"><label class="fun-label">Pending Amount</label><input type="number" step="0.01" id="f_payPending" class="form-control fun-input bg-warning bg-opacity-10 fw-bold" readonly value="0"></div>
-                  </div>
-               </div>
-
-               <div class="mb-3">
-                  <label class="fun-label">Required Paperwork *</label>
-                  <div id="f_paperwork" class="d-flex flex-wrap gap-3 p-3 bg-white rounded border">
-                     <div class="form-check"><input class="form-check-input" type="checkbox" value="KYC"><label class="form-check-label fw-bold">KYC</label></div>
-                     <div class="form-check"><input class="form-check-input" type="checkbox" value="INVOICE"><label class="form-check-label fw-bold">INVOICE</label></div>
-                     <div class="form-check"><input class="form-check-input" type="checkbox" value="LOA"><label class="form-check-label fw-bold">LOA</label></div>
-                     <div class="form-check"><input class="form-check-input" type="checkbox" value="N/A"><label class="form-check-label fw-bold">N/A</label></div>
                   </div>
                </div>
 
@@ -522,7 +512,7 @@ function updDd(){
    if(!window.APP_DATA.static) return;
    const dd=window.APP_DATA.static.dropdowns;
    if(!dd) return; // robustness check
-
+   
    fillSel('f_net', dd.networks);
    const mn=document.getElementById('man_net');
    if(mn && mn.options.length<=1 && dd.networks){ let opts=''; dd.networks.forEach(x=>opts+=`<option value="${x}">${x}</option>`); mn.innerHTML+=opts; }
