@@ -1,5 +1,5 @@
 /* =========================================
-   ZEPHYR PRO API (v4.1 - Robust + Fixes)
+   ZEPHYR PRO API (v4.2 - Mandatory MCQ + Admin Fixes)
    ========================================= */
 
 const TASK_SHEET_ID = "1_8VSzZdn8rKrzvXpzIfY_oz3XT9gi30jgzdxzQP4Bac";
@@ -42,6 +42,7 @@ function doPost(e) {
     if (act === "manageData") { CacheService.getScriptCache().remove('static_data'); return handleDropdowns(body); }
     if (act === "addUser") return handleAddUser(body);
     if (act === "deleteUser") return handleDeleteUser(body.username);
+    if (act === "changePassword") return handleChangePassword(body);
 
     return jsonResponse("error", "Unknown Action");
   } catch (err) {
@@ -51,21 +52,18 @@ function doPost(e) {
   }
 }
 
-// --- MAIN DATA FETCH & SYNC ---
+// --- MAIN DATA FETCH ---
 function getAllData(username) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName("Shipments");
   const targetUser = String(username).trim().toLowerCase();
 
-  // 1. Static Data Cache
   const cache = CacheService.getScriptCache();
   let staticDataStr = cache.get('static_data');
   let staticData = null;
 
   if (!staticDataStr) {
-    // Robust Fetch
     try {
-      // Local Sheet Dropdowns (Always available hopefully)
       const ddSheet = ss.getSheetByName("Sheet2");
       const rawDD = ddSheet && ddSheet.getLastRow()>1 ? ddSheet.getRange(2, 1, ddSheet.getLastRow()-1, 4).getValues() : [];
       const dd = {
@@ -74,37 +72,26 @@ function getAllData(username) {
         destinations: rawDD.map(r=>r[2]).filter(String),
         extraCharges: rawDD.map(r=>r[3]).filter(String)
       };
-
-      // Remote Staff (Might fail)
       let staff = [];
       try {
         const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
         staff = remoteSS.getSheetByName("Subordinate Staff").getRange(2,1,50).getValues().flat().filter(String);
-      } catch(e) {
-        console.error("Staff Fetch Error", e);
-        staff = ["Error Loading Staff"]; // Fallback
-      }
-
+      } catch(e) { staff = ["Error Loading Staff"]; }
       staticData = { staff: staff, dropdowns: dd };
       cache.put('static_data', JSON.stringify(staticData), 1800);
-    } catch(e) {
-      console.error("Static Data Error", e);
-      staticData = { staff: [], dropdowns: {} };
-    }
-  } else {
-    staticData = JSON.parse(staticDataStr);
-  }
+    } catch(e) { staticData = { staff: [], dropdowns: {} }; }
+  } else { staticData = JSON.parse(staticDataStr); }
 
-  // 2. Identify Role
   const uData = ss.getSheetByName("Users").getDataRange().getValues();
   let role = "Staff";
   for(let i=1; i<uData.length; i++) {
     if(String(uData[i][0]).toLowerCase() === targetUser) { role = uData[i][3]; break; }
   }
 
-  // 3. READ SHIPMENTS (Cols A-Z -> 26 cols)
+  // 3. READ SHIPMENTS (Cols A-AA -> 27 cols)
+  // U:NetNo, V-X:Pay, Y-Z:Man, AA:Paperwork
   const lastRow = sh.getLastRow();
-  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 26).getDisplayValues() : [];
+  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 27).getDisplayValues() : [];
 
   // 4. SYNC AUTOMATION
   let updates = [];
@@ -114,8 +101,6 @@ function getAllData(username) {
       if(brSheet) {
           const brLast = brSheet.getLastRow();
           if(brLast > 1) {
-              // Read only needed columns to save memory if possible, but they are far apart (A, U, AO)
-              // Let's read A(0), U(20), AO(40). Range: 1 to 41.
               const brData = brSheet.getRange(2, 1, brLast-1, 41).getValues();
               const brMap = {};
               brData.forEach(r => {
@@ -130,15 +115,14 @@ function getAllData(username) {
                       const match = brMap[awb];
                       const user = match.user || "System";
                       const netNo = match.netNo || "";
-
                       r[14] = "Done"; r[15] = user; r[20] = netNo;
-                      updates.push({ row: i+2, vals: [["Done", user]] }); // O, P
-                      updates.push({ row: i+2, col: 21, val: [[netNo]] }); // U
+                      updates.push({ row: i+2, vals: [["Done", user]] });
+                      updates.push({ row: i+2, col: 21, val: [[netNo]] });
                   }
               });
           }
       }
-  } catch(e) { console.error("Booking Report Sync Error", e); }
+  } catch(e) {}
 
   if(updates.length > 0) {
       updates.forEach(u => {
@@ -167,7 +151,7 @@ function getAllData(username) {
       user: r[8], autoDoer: r[15], assignee: r[17],
       actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
       netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
-      batchNo: r[24], manifestDate: r[25]
+      batchNo: r[24], manifestDate: r[25], paperwork: r[26]
     };
 
     const paperStatus = r[16];
@@ -252,12 +236,13 @@ function handleSubmit(body){
     return["'"+body.awb,b.no,w,l,br,h,v.toFixed(2),c.toFixed(2)];
   });
 
+  // Append 27 columns: A-Z (26) + AA (Paperwork)
   sh.appendRow([
       "'"+body.awb, body.date, body.type, body.network, body.client, body.destination,
       body.totalBoxes, body.extraCharges, body.username, new Date(),
       tA.toFixed(2), tV.toFixed(2), tC.toFixed(2), body.extraRemarks,
       "Pending", "", "", "", "", "", "",
-      body.payTotal, body.payPaid, body.payPending, "", ""
+      body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork
   ]);
 
   if(br.length) bx.getRange(bx.getLastRow()+1,1,br.length,8).setValues(br);
@@ -301,6 +286,19 @@ function handleApproveTransfer(b) {
   else { sh.getRange(row, 18).setValue(b.to); syncFMS(b.taskId, { assignee: b.to }); }
   req.getRange(r,6).setValue("Approved");
   return jsonResponse("success","Transferred");
+}
+
+function handleChangePassword(b) {
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  const uSheet = ss.getSheetByName("Users");
+  const d = uSheet.getDataRange().getValues();
+  for(let i=1; i<d.length; i++) {
+    if(String(d[i][0]).toLowerCase() === String(b.username).toLowerCase()) {
+      uSheet.getRange(i+1, 2).setValue(b.newPass);
+      return jsonResponse("success", "Password Updated");
+    }
+  }
+  return jsonResponse("error", "User Not Found");
 }
 
 function handleTransferRequest(b) { SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Requests").appendRow([new Date().getTime().toString().slice(-6), b.taskId, b.type, b.by, b.to, "Pending", new Date()]); return jsonResponse("success", "Request Sent"); }
