@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js" defer></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 
   <style>
     :root {
@@ -56,8 +56,11 @@
     .fun-header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 1.5rem; border-radius: 12px 12px 0 0; }
     .fun-label { color: #475569; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; }
     .fun-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
-    /* Green Package Section */
     .fun-section-green { background: #f0fdf4; border-color: #bbf7d0; }
+    
+    /* Dark Checkboxes */
+    .form-check-input:checked { background-color: var(--primary-color); border-color: var(--primary-color); }
+    .form-check-input { border: 2px solid #cbd5e1; }
   </style>
 </head>
 <body>
@@ -71,7 +74,8 @@
 <div id="loginSection" class="login-wrapper">
   <div class="login-card">
     <div class="text-center mb-4"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="50"></div>
-    <h4 class="text-center fw-bold mb-4">Portal Login</h4>
+    <h4 class="text-center fw-bold mb-1">Portal Login</h4>
+    <p class="text-center text-muted small mb-4">v4.1</p>
     <form onsubmit="event.preventDefault(); doLogin();">
       <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required>
       <input type="text" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required>
@@ -165,11 +169,11 @@
                </div>
 
                <div class="fun-section border-warning">
-                  <h6 class="fw-bold text-warning mb-3"><i class="bi bi-currency-dollar me-2"></i>Payment Details</h6>
+                  <h6 class="fw-bold text-warning mb-3"><i class="bi bi-currency-rupee me-2"></i>Payment Details</h6>
                   <div class="row g-3">
-                     <div class="col-md-4"><label class="fun-label">Total Amount</label><input type="number" id="f_payTotal" class="form-control fun-input" oninput="cPay()"></div>
-                     <div class="col-md-4"><label class="fun-label">Amount Paid</label><input type="number" id="f_payPaid" class="form-control fun-input" oninput="cPay()"></div>
-                     <div class="col-md-4"><label class="fun-label">Pending Amount</label><input type="number" id="f_payPending" class="form-control fun-input bg-warning bg-opacity-10 fw-bold" readonly value="0"></div>
+                     <div class="col-md-4"><label class="fun-label">Total Amount</label><input type="number" step="0.01" id="f_payTotal" class="form-control fun-input" oninput="cPay()"></div>
+                     <div class="col-md-4"><label class="fun-label">Amount Paid</label><input type="number" step="0.01" id="f_payPaid" class="form-control fun-input" oninput="cPay()"></div>
+                     <div class="col-md-4"><label class="fun-label">Pending Amount</label><input type="number" step="0.01" id="f_payPending" class="form-control fun-input bg-warning bg-opacity-10 fw-bold" readonly value="0"></div>
                   </div>
                </div>
                
@@ -507,11 +511,13 @@ function initForms(){
 function updDd(){
    if(!window.APP_DATA.static) return;
    const dd=window.APP_DATA.static.dropdowns;
+   if(!dd) return; // robustness check
+   
    fillSel('f_net', dd.networks);
    const mn=document.getElementById('man_net');
    if(mn && mn.options.length<=1 && dd.networks){ let opts=''; dd.networks.forEach(x=>opts+=`<option value="${x}">${x}</option>`); mn.innerHTML+=opts; }
-   if(window.tomInstances.client){ window.tomInstances.client.clearOptions(); dd.clients.forEach(x=>window.tomInstances.client.addOption({value:x,text:x})); window.tomInstances.client.sync(); }
-   if(window.tomInstances.dest){ window.tomInstances.dest.clearOptions(); dd.destinations.forEach(x=>window.tomInstances.dest.addOption({value:x,text:x})); window.tomInstances.dest.sync(); }
+   if(window.tomInstances.client && dd.clients){ window.tomInstances.client.clearOptions(); dd.clients.forEach(x=>window.tomInstances.client.addOption({value:x,text:x})); window.tomInstances.client.sync(); }
+   if(window.tomInstances.dest && dd.destinations){ window.tomInstances.dest.clearOptions(); dd.destinations.forEach(x=>window.tomInstances.dest.addOption({value:x,text:x})); window.tomInstances.dest.sync(); }
    const ex=document.getElementById('f_extra'); if(ex && dd.extraCharges) ex.innerHTML=dd.extraCharges.map(x=>`<div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label small">${x}</label></div>`).join('');
    if(curRole==='admin'){
      const cat=document.getElementById('dd_cat').value; const targetList = dd[{'network':'networks','client':'clients','destination':'destinations','extra':'extraCharges'}[cat]];
@@ -564,7 +570,7 @@ window.chkDox=function(){
 window.genBoxes=function(){
    const n=document.getElementById('f_boxes').value; const tb=document.getElementById('boxTable'); 
    let html = '';
-   for(let i=1;i<=n;i++) html += `<tr><td>${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="val-chg">0</td></tr>`;
+   for(let i=1;i<=n;i++) html += `<tr><td>${i}</td><td><input type="number" step="0.01" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" step="0.01" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" step="0.01" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" step="0.01" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="val-chg">0</td></tr>`;
    tb.innerHTML = html;
 }
 window.cBox=function(el){
