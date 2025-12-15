@@ -15,7 +15,7 @@
     :root {
       --sidebar-width: 260px;
       --header-height: 64px;
-      --primary-color: #0f172a; --secondary-color: #334155; --accent-color: #2563eb;
+      --primary-color: #0f172a; --secondary-color: #334155; --accent-color: #3b82f6;
       --bg-color: #f8fafc; --success-color: #10b981; --border-color: #e2e8f0;
       --font-main: 'Inter', sans-serif;
     }
@@ -50,8 +50,12 @@
     .sidebar-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
     .sidebar-backdrop.show { display: block; }
 
-    /* Utilities */
-    .bg-slate-100 { background-color: #f1f5f9; }
+    /* FUN & COLOURFUL INPUTS */
+    .fun-input { border: 2px solid #e2e8f0; transition: all 0.2s; }
+    .fun-input:focus { border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+    .fun-header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 1.5rem; border-radius: 12px 12px 0 0; }
+    .fun-label { color: #475569; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; }
+    .fun-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
   </style>
 </head>
 <body>
@@ -87,7 +91,7 @@
       <div class="nav-label">Menu</div>
       <a class="nav-item-custom" id="nav-inbound" onclick="switchTab('inbound')"><i class="bi bi-box-seam me-2"></i> Inbound</a>
       <a class="nav-item-custom active" id="nav-overview" onclick="switchTab('overview')"><i class="bi bi-grid-1x2 me-2"></i> Overview</a>
-      <a class="nav-item-custom" id="nav-taskhub" onclick="switchTab('taskhub')"><i class="bi bi-check-circle me-2"></i> My Tasks</a>
+      <a class="nav-item-custom" id="nav-taskhub" onclick="switchTab('taskhub')"><i class="bi bi-check-circle me-2"></i> <span id="taskLabel">My Tasks</span></a>
       <a class="nav-item-custom" id="nav-manifest" onclick="switchTab('manifest')"><i class="bi bi-file-earmark-spreadsheet me-2"></i> Manifest</a>
       <a class="nav-item-custom" id="nav-analytics" onclick="switchTab('analytics')"><i class="bi bi-graph-up me-2"></i> Analytics</a>
       
@@ -118,35 +122,69 @@
       
       <!-- INBOUND TAB -->
       <div id="inbound-tab" class="tab-view" style="display:none;">
-         <div class="panel-card p-4 mx-auto" style="max-width:1000px;">
-           <h5 class="fw-bold mb-4 border-bottom pb-2">New Shipment</h5>
-           <form id="shipForm">
-             <div class="row g-3">
-               <div class="col-md-4"><label class="form-label small fw-bold">AWB *</label><input id="f_awb" class="form-control font-monospace" required placeholder="000-00000000"></div>
-               <div class="col-md-4"><label class="form-label small fw-bold">Date *</label><input type="date" id="f_date" class="form-control" required></div>
-               <div class="col-md-4"><label class="form-label small fw-bold">Type *</label><select id="f_type" class="form-select"><option>Dox</option><option>Ndox</option></select></div>
-               <div class="col-md-4"><label class="form-label small fw-bold">Network *</label><select id="f_net" class="form-select" required></select></div>
-               <div class="col-md-4"><label class="form-label small fw-bold">Client *</label><select id="f_client" required></select></div>
-               <div class="col-md-4"><label class="form-label small fw-bold">Dest *</label><select id="f_dest" required></select></div>
-               <div class="col-md-6"><label class="form-label small fw-bold">Boxes *</label><div class="input-group"><input type="number" id="f_boxes" class="form-control" required><button type="button" class="btn btn-secondary" onclick="genBoxes()">Gen</button></div></div>
-               <div class="col-md-6"><label class="form-label small fw-bold">Total Chg Wgt</label><input id="f_totalChg" class="form-control bg-light fw-bold" readonly value="0.00"></div>
-             </div>
-             <div class="mt-3 table-responsive border rounded"><table class="table table-sm mb-0"><thead><tr><th>#</th><th>Weight</th><th>L</th><th>B</th><th>H</th><th>Chg</th></tr></thead><tbody id="boxTable"></tbody></table></div>
-             <div class="mt-3"><label class="small fw-bold">Extra Charges</label><div id="f_extra" class="d-flex flex-wrap gap-2 p-2 bg-light rounded border"></div></div>
-             <div class="mt-3"><label class="small fw-bold">Remarks</label><textarea id="f_remarks" class="form-control" rows="1"></textarea></div>
-             <div class="d-flex justify-content-end gap-2 mt-4">
-               <button type="button" class="btn btn-light" onclick="document.getElementById('shipForm').reset()">Reset</button>
-               <button class="btn btn-primary px-5 rounded-pill fw-bold py-2">Submit Entry</button>
-             </div>
-           </form>
+         <div class="panel-card mx-auto shadow-sm" style="max-width:1100px; border:none;">
+           <div class="fun-header">
+              <h5 class="fw-bold m-0"><i class="bi bi-plus-circle-fill me-2"></i>New Shipment Entry</h5>
+              <div class="small opacity-75">Please fill all details accurately</div>
+           </div>
+           <div class="p-4">
+             <form id="shipForm">
+               <div class="row g-4 mb-4">
+                 <div class="col-md-4"><label class="fun-label">Airway Bill Number *</label><input id="f_awb" class="form-control fun-input font-monospace" required placeholder="000-00000000"></div>
+                 <div class="col-md-4"><label class="fun-label">Date *</label><input type="date" id="f_date" class="form-control fun-input" required></div>
+                 <div class="col-md-4"><label class="fun-label">Shipment Type *</label><select id="f_type" class="form-select fun-input"><option>Dox</option><option>Ndox</option></select></div>
+                 <div class="col-md-4"><label class="fun-label">Network *</label><select id="f_net" class="form-select fun-input" required></select></div>
+                 <div class="col-md-4"><label class="fun-label">Client *</label><select id="f_client" required></select></div>
+                 <div class="col-md-4"><label class="fun-label">Destination *</label><select id="f_dest" required></select></div>
+               </div>
+
+               <div class="fun-section">
+                  <h6 class="fw-bold text-primary mb-3"><i class="bi bi-box-seam me-2"></i>Package Details</h6>
+                  <div class="row g-3 align-items-end mb-3">
+                     <div class="col-md-4">
+                        <label class="fun-label">Total Quantity *</label>
+                        <div class="input-group">
+                           <input type="number" id="f_boxes" class="form-control fun-input" required placeholder="Qty">
+                           <button type="button" class="btn btn-primary" onclick="genBoxes()">Generate</button>
+                        </div>
+                     </div>
+                     <div class="col-md-4">
+                        <label class="fun-label">Total Chargeable Weight</label>
+                        <input id="f_totalChg" class="form-control fun-input bg-primary bg-opacity-10 fw-bold text-primary" readonly value="0.00">
+                     </div>
+                  </div>
+                  <div class="table-responsive bg-white rounded border"><table class="table table-sm mb-0 align-middle">
+                     <thead class="table-light"><tr><th>#</th><th>Weight (Kg)</th><th>Length (cm)</th><th>Width (cm)</th><th>Height (cm)</th><th>Chargeable Weight</th></tr></thead>
+                     <tbody id="boxTable"></tbody>
+                  </table></div>
+               </div>
+
+               <div class="fun-section border-warning">
+                  <h6 class="fw-bold text-warning mb-3"><i class="bi bi-currency-dollar me-2"></i>Payment Details</h6>
+                  <div class="row g-3">
+                     <div class="col-md-4"><label class="fun-label">Total Amount</label><input type="number" id="f_payTotal" class="form-control fun-input" oninput="cPay()"></div>
+                     <div class="col-md-4"><label class="fun-label">Amount Paid</label><input type="number" id="f_payPaid" class="form-control fun-input" oninput="cPay()"></div>
+                     <div class="col-md-4"><label class="fun-label">Pending Amount</label><input type="number" id="f_payPending" class="form-control fun-input bg-warning bg-opacity-10 fw-bold" readonly value="0"></div>
+                  </div>
+               </div>
+               
+               <div class="mb-3"><label class="fun-label">Extra Charges</label><div id="f_extra" class="d-flex flex-wrap gap-2 p-3 bg-white rounded border"></div></div>
+               <div class="mb-4"><label class="fun-label">Remarks</label><textarea id="f_remarks" class="form-control fun-input" rows="2"></textarea></div>
+               
+               <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                 <button type="button" class="btn btn-light rounded-pill px-4" onclick="resetForm()">Reset</button>
+                 <button class="btn btn-primary px-5 rounded-pill fw-bold py-2 shadow-sm">Submit Entry</button>
+               </div>
+             </form>
+           </div>
          </div>
       </div>
 
       <!-- OVERVIEW TAB -->
       <div id="overview-tab" class="tab-view">
         <div class="row g-4 mb-4">
-           <div class="col-md-4"><div class="stat-card"><div><div class="stat-label">TODAY'S INBOUND</div><div class="stat-value text-success" id="ovInbound">0</div></div><i class="bi bi-box-seam fs-1 text-success opacity-25"></i></div></div>
-           <div class="col-md-4"><div class="stat-card"><div><div class="stat-label">PENDING AUTO</div><div class="stat-value text-danger" id="ovAuto">0</div></div><i class="bi bi-robot fs-1 text-danger opacity-25"></i></div></div>
+           <div class="col-md-4"><div class="stat-card"><div><div class="stat-label">TODAY'S INBOUND</div><div class="stat-value text-success" id="ovInbound">0</div></div><i class="bi bi-calendar-check fs-1 text-success opacity-25"></i></div></div>
+           <div class="col-md-4"><div class="stat-card"><div><div class="stat-label">PENDING AUTOMATION</div><div class="stat-value text-danger" id="ovAuto">0</div></div><i class="bi bi-robot fs-1 text-danger opacity-25"></i></div></div>
            <div class="col-md-4"><div class="stat-card"><div><div class="stat-label">PENDING PAPERWORK</div><div class="stat-value text-warning" id="ovPaper">0</div></div><i class="bi bi-files fs-1 text-warning opacity-25"></i></div></div>
         </div>
         
@@ -154,10 +192,13 @@
           <div class="col-lg-6">
             <div class="panel-card" style="height:600px">
               <div class="panel-header bg-danger bg-opacity-10 text-danger border-danger border-opacity-25">
-                 <span><i class="bi bi-exclamation-circle me-2"></i>Pending Automation</span>
+                 <span><i class="bi bi-hourglass-split me-2"></i>Pending Automation</span>
                  <span class="badge bg-danger" id="badgeAuto">0</span>
               </div>
-              <div class="panel-body p-0 overflow-auto" style="height:540px" id="listAuto"></div>
+              <div class="p-2 bg-light border-bottom small text-muted text-center">
+                 <i class="bi bi-info-circle me-1"></i> Automation is processed via Booking Report
+              </div>
+              <div class="panel-body p-0 overflow-auto" style="height:500px" id="listAuto"></div>
             </div>
           </div>
           <div class="col-lg-6">
@@ -174,34 +215,26 @@
 
       <!-- TASK HUB TAB -->
       <div id="taskhub-tab" class="tab-view" style="display:none;">
-        <ul class="nav nav-pills mb-3" id="taskTabs">
-          <li class="nav-item"><button class="nav-link active rounded-pill px-4" data-bs-toggle="pill" data-bs-target="#tAssign">Assign Next Step</button></li>
-          <li class="nav-item ms-2"><button class="nav-link rounded-pill px-4" data-bs-toggle="pill" data-bs-target="#tTodo">My To-Do List</button></li>
-        </ul>
-        <div class="tab-content">
-          <div class="tab-pane fade show active" id="tAssign">
-             <div class="alert alert-info py-2 small border-0 bg-primary bg-opacity-10 text-primary mb-3"><i class="bi bi-info-circle me-2"></i>Tasks you automated. Assign them to paperwork staff.</div>
-             <div id="contAssign" class="row g-3"></div>
-          </div>
-          <div class="tab-pane fade" id="tTodo">
-             <div class="alert alert-warning py-2 small border-0 bg-warning bg-opacity-10 text-warning mb-3"><i class="bi bi-info-circle me-2"></i>Paperwork tasks assigned to you.</div>
-             <div id="contTodo" class="row g-3"></div>
-          </div>
-        </div>
-        <!-- Admin Pool View -->
-        <div id="adminPoolView" style="display:none" class="mt-4">
+        <!-- ADMIN VIEW -->
+        <div id="adminTaskView" style="display:none">
            <div class="panel-card">
-              <div class="panel-header"><span>Global Task Pool</span> <button class="btn btn-sm btn-outline-success" onclick="exportPool()">Export</button></div>
+              <div class="panel-header bg-primary text-white"><span><i class="bi bi-kanban me-2"></i>Task Manager (Global Pool)</span> <button class="btn btn-sm btn-light text-primary fw-bold" onclick="exportPool()">Export</button></div>
               <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="bg-light"><tr><th>AWB</th><th>Details</th><th>Assigned To</th><th>Action</th></tr></thead><tbody id="poolBody"></tbody></table></div>
            </div>
+        </div>
+
+        <!-- STAFF VIEW -->
+        <div id="staffTaskView" style="display:none">
+             <div class="alert alert-warning py-3 mb-4 shadow-sm border-0 border-start border-4 border-warning"><h5 class="alert-heading fw-bold m-0"><i class="bi bi-list-check me-2"></i>My To-Do List</h5></div>
+             <div id="contTodo" class="row g-3"></div>
         </div>
       </div>
 
       <!-- MANIFEST TAB -->
       <div id="manifest-tab" class="tab-view" style="display:none;">
         <ul class="nav nav-pills mb-3" id="manTabs">
-           <li class="nav-item"><button class="nav-link active rounded-pill px-4" onclick="switchManifestView('pending')">Pending</button></li>
-           <li class="nav-item ms-2"><button class="nav-link rounded-pill px-4" onclick="switchManifestView('history')">History</button></li>
+           <li class="nav-item"><button class="nav-link active rounded-pill px-4" onclick="switchManifestView('pending')">Pending Manifest</button></li>
+           <li class="nav-item ms-2"><button class="nav-link rounded-pill px-4" onclick="switchManifestView('history')">Manifest History</button></li>
         </ul>
 
         <!-- Pending View -->
@@ -210,7 +243,7 @@
              <div class="panel-header">
                 <div class="d-flex align-items-center gap-3">
                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px"><i class="bi bi-file-earmark-spreadsheet"></i></div>
-                   <div><div class="fw-bold">Pending Manifest</div><div class="small text-muted fw-normal">Ready for dispatch</div></div>
+                   <div><div class="fw-bold">Ready to Manifest</div><div class="small text-muted fw-normal">Items with Paperwork Completed</div></div>
                 </div>
                 <div class="d-flex gap-2 align-items-center">
                    <select id="man_net" class="form-select" onchange="renderManifest()"><option value="">Select Network...</option></select>
@@ -223,7 +256,7 @@
                       <thead class="bg-light">
                          <tr>
                             <th class="ps-4" style="width:40px"><input type="checkbox" class="form-check-input" id="checkAllMan" onclick="toggleAllMan(this)"></th>
-                            <th>AWB</th><th>Date</th><th>Dest</th><th>Net</th><th>Pcs</th><th>Wgt</th><th class="text-end pe-4">Status</th>
+                            <th>AWB</th><th>Date</th><th>Destination</th><th>Network</th><th>Pieces</th><th>Weight</th><th class="text-end pe-4">Status</th>
                          </tr>
                       </thead>
                       <tbody id="manifestList"></tbody>
@@ -329,9 +362,15 @@ window.doLogin=async function(){
      document.getElementById('userDisplay').textContent=r.name;
      document.getElementById('loginSection').style.display='none';
      document.getElementById('appSection').style.display='flex';
-     if(curRole==='admin'){ document.getElementById('adminNavGroup').style.display='block'; document.getElementById('adminPoolView').style.display='block'; }
      
-     // Optimistic Load (Bolt Speed)
+     if(curRole==='admin'){ 
+         document.getElementById('adminNavGroup').style.display='block'; 
+         document.getElementById('nav-taskhub').onclick = () => switchTab('taskhub');
+         document.getElementById('taskLabel').textContent = "Task Manager";
+     } else {
+         document.getElementById('taskLabel').textContent = "My Tasks";
+     }
+     
      syncData(true);
   } else { showSpin(false); document.getElementById('loginError').textContent=r.message; document.getElementById('loginError').style.display='block'; }
 }
@@ -339,7 +378,6 @@ window.logout=function(){location.reload();}
 
 // --- DATA ---
 async function syncData(init=false){
-  // init is true on login (run in bg)
   try {
      const r = await fetchGet('getAllData');
      if(r.result==="success"){
@@ -353,26 +391,25 @@ async function syncData(init=false){
 
 function renderUI(){
   const d=window.APP_DATA.overview, s=window.APP_DATA.stats;
-  // Stats
   document.getElementById('ovInbound').textContent=s.inbound;
   document.getElementById('ovAuto').textContent=d.auto.length;
   document.getElementById('ovPaper').textContent=d.paper.length;
   document.getElementById('badgeAuto').textContent=d.auto.length;
   document.getElementById('badgePaper').textContent=d.paper.length;
 
-  // Auto List - OPTIMIZED
+  // Auto List - Read Only
   const la=document.getElementById('listAuto');
-  if(!d.auto.length) la.innerHTML='<div class="text-center p-4 text-muted small">All clear!</div>';
+  if(!d.auto.length) la.innerHTML='<div class="text-center p-4 text-muted small">No Pending Automation</div>';
   else {
       la.innerHTML = d.auto.map(x => 
-        `<div class="list-group-item p-3 border-bottom"><div class="d-flex justify-content-between"><strong>${x.id}</strong><small class="text-muted">${x.net}</small></div><div class="small fw-bold text-primary">${x.client}</div><div class="small text-muted mb-2">${x.details}</div><button class="btn btn-sm btn-outline-primary w-100" onclick="actAutoDone('${x.id}')">Step 1: Mark Automation Done</button></div>`
+        `<div class="list-group-item p-3 border-bottom"><div class="d-flex justify-content-between"><strong>${x.id}</strong><small class="text-muted">${x.net}</small></div><div class="small fw-bold text-primary">${x.client}</div><div class="small text-muted fst-italic">Waiting for Booking Report...</div></div>`
       ).join('');
   }
 
-  // Paper List - OPTIMIZED
+  // Paper List
   const lp=document.getElementById('listPaper');
   const sortedP = [...d.paper].sort((a,b)=>(a.assignee?1:-1)-(b.assignee?1:-1));
-  if(!sortedP.length) lp.innerHTML='<div class="text-center p-4 text-muted small">All clear!</div>';
+  if(!sortedP.length) lp.innerHTML='<div class="text-center p-4 text-muted small">No Pending Paperwork</div>';
   else {
       lp.innerHTML = sortedP.map(x => {
          let badge = x.assignee ? `<span class="badge bg-success bg-opacity-10 text-success border-success border"><i class="bi bi-person-check me-1"></i>${x.assignee}</span>` : `<span class="badge bg-secondary"><i class="bi bi-robot me-1"></i>Auto by ${x.autoDoer}</span>`;
@@ -380,41 +417,19 @@ function renderUI(){
       }).join('');
   }
 
-  // Task Hub
   renderTaskHub();
-  
-  // Manifest check
   if(document.getElementById('manifest-tab').style.display==='block') renderManifest();
-
-  // Admin Badges
   if(curRole==='admin'){
-     const rc=s.requests||0;
-     const b=document.getElementById('adminBadge'); b.textContent=rc; b.style.display=rc>0?'inline-block':'none';
+     const rc=s.requests||0; const b=document.getElementById('adminBadge'); b.textContent=rc; b.style.display=rc>0?'inline-block':'none';
   }
 }
 
 function renderTaskHub(){
-   const wf=window.APP_DATA.workflow;
-   const ca=document.getElementById('contAssign');
-   if(!wf.toAssign.length) ca.innerHTML='<div class="col-12 text-center text-muted small py-4">Nothing to assign</div>';
-   else {
-       let opts=`<option value="">Select Staff...</option>`;
-       if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`);
-       
-       ca.innerHTML = wf.toAssign.map(x => 
-          `<div class="col-md-6 col-xl-4"><div class="panel-card p-3 border-primary border-start border-4"><div class="fw-bold">${x.id}</div><div class="small text-muted mb-2">${x.client}</div><div class="input-group input-group-sm"><select id="as_${x.id}" class="form-select">${opts}</select><button class="btn btn-primary" onclick="actAssign('${x.id}')">Assign</button></div></div></div>`
-       ).join('');
-   }
-
-   const ct=document.getElementById('contTodo');
-   if(!wf.toDo.length) ct.innerHTML='<div class="col-12 text-center text-muted small py-4">No tasks assigned to you</div>';
-   else {
-       ct.innerHTML = wf.toDo.map(x => 
-          `<div class="col-md-6 col-xl-4"><div class="panel-card p-3 border-warning border-start border-4"><div class="d-flex justify-content-between"><div><div class="fw-bold">${x.id}</div><div class="small text-muted">${x.subtitle}</div></div><button class="btn btn-sm btn-light" onclick="openReassign('${x.id}','Paperwork')"><i class="bi bi-arrow-left-right"></i></button></div><div class="small text-primary my-2">${x.details}</div><button class="btn btn-success w-100 btn-sm rounded-pill" onclick="actComplete('${x.id}')">Mark Complete</button></div></div>`
-       ).join('');
-   }
-
-   if(curRole==='admin'){
+   // Split Logic
+   if(curRole === 'admin') {
+      document.getElementById('adminTaskView').style.display = 'block';
+      document.getElementById('staffTaskView').style.display = 'none';
+      
       const pt=document.getElementById('poolBody');
       let opts=`<option value="">Select Staff...</option>`;
       if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`);
@@ -423,25 +438,29 @@ function renderTaskHub(){
          let assignVal = x.assignee || "";
          return `<tr><td class="fw-bold font-monospace">${x.id}</td><td>${x.client}<br><small class="text-muted">${x.net}</small></td><td><div class="input-group input-group-sm" style="width:160px"><select id="adm_as_${x.id}" class="form-select">${opts}</select><button class="btn btn-outline-secondary" onclick="actAssign('${x.id}','adm_as_')"><i class="bi bi-check"></i></button></div></td><td>${assignVal}</td></tr>`;
       }).join('');
-      // Set values after render
       window.APP_DATA.adminPool.forEach(x => { if(x.assignee) { const el = document.getElementById(`adm_as_${x.id}`); if(el) el.value = x.assignee; } });
-      renderAdminPanel();
+      renderAdminPanel(); // For admin tab sidebar
+   } else {
+      document.getElementById('adminTaskView').style.display = 'none';
+      document.getElementById('staffTaskView').style.display = 'block';
+      
+      const wf=window.APP_DATA.workflow;
+      const ct=document.getElementById('contTodo');
+      if(!wf.toDo.length) ct.innerHTML='<div class="col-12 text-center text-muted small py-4">No tasks assigned to you</div>';
+      else {
+          ct.innerHTML = wf.toDo.map(x => 
+             `<div class="col-md-6 col-xl-4"><div class="panel-card p-3 border-warning border-start border-4"><div class="d-flex justify-content-between"><div><div class="fw-bold">${x.id}</div><div class="small text-muted">${x.subtitle}</div></div><button class="btn btn-sm btn-light" onclick="openReassign('${x.id}','Paperwork')"><i class="bi bi-arrow-left-right"></i></button></div><div class="small text-primary my-2">${x.details}</div><button class="btn btn-success w-100 btn-sm rounded-pill" onclick="actComplete('${x.id}')">Mark Complete</button></div></div>`
+          ).join('');
+      }
    }
 }
 
 // --- ACTIONS ---
-async function actAutoDone(id){
-   if(!confirm(`Confirm ${id} automation done?`)) return;
-   await callApi({action:"markAutoDone", id:id, user:curUser});
-   syncData(false); toast("Marked Automation Done");
-}
-
 async function actAssign(id, pfx='as_'){
    const s=document.getElementById(pfx+id).value; if(!s) return alert("Select Staff");
    await callApi({action:"assignTask", id:id, staff:s, assigner:curUser});
    syncData(false); toast("Task Assigned");
 }
-
 async function actComplete(id){
    if(!confirm(`Complete paperwork for ${id}?`)) return;
    await callApi({action:"markPaperworkDone", id:id});
@@ -454,59 +473,33 @@ window.switchTab=function(t){
    document.getElementById('nav-'+t).classList.add('active');
    document.querySelectorAll('.tab-view').forEach(e=>e.style.display='none');
    document.getElementById(t+'-tab').style.display='block';
-   document.getElementById('pageTitle').textContent = t.charAt(0).toUpperCase() + t.slice(1);
+   document.getElementById('pageTitle').textContent = t==='taskhub' ? (curRole==='admin'?'Task Manager':'My Tasks') : (t.charAt(0).toUpperCase() + t.slice(1));
    if(window.innerWidth<992) toggleSidebar();
    if(t==='manifest') renderManifest();
    if(t==='admin') renderAdminPanel();
 }
-
 function initForms(){
    const dd=window.APP_DATA.static.dropdowns;
    fillSel('f_net', dd.networks);
    window.tomInstances.client = new TomSelect("#f_client",{create:false, dropdownParent:'body', placeholder:"Select Client..."});
-   window.tomInstances.dest = new TomSelect("#f_dest",{create:false, dropdownParent:'body', placeholder:"Select Dest..."});
+   window.tomInstances.dest = new TomSelect("#f_dest",{create:false, dropdownParent:'body', placeholder:"Select Destination..."});
    updDd();
 }
-
 function updDd(){
    if(!window.APP_DATA.static) return;
    const dd=window.APP_DATA.static.dropdowns;
    fillSel('f_net', dd.networks);
-   
-   // Manifest Dropdown
    const mn=document.getElementById('man_net');
-   if(mn && mn.options.length<=1 && dd.networks){
-       // Accumulate string optimization
-       let opts = '';
-       dd.networks.forEach(x => opts += `<option value="${x}">${x}</option>`);
-       mn.innerHTML += opts;
-   }
-
+   if(mn && mn.options.length<=1 && dd.networks){ let opts=''; dd.networks.forEach(x=>opts+=`<option value="${x}">${x}</option>`); mn.innerHTML+=opts; }
    if(window.tomInstances.client){ window.tomInstances.client.clearOptions(); dd.clients.forEach(x=>window.tomInstances.client.addOption({value:x,text:x})); window.tomInstances.client.sync(); }
    if(window.tomInstances.dest){ window.tomInstances.dest.clearOptions(); dd.destinations.forEach(x=>window.tomInstances.dest.addOption({value:x,text:x})); window.tomInstances.dest.sync(); }
-   
-   const ex=document.getElementById('f_extra');
-   if(ex && dd.extraCharges) {
-       ex.innerHTML = dd.extraCharges.map(x => `<div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label small">${x}</label></div>`).join('');
-   }
-   
+   const ex=document.getElementById('f_extra'); if(ex && dd.extraCharges) ex.innerHTML=dd.extraCharges.map(x=>`<div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label small">${x}</label></div>`).join('');
    if(curRole==='admin'){
-     const cat=document.getElementById('dd_cat').value;
-     const targetList = dd[{'network':'networks','client':'clients','destination':'destinations','extra':'extraCharges'}[cat]];
-     const delSel=document.getElementById('dd_del');
-     if(targetList) delSel.innerHTML = targetList.map(x => `<option value="${x}">${x}</option>`).join('');
+     const cat=document.getElementById('dd_cat').value; const targetList = dd[{'network':'networks','client':'clients','destination':'destinations','extra':'extraCharges'}[cat]];
+     const delSel=document.getElementById('dd_del'); if(targetList) delSel.innerHTML=targetList.map(x=>`<option value="${x}">${x}</option>`).join('');
    }
 }
-
-function fillSel(id, arr){
-   const e=document.getElementById(id); if(!e) return;
-   if(e.options.length > 1) return;
-   if(arr) {
-       let html = '';
-       arr.forEach(x => html += `<option value="${x}">${x}</option>`);
-       e.innerHTML += html;
-   }
-}
+function fillSel(id, arr){ const e=document.getElementById(id); if(!e||e.options.length>1)return; if(arr) { let html=''; arr.forEach(x=>html+=`<option value="${x}">${x}</option>`); e.innerHTML+=html; } }
 
 // --- FORM SUBMIT ---
 document.getElementById('shipForm').onsubmit = async (e)=>{
@@ -518,18 +511,22 @@ document.getElementById('shipForm').onsubmit = async (e)=>{
       if(inps.length) boxes.push({no:i+1, weight:inps[0].value, length:inps[1].value, breath:inps[2].value, height:inps[3].value});
    });
    document.querySelectorAll('#f_extra input:checked').forEach(c=>extra.push(c.value));
+   
    const r = await callApi({ 
      action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, 
      date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, 
      network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, 
      destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, 
-     extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes 
+     extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes,
+     payTotal: document.getElementById('f_payTotal').value || 0,
+     payPaid: document.getElementById('f_payPaid').value || 0,
+     payPending: document.getElementById('f_payPending').value || 0
    });
    showSpin(false);
-   if(r.result==='success') { toast("Entry Saved"); document.getElementById('shipForm').reset(); document.getElementById('boxTable').innerHTML=''; window.tomInstances.client.clear(); window.tomInstances.dest.clear(); syncData(false); }
+   if(r.result==='success') { toast("Entry Saved"); resetForm(); syncData(false); }
    else alert(r.message);
 };
-
+function resetForm(){ document.getElementById('shipForm').reset(); document.getElementById('boxTable').innerHTML=''; window.tomInstances.client.clear(); window.tomInstances.dest.clear(); document.getElementById('f_date').valueAsDate=new Date(); }
 window.genBoxes=function(){
    const n=document.getElementById('f_boxes').value; const tb=document.getElementById('boxTable'); 
    let html = '';
@@ -543,173 +540,91 @@ window.cBox=function(el){
    let tot=0; document.querySelectorAll('.val-chg').forEach(x=>tot+=parseFloat(x.textContent));
    document.getElementById('f_totalChg').value=tot.toFixed(2);
 }
-
-// --- ADMIN & REASSIGN ---
-window.openReassign=function(id, type){ curReassign={id,type}; document.getElementById('rId').textContent=id; const s=document.getElementById('rStaff'); s.innerHTML='<option value="">Select...</option>'; window.APP_DATA.static.staff.forEach(x=>s.innerHTML+=`<option value="${x}">${x}</option>`); new bootstrap.Modal(document.getElementById('reassignModal')).show(); }
-window.sendTransfer=async function(){
-   const to=document.getElementById('rStaff').value; if(!to)return;
-   bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide();
-   await callApi({action:"requestTransfer", taskId:curReassign.id, type:curReassign.type, by:curUser, to:to});
-   toast("Request Sent");
+window.cPay=function(){
+   const t=parseFloat(document.getElementById('f_payTotal').value)||0;
+   const p=parseFloat(document.getElementById('f_payPaid').value)||0;
+   document.getElementById('f_payPending').value = (t-p).toFixed(2);
 }
+
+// --- ADMIN ---
+window.openReassign=function(id, type){ curReassign={id,type}; document.getElementById('rId').textContent=id; const s=document.getElementById('rStaff'); s.innerHTML='<option value="">Select...</option>'; window.APP_DATA.static.staff.forEach(x=>s.innerHTML+=`<option value="${x}">${x}</option>`); new bootstrap.Modal(document.getElementById('reassignModal')).show(); }
+window.sendTransfer=async function(){ const to=document.getElementById('rStaff').value; if(!to)return; bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide(); await callApi({action:"requestTransfer", taskId:curReassign.id, type:curReassign.type, by:curUser, to:to}); toast("Request Sent"); }
 window.manDd=async function(act){ const v=document.getElementById('dd_val').value, c=document.getElementById('dd_cat').value; if(!v)return; await callApi({action:"manageData",subAction:act,category:c,value:v}); document.getElementById('dd_val').value=''; syncData(false); }
 window.delDd=async function(){ const v=document.getElementById('dd_del').value, c=document.getElementById('dd_cat').value; if(!v)return; if(confirm("Delete?")) await callApi({action:"manageData",subAction:"delete",category:c,value:v}); syncData(false); }
 window.addUser=async function(){ await callApi({action:"addUser", u:document.getElementById('nu_u').value, p:document.getElementById('nu_p').value, n:document.getElementById('nu_n').value, r:document.getElementById('nu_r').value}); loadUsers(); }
 window.delUser=async function(u){ if(confirm("Del?")) await callApi({action:"deleteUser", username:u}); loadUsers(); }
-async function loadUsers() { renderAdminPanel(); } // Wrapper
-
+async function loadUsers() { renderAdminPanel(); }
 async function renderAdminPanel(){
    if(curRole!=='admin') return;
-   const r=await fetchGet('getUsers'); const t=document.getElementById('userList'); 
-   if(r.users) t.innerHTML = r.users.map(u => `<tr><td>${u[0]}</td><td>****</td><td>${u[2]}</td><td><button class="btn btn-sm btn-outline-danger py-0" onclick="delUser('${u[0]}')">x</button></td></tr>`).join('');
-   
-   const rr=await fetchGet('getAdminRequests'); const rl=document.getElementById('reqList');
-   if(rr.requests) rl.innerHTML = rr.requests.map(x => `<div class="list-group-item d-flex justify-content-between"><small><strong>${x.taskId}</strong> (${x.type})<br>${x.by} to ${x.to}</small><div><button class="btn btn-sm btn-success py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">ok</button><button class="btn btn-sm btn-danger py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">x</button></div></div>`).join('');
+   const r=await fetchGet('getUsers'); const t=document.getElementById('userList'); if(r.users) t.innerHTML = r.users.map(u => `<tr><td>${u[0]}</td><td>****</td><td>${u[2]}</td><td><button class="btn btn-sm btn-outline-danger py-0" onclick="delUser('${u[0]}')">x</button></td></tr>`).join('');
+   const rr=await fetchGet('getAdminRequests'); const rl=document.getElementById('reqList'); if(rr.requests) rl.innerHTML = rr.requests.map(x => `<div class="list-group-item d-flex justify-content-between"><small><strong>${x.taskId}</strong> (${x.type})<br>${x.by} to ${x.to}</small><div><button class="btn btn-sm btn-success py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">ok</button><button class="btn btn-sm btn-danger py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">x</button></div></div>`).join('');
 }
 window.decideTr=async function(rid,tid,typ,to,dec){ showSpin(true); await callApi({action:"approveTransfer", reqId:rid, taskId:tid, type:typ, to:to, decision:dec}); renderAdminPanel(); showSpin(false); }
 window.reloadFrame=function(){ document.getElementById('lookerFrame').src += ''; }
+window.exportPool=function(){ const data = window.APP_DATA.adminPool.map(x=>({"AWB":x.id,"Client":x.client,"Net":x.net,"Status":x.assignee?"Assigned":"Unassigned","Assignee":x.assignee||""})); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Pool"); XLSX.writeFile(wb, "Pool.xlsx"); }
 
-window.exportPool=function(){
-   const data = window.APP_DATA.adminPool.map(x=>({"AWB":x.id,"Client":x.client,"Net":x.net,"Status":x.assignee?"Assigned":"Unassigned","Assignee":x.assignee||""}));
-   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Pool"); XLSX.writeFile(wb, "Pool.xlsx");
-}
-
-// --- MANIFEST LOGIC (ENHANCED) ---
+// --- MANIFEST LOGIC ---
 window.switchManifestView = function(view) {
     document.querySelectorAll('#manTabs .nav-link').forEach(el => el.classList.remove('active'));
-    // Simple way to toggle active state on button click
     const idx = view === 'pending' ? 0 : 1;
     document.querySelectorAll('#manTabs .nav-link')[idx].classList.add('active');
-    
     document.getElementById('man-pending-view').style.display = view === 'pending' ? 'block' : 'none';
     document.getElementById('man-history-view').style.display = view === 'history' ? 'block' : 'none';
-    
     if(view === 'pending') renderManifest();
     if(view === 'history') renderManifestHistory();
 }
-
 window.renderManifest = function() {
    const net = document.getElementById('man_net').value;
    const list = document.getElementById('manifestList');
-   
    const items = window.APP_DATA.manifest || [];
-   // Filter: Matches Network AND No Batch ID assigned yet
    const filtered = net ? items.filter(x => x.net === net && !x.batchNo) : [];
-   
    if (!net || filtered.length === 0) {
       list.innerHTML = '';
       document.getElementById('manifestEmptyState').style.display = 'block';
       document.getElementById('manifestEmptyState').querySelector('h6').textContent = !net ? "No Network Selected" : `No Pending Items for ${net}`;
       return;
    }
-   
    document.getElementById('manifestEmptyState').style.display = 'none';
-   list.innerHTML = filtered.map(x => `<tr>
-         <td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${x.id}"></td>
-         <td class="fw-bold font-monospace">${x.id}</td>
-         <td>${new Date(x.date).toLocaleDateString()}</td>
-         <td>${x.dest}</td>
-         <td>${x.net}</td>
-         <td>${x.boxes}</td>
-         <td>${x.chgWgt}</td>
-         <td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td>
-      </tr>`).join('');
+   list.innerHTML = filtered.map(x => `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`).join('');
 };
-
-window.toggleAllMan = function(el) {
-   document.querySelectorAll('.batch-check').forEach(c => c.checked = el.checked);
-}
-
+window.toggleAllMan = function(el) { document.querySelectorAll('.batch-check').forEach(c => c.checked = el.checked); }
 window.createBatch = async function() {
    const net = document.getElementById('man_net').value;
    if(!net) return alert("Select Network");
-   
    const chks = document.querySelectorAll('.batch-check:checked');
    if(chks.length === 0) return alert("Select at least one item");
-   
    const ids = Array.from(chks).map(c => c.value);
    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
    const manifestDate = new Date().toLocaleDateString();
-
    if(!confirm(`Generate Manifest Batch "${batchId}" for ${ids.length} items?`)) return;
-
-   // Optimistic Update
-   window.APP_DATA.manifest.forEach(x => {
-       if(ids.includes(x.id)) { x.batchNo = batchId; x.manifestDate = manifestDate; }
-   });
-   
-   exportBatch(batchId); // Download Excel
-   renderManifest(); // Refresh Pending View
-   
-   // Sync Backend
+   window.APP_DATA.manifest.forEach(x => { if(ids.includes(x.id)) { x.batchNo = batchId; x.manifestDate = manifestDate; } });
+   exportBatch(batchId); renderManifest();
    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate });
    toast("Batch Created & Exported");
 };
-
 window.renderManifestHistory = function() {
     const con = document.getElementById('batchContainer');
     const all = window.APP_DATA.manifest || [];
     const batches = {};
-    all.forEach(x => {
-        if(x.batchNo) {
-            if(!batches[x.batchNo]) batches[x.batchNo] = [];
-            batches[x.batchNo].push(x);
-        }
-    });
-    
+    all.forEach(x => { if(x.batchNo) { if(!batches[x.batchNo]) batches[x.batchNo] = []; batches[x.batchNo].push(x); } });
     const keys = Object.keys(batches).sort().reverse();
-    if(keys.length === 0) {
-        con.innerHTML = '';
-        document.getElementById('batchEmptyState').style.display = 'block';
-        return;
-    }
+    if(keys.length === 0) { con.innerHTML = ''; document.getElementById('batchEmptyState').style.display = 'block'; return; }
     document.getElementById('batchEmptyState').style.display = 'none';
-    
     con.innerHTML = keys.map(k => {
         const group = batches[k];
         const net = group[0].net;
         const date = group[0].manifestDate || "N/A";
         const count = group.length;
-        
-        // Generate mini table rows
         const rows = group.map(g => `<tr><td>${g.id}</td><td>${g.dest}</td><td>${g.chgWgt}</td></tr>`).join('');
-        
-        return `<div class="col-md-6 col-xl-4">
-             <div class="panel-card h-100">
-               <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
-                  <div><div class="fw-bold text-primary">${k}</div><div class="small text-muted">${date} • ${net}</div></div>
-                  <span class="badge bg-primary rounded-pill">${count} Items</span>
-               </div>
-               <div class="p-3">
-                  <div class="d-flex gap-2 mb-3">
-                     <button class="btn btn-sm btn-outline-primary flex-fill" onclick="exportBatch('${k}')"><i class="bi bi-download me-1"></i> Re-Export</button>
-                     <button class="btn btn-sm btn-outline-secondary flex-fill" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_${k}">View Items</button>
-                  </div>
-                  <div class="collapse" id="collapse_${k}">
-                     <div class="table-responsive border rounded" style="max-height:200px; overflow-y:auto;">
-                        <table class="table table-sm table-striped mb-0 small"><thead><tr><th>AWB</th><th>Dest</th><th>Wgt</th></tr></thead><tbody>${rows}</tbody></table>
-                     </div>
-                  </div>
-               </div>
-             </div>
-          </div>`;
+        return `<div class="col-md-6 col-xl-4"><div class="panel-card h-100"><div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light"><div><div class="fw-bold text-primary">${k}</div><div class="small text-muted">${date} • ${net}</div></div><span class="badge bg-primary rounded-pill">${count} Items</span></div><div class="p-3"><div class="d-flex gap-2 mb-3"><button class="btn btn-sm btn-outline-primary flex-fill" onclick="exportBatch('${k}')"><i class="bi bi-download me-1"></i> Re-Export</button><button class="btn btn-sm btn-outline-secondary flex-fill" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_${k}">View Items</button></div><div class="collapse" id="collapse_${k}"><div class="table-responsive border rounded" style="max-height:200px; overflow-y:auto;"><table class="table table-sm table-striped mb-0 small"><thead><tr><th>AWB</th><th>Destination</th><th>Weight</th></tr></thead><tbody>${rows}</tbody></table></div></div></div></div></div>`;
     }).join('');
 }
-
 window.exportBatch = function(batchId) {
    const items = window.APP_DATA.manifest.filter(x => x.batchNo === batchId);
    if(!items.length) return alert("Empty Batch");
-   
-   const data = items.map(x => ({
-      "AWB": x.id, "Date": x.date, "Network": x.net, "Client": x.client, 
-      "Destination": x.dest, "Pieces": x.boxes, "Weight": x.chgWgt, "Type": x.type, "Batch": x.batchNo
-   }));
-   
-   const wb = XLSX.utils.book_new();
-   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), batchId);
-   XLSX.writeFile(wb, `Manifest_${batchId}.xlsx`);
+   const data = items.map(x => ({ "AWB": x.id, "Date": x.date, "Network": x.net, "Client": x.client, "Destination": x.dest, "Pieces": x.boxes, "Weight": x.chgWgt, "Type": x.type, "Batch": x.batchNo }));
+   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), batchId); XLSX.writeFile(wb, `Manifest_${batchId}.xlsx`);
 };
-
 </script>
 </body>
 </html>
