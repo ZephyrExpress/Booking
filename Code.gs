@@ -186,9 +186,12 @@ function getAllData(username) {
     else {
       // Auto Done -> Pending Paperwork
       pendingPaper.push(item);
-      // Admin Pool: Items needing assignment (or just all pending paperwork)
-      // Task Hub Logic:
-      if (assignee === "") toAssign.push(item); // Unassigned
+
+      // Staff Panel 1: Automation done by me (so I can transfer/assign)
+      // Include all items I automated that are not fully completed paperwork-wise
+      if (autoBy === targetUser) toAssign.push(item);
+
+      // Staff Panel 2: Assigned to me
       if (assignee === targetUser) myToDo.push({...item, subtitle: `Assigned by ${r[18]}`});
     }
   });

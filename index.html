@@ -56,6 +56,8 @@
     .fun-header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 1.5rem; border-radius: 12px 12px 0 0; }
     .fun-label { color: #475569; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; }
     .fun-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    /* Green Package Section */
+    .fun-section-green { background: #f0fdf4; border-color: #bbf7d0; }
   </style>
 </head>
 <body>
@@ -115,7 +117,10 @@
         <button class="mobile-toggle me-3" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
         <h5 class="m-0 fw-bold text-primary" id="pageTitle">Overview</h5>
       </div>
-      <div class="small fw-bold text-muted" id="dateDisplay"></div>
+      <div class="text-end">
+         <div class="small fw-bold text-muted" id="dateDisplay"></div>
+         <div class="small fw-bold text-muted" id="timeDisplay"></div>
+      </div>
     </div>
 
     <div class="main-container p-4">
@@ -132,29 +137,29 @@
                <div class="row g-4 mb-4">
                  <div class="col-md-4"><label class="fun-label">Airway Bill Number *</label><input id="f_awb" class="form-control fun-input font-monospace" required placeholder="000-00000000"></div>
                  <div class="col-md-4"><label class="fun-label">Date *</label><input type="date" id="f_date" class="form-control fun-input" required></div>
-                 <div class="col-md-4"><label class="fun-label">Shipment Type *</label><select id="f_type" class="form-select fun-input"><option>Dox</option><option>Ndox</option></select></div>
+                 <div class="col-md-4"><label class="fun-label">Shipment Type *</label><select id="f_type" class="form-select fun-input" onchange="chkDox()"><option>Dox</option><option>Ndox</option></select></div>
                  <div class="col-md-4"><label class="fun-label">Network *</label><select id="f_net" class="form-select fun-input" required></select></div>
                  <div class="col-md-4"><label class="fun-label">Client *</label><select id="f_client" required></select></div>
                  <div class="col-md-4"><label class="fun-label">Destination *</label><select id="f_dest" required></select></div>
                </div>
 
-               <div class="fun-section">
-                  <h6 class="fw-bold text-primary mb-3"><i class="bi bi-box-seam me-2"></i>Package Details</h6>
+               <div class="fun-section fun-section-green">
+                  <h6 class="fw-bold text-success mb-3"><i class="bi bi-box-seam me-2"></i>Package Details</h6>
                   <div class="row g-3 align-items-end mb-3">
                      <div class="col-md-4">
                         <label class="fun-label">Total Quantity *</label>
                         <div class="input-group">
                            <input type="number" id="f_boxes" class="form-control fun-input" required placeholder="Qty">
-                           <button type="button" class="btn btn-primary" onclick="genBoxes()">Generate</button>
+                           <button type="button" class="btn btn-success" onclick="genBoxes()">Generate</button>
                         </div>
                      </div>
                      <div class="col-md-4">
                         <label class="fun-label">Total Chargeable Weight</label>
-                        <input id="f_totalChg" class="form-control fun-input bg-primary bg-opacity-10 fw-bold text-primary" readonly value="0.00">
+                        <input id="f_totalChg" class="form-control fun-input bg-success bg-opacity-10 fw-bold text-success" readonly value="0.00">
                      </div>
                   </div>
                   <div class="table-responsive bg-white rounded border"><table class="table table-sm mb-0 align-middle">
-                     <thead class="table-light"><tr><th>#</th><th>Weight (Kg)</th><th>Length (cm)</th><th>Width (cm)</th><th>Height (cm)</th><th>Chargeable Weight</th></tr></thead>
+                     <thead class="table-light"><tr><th>#</th><th>Weight (Kg) *</th><th>Length (cm)</th><th>Width (cm)</th><th>Height (cm)</th><th>Chargeable Weight</th></tr></thead>
                      <tbody id="boxTable"></tbody>
                   </table></div>
                </div>
@@ -169,7 +174,7 @@
                </div>
 
                <div class="mb-3"><label class="fun-label">Extra Charges</label><div id="f_extra" class="d-flex flex-wrap gap-2 p-3 bg-white rounded border"></div></div>
-               <div class="mb-4"><label class="fun-label">Remarks</label><textarea id="f_remarks" class="form-control fun-input" rows="2"></textarea></div>
+               <div class="mb-4"><label class="fun-label">Extra Charges Remarks (if applicable)</label><textarea id="f_remarks" class="form-control fun-input" rows="2"></textarea></div>
 
                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
                  <button type="button" class="btn btn-light rounded-pill px-4" onclick="resetForm()">Reset</button>
@@ -195,10 +200,7 @@
                  <span><i class="bi bi-hourglass-split me-2"></i>Pending Automation</span>
                  <span class="badge bg-danger" id="badgeAuto">0</span>
               </div>
-              <div class="p-2 bg-light border-bottom small text-muted text-center">
-                 <i class="bi bi-info-circle me-1"></i> Automation is processed via Booking Report
-              </div>
-              <div class="panel-body p-0 overflow-auto" style="height:500px" id="listAuto"></div>
+              <div class="panel-body p-0 overflow-auto" style="height:540px" id="listAuto"></div>
             </div>
           </div>
           <div class="col-lg-6">
@@ -219,14 +221,22 @@
         <div id="adminTaskView" style="display:none">
            <div class="panel-card">
               <div class="panel-header bg-primary text-white"><span><i class="bi bi-kanban me-2"></i>Task Manager (Global Pool)</span> <button class="btn btn-sm btn-light text-primary fw-bold" onclick="exportPool()">Export</button></div>
-              <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="bg-light"><tr><th>AWB</th><th>Details</th><th>Assigned To</th><th>Action</th></tr></thead><tbody id="poolBody"></tbody></table></div>
+              <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="bg-light"><tr><th>AWB</th><th>Network</th><th>Weight</th><th>Details</th><th>Assigned To</th><th>Action</th></tr></thead><tbody id="poolBody"></tbody></table></div>
            </div>
         </div>
 
         <!-- STAFF VIEW -->
         <div id="staffTaskView" style="display:none">
-             <div class="alert alert-warning py-3 mb-4 shadow-sm border-0 border-start border-4 border-warning"><h5 class="alert-heading fw-bold m-0"><i class="bi bi-list-check me-2"></i>My To-Do List</h5></div>
-             <div id="contTodo" class="row g-3"></div>
+             <div class="row g-4">
+                 <div class="col-lg-6">
+                     <div class="alert alert-info py-3 shadow-sm border-0 border-start border-4 border-info"><h5 class="alert-heading fw-bold m-0"><i class="bi bi-robot me-2"></i>My Automated Shipments</h5></div>
+                     <div id="contAssign" class="row g-3"></div>
+                 </div>
+                 <div class="col-lg-6">
+                     <div class="alert alert-warning py-3 shadow-sm border-0 border-start border-4 border-warning"><h5 class="alert-heading fw-bold m-0"><i class="bi bi-list-check me-2"></i>My To-Do List</h5></div>
+                     <div id="contTodo" class="row g-3"></div>
+                 </div>
+             </div>
         </div>
       </div>
 
@@ -338,6 +348,7 @@ window.tomInstances={client:null,dest:null,del:null};
 // --- INIT ---
 document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'short',day:'numeric'});
+  setInterval(() => document.getElementById('timeDisplay').textContent = new Date().toLocaleTimeString('en-US'), 1000);
   document.getElementById('f_date').valueAsDate=new Date();
   document.getElementById('lookerFrame').src = LOOKER_URL;
 });
@@ -402,7 +413,7 @@ function renderUI(){
   if(!d.auto.length) la.innerHTML='<div class="text-center p-4 text-muted small">No Pending Automation</div>';
   else {
       la.innerHTML = d.auto.map(x =>
-        `<div class="list-group-item p-3 border-bottom"><div class="d-flex justify-content-between"><strong>${x.id}</strong><small class="text-muted">${x.net}</small></div><div class="small fw-bold text-primary">${x.client}</div><div class="small text-muted fst-italic">Waiting for Booking Report...</div></div>`
+        `<div class="list-group-item p-3 border-bottom"><div class="d-flex justify-content-between"><strong>${x.id}</strong><small class="text-muted">${x.net}</small></div><div class="small fw-bold text-primary">${x.client}</div></div>`
       ).join('');
   }
 
@@ -436,20 +447,28 @@ function renderTaskHub(){
 
       pt.innerHTML = window.APP_DATA.adminPool.map(x => {
          let assignVal = x.assignee || "";
-         return `<tr><td class="fw-bold font-monospace">${x.id}</td><td>${x.client}<br><small class="text-muted">${x.net}</small></td><td><div class="input-group input-group-sm" style="width:160px"><select id="adm_as_${x.id}" class="form-select">${opts}</select><button class="btn btn-outline-secondary" onclick="actAssign('${x.id}','adm_as_')"><i class="bi bi-check"></i></button></div></td><td>${assignVal}</td></tr>`;
+         return `<tr><td class="fw-bold font-monospace">${x.id}</td><td>${x.net}</td><td>${x.chgWgt}</td><td>${x.client}<br><small class="text-muted">${x.details}</small></td><td><div class="input-group input-group-sm" style="width:160px"><select id="adm_as_${x.id}" class="form-select">${opts}</select><button class="btn btn-outline-secondary" onclick="actAssign('${x.id}','adm_as_')"><i class="bi bi-check"></i></button></div></td><td>${assignVal}</td></tr>`;
       }).join('');
       window.APP_DATA.adminPool.forEach(x => { if(x.assignee) { const el = document.getElementById(`adm_as_${x.id}`); if(el) el.value = x.assignee; } });
-      renderAdminPanel(); // For admin tab sidebar
+      renderAdminPanel();
    } else {
       document.getElementById('adminTaskView').style.display = 'none';
       document.getElementById('staffTaskView').style.display = 'block';
 
       const wf=window.APP_DATA.workflow;
+      const ca=document.getElementById('contAssign');
+      if(!wf.toAssign.length) ca.innerHTML='<div class="col-12 text-center text-muted small py-4">No shipments automated by you</div>';
+      else {
+          ca.innerHTML = wf.toAssign.map(x =>
+             `<div class="col-12"><div class="panel-card p-3 border-info border-start border-4"><div class="fw-bold">${x.id}</div><div class="small text-muted mb-2">${x.client} • ${x.net}</div><button class="btn btn-outline-primary btn-sm w-100 rounded-pill" onclick="openReassign('${x.id}','Paperwork')"><i class="bi bi-arrow-left-right me-2"></i>Transfer for Paperwork</button></div></div>`
+          ).join('');
+      }
+
       const ct=document.getElementById('contTodo');
       if(!wf.toDo.length) ct.innerHTML='<div class="col-12 text-center text-muted small py-4">No tasks assigned to you</div>';
       else {
           ct.innerHTML = wf.toDo.map(x =>
-             `<div class="col-md-6 col-xl-4"><div class="panel-card p-3 border-warning border-start border-4"><div class="d-flex justify-content-between"><div><div class="fw-bold">${x.id}</div><div class="small text-muted">${x.subtitle}</div></div><button class="btn btn-sm btn-light" onclick="openReassign('${x.id}','Paperwork')"><i class="bi bi-arrow-left-right"></i></button></div><div class="small text-primary my-2">${x.details}</div><button class="btn btn-success w-100 btn-sm rounded-pill" onclick="actComplete('${x.id}')">Mark Complete</button></div></div>`
+             `<div class="col-12"><div class="panel-card p-3 border-warning border-start border-4"><div class="d-flex justify-content-between"><div><div class="fw-bold">${x.id}</div><div class="small text-muted">${x.subtitle}</div></div><button class="btn btn-sm btn-light" onclick="openReassign('${x.id}','Paperwork')"><i class="bi bi-arrow-left-right"></i></button></div><div class="small text-primary my-2">${x.details}</div><button class="btn btn-success w-100 btn-sm rounded-pill" onclick="actComplete('${x.id}')">Mark Complete</button></div></div>`
           ).join('');
       }
    }
@@ -474,7 +493,7 @@ window.switchTab=function(t){
    document.querySelectorAll('.tab-view').forEach(e=>e.style.display='none');
    document.getElementById(t+'-tab').style.display='block';
    document.getElementById('pageTitle').textContent = t==='taskhub' ? (curRole==='admin'?'Task Manager':'My Tasks') : (t.charAt(0).toUpperCase() + t.slice(1));
-   if(window.innerWidth<992) toggleSidebar();
+   if(document.getElementById('sidebar').classList.contains('show')) toggleSidebar();
    if(t==='manifest') renderManifest();
    if(t==='admin') renderAdminPanel();
 }
@@ -504,6 +523,14 @@ function fillSel(id, arr){ const e=document.getElementById(id); if(!e||e.options
 // --- FORM SUBMIT ---
 document.getElementById('shipForm').onsubmit = async (e)=>{
    e.preventDefault();
+   // Validation: Payment
+   const cl = document.getElementById('f_client').value;
+   if(cl === "COUNTER SALE CASH - CASH") {
+       const pd = parseFloat(document.getElementById('f_payPaid').value)||0;
+       const pt = parseFloat(document.getElementById('f_payTotal').value)||0;
+       if(pt <= 0) return alert("Total Amount Required for Cash Sale");
+   }
+
    showSpin(true);
    let boxes=[], extra=[];
    document.querySelectorAll('#boxTable tr').forEach((tr,i)=>{
@@ -527,10 +554,17 @@ document.getElementById('shipForm').onsubmit = async (e)=>{
    else alert(r.message);
 };
 function resetForm(){ document.getElementById('shipForm').reset(); document.getElementById('boxTable').innerHTML=''; window.tomInstances.client.clear(); window.tomInstances.dest.clear(); document.getElementById('f_date').valueAsDate=new Date(); }
+window.chkDox=function(){
+   const t=document.getElementById('f_type').value;
+   if(t==='Dox'){
+       document.getElementById('f_boxes').value=1;
+       genBoxes();
+   }
+}
 window.genBoxes=function(){
    const n=document.getElementById('f_boxes').value; const tb=document.getElementById('boxTable');
    let html = '';
-   for(let i=1;i<=n;i++) html += `<tr><td>${i}</td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="val-chg">0</td></tr>`;
+   for(let i=1;i<=n;i++) html += `<tr><td>${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="val-chg">0</td></tr>`;
    tb.innerHTML = html;
 }
 window.cBox=function(el){
