@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js" defer></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
 
   <style>
     :root {
@@ -56,8 +56,11 @@
     .fun-header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 1.5rem; border-radius: 12px 12px 0 0; }
     .fun-label { color: #475569; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; }
     .fun-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
-    /* Green Package Section */
     .fun-section-green { background: #f0fdf4; border-color: #bbf7d0; }
+
+    /* Dark Checkboxes */
+    .form-check-input { border-color: #64748b; border-width: 2px; }
+    .form-check-input:checked { background-color: var(--primary-color); border-color: var(--primary-color); }
   </style>
 </head>
 <body>
@@ -71,7 +74,8 @@
 <div id="loginSection" class="login-wrapper">
   <div class="login-card">
     <div class="text-center mb-4"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="50"></div>
-    <h4 class="text-center fw-bold mb-4">Portal Login</h4>
+    <h4 class="text-center fw-bold mb-1">Portal Login</h4>
+    <p class="text-center text-muted small mb-4">v4.2</p>
     <form onsubmit="event.preventDefault(); doLogin();">
       <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required>
       <input type="text" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required>
@@ -84,7 +88,7 @@
 <!-- MAIN APP -->
 <div id="appSection" class="main-wrapper" style="display:none;">
   <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
-  
+
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png" height="30" class="me-2"> ZEPHYR PRO
@@ -165,17 +169,27 @@
                </div>
 
                <div class="fun-section border-warning">
-                  <h6 class="fw-bold text-warning mb-3"><i class="bi bi-currency-dollar me-2"></i>Payment Details</h6>
+                  <h6 class="fw-bold text-warning mb-3"><i class="bi bi-currency-rupee me-2"></i>Payment Details</h6>
                   <div class="row g-3">
-                     <div class="col-md-4"><label class="fun-label">Total Amount</label><input type="number" id="f_payTotal" class="form-control fun-input" oninput="cPay()"></div>
-                     <div class="col-md-4"><label class="fun-label">Amount Paid</label><input type="number" id="f_payPaid" class="form-control fun-input" oninput="cPay()"></div>
-                     <div class="col-md-4"><label class="fun-label">Pending Amount</label><input type="number" id="f_payPending" class="form-control fun-input bg-warning bg-opacity-10 fw-bold" readonly value="0"></div>
+                     <div class="col-md-4"><label class="fun-label">Total Amount</label><input type="number" step="0.01" id="f_payTotal" class="form-control fun-input" oninput="cPay()"></div>
+                     <div class="col-md-4"><label class="fun-label">Amount Paid</label><input type="number" step="0.01" id="f_payPaid" class="form-control fun-input" oninput="cPay()"></div>
+                     <div class="col-md-4"><label class="fun-label">Pending Amount</label><input type="number" step="0.01" id="f_payPending" class="form-control fun-input bg-warning bg-opacity-10 fw-bold" readonly value="0"></div>
                   </div>
                </div>
-               
+
+               <div class="mb-3">
+                  <label class="fun-label">Required Paperwork *</label>
+                  <div id="f_paperwork" class="d-flex flex-wrap gap-3 p-3 bg-white rounded border">
+                     <div class="form-check"><input class="form-check-input" type="checkbox" value="KYC"><label class="form-check-label fw-bold">KYC</label></div>
+                     <div class="form-check"><input class="form-check-input" type="checkbox" value="INVOICE"><label class="form-check-label fw-bold">INVOICE</label></div>
+                     <div class="form-check"><input class="form-check-input" type="checkbox" value="LOA"><label class="form-check-label fw-bold">LOA</label></div>
+                     <div class="form-check"><input class="form-check-input" type="checkbox" value="N/A"><label class="form-check-label fw-bold">N/A</label></div>
+                  </div>
+               </div>
+
                <div class="mb-3"><label class="fun-label">Extra Charges</label><div id="f_extra" class="d-flex flex-wrap gap-2 p-3 bg-white rounded border"></div></div>
                <div class="mb-4"><label class="fun-label">Extra Charges Remarks (if applicable)</label><textarea id="f_remarks" class="form-control fun-input" rows="2"></textarea></div>
-               
+
                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
                  <button type="button" class="btn btn-light rounded-pill px-4" onclick="resetForm()">Reset</button>
                  <button class="btn btn-primary px-5 rounded-pill fw-bold py-2 shadow-sm">Submit Entry</button>
@@ -192,7 +206,7 @@
            <div class="col-md-4"><div class="stat-card"><div><div class="stat-label">PENDING AUTOMATION</div><div class="stat-value text-danger" id="ovAuto">0</div></div><i class="bi bi-robot fs-1 text-danger opacity-25"></i></div></div>
            <div class="col-md-4"><div class="stat-card"><div><div class="stat-label">PENDING PAPERWORK</div><div class="stat-value text-warning" id="ovPaper">0</div></div><i class="bi bi-files fs-1 text-warning opacity-25"></i></div></div>
         </div>
-        
+
         <div class="row g-4">
           <div class="col-lg-6">
             <div class="panel-card" style="height:600px">
@@ -266,7 +280,7 @@
                       <thead class="bg-light">
                          <tr>
                             <th class="ps-4" style="width:40px"><input type="checkbox" class="form-check-input" id="checkAllMan" onclick="toggleAllMan(this)"></th>
-                            <th>AWB</th><th>Date</th><th>Destination</th><th>Network</th><th>Pieces</th><th>Weight</th><th class="text-end pe-4">Status</th>
+                            <th>AWB</th><th>Date</th><th>Destination</th><th>Network</th><th>Net No</th><th>Pcs</th><th>Wgt</th><th>Client</th><th class="text-end pe-4">Status</th>
                          </tr>
                       </thead>
                       <tbody id="manifestList"></tbody>
@@ -291,7 +305,7 @@
            </div>
         </div>
       </div>
-      
+
       <!-- ANALYTICS TAB -->
       <div id="analytics-tab" class="tab-view" style="display:none;">
         <div class="panel-card" style="height: 85vh;">
@@ -339,14 +353,14 @@
 <script>
 const API_URL="https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
 // REPLACE WITH YOUR LOOKER STUDIO URL
-const LOOKER_URL = "https://lookerstudio.google.com/embed/reporting/YOUR_REPORT_ID/page/YOUR_PAGE_ID"; 
+const LOOKER_URL = "https://lookerstudio.google.com/embed/reporting/YOUR_REPORT_ID/page/YOUR_PAGE_ID";
 
 let curUser="", curRole="", curReassign={};
 window.APP_DATA={staff:[], dropdowns:{}, overview:{auto:[],paper:[]}, workflow:{toAssign:[],toDo:[]}, manifest:[]};
 window.tomInstances={client:null,dest:null,del:null};
 
 // --- INIT ---
-document.addEventListener('DOMContentLoaded', ()=>{ 
+document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'short',day:'numeric'});
   setInterval(() => document.getElementById('timeDisplay').textContent = new Date().toLocaleTimeString('en-US'), 1000);
   document.getElementById('f_date').valueAsDate=new Date();
@@ -373,15 +387,15 @@ window.doLogin=async function(){
      document.getElementById('userDisplay').textContent=r.name;
      document.getElementById('loginSection').style.display='none';
      document.getElementById('appSection').style.display='flex';
-     
-     if(curRole==='admin'){ 
-         document.getElementById('adminNavGroup').style.display='block'; 
+
+     if(curRole==='admin'){
+         document.getElementById('adminNavGroup').style.display='block';
          document.getElementById('nav-taskhub').onclick = () => switchTab('taskhub');
          document.getElementById('taskLabel').textContent = "Task Manager";
      } else {
          document.getElementById('taskLabel').textContent = "My Tasks";
      }
-     
+
      syncData(true);
   } else { showSpin(false); document.getElementById('loginError').textContent=r.message; document.getElementById('loginError').style.display='block'; }
 }
@@ -412,7 +426,7 @@ function renderUI(){
   const la=document.getElementById('listAuto');
   if(!d.auto.length) la.innerHTML='<div class="text-center p-4 text-muted small">No Pending Automation</div>';
   else {
-      la.innerHTML = d.auto.map(x => 
+      la.innerHTML = d.auto.map(x =>
         `<div class="list-group-item p-3 border-bottom"><div class="d-flex justify-content-between"><strong>${x.id}</strong><small class="text-muted">${x.net}</small></div><div class="small fw-bold text-primary">${x.client}</div></div>`
       ).join('');
   }
@@ -440,7 +454,7 @@ function renderTaskHub(){
    if(curRole === 'admin') {
       document.getElementById('adminTaskView').style.display = 'block';
       document.getElementById('staffTaskView').style.display = 'none';
-      
+
       const pt=document.getElementById('poolBody');
       let opts=`<option value="">Select Staff...</option>`;
       if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`);
@@ -450,16 +464,16 @@ function renderTaskHub(){
          return `<tr><td class="fw-bold font-monospace">${x.id}</td><td>${x.net}</td><td>${x.chgWgt}</td><td>${x.client}<br><small class="text-muted">${x.details}</small></td><td><div class="input-group input-group-sm" style="width:160px"><select id="adm_as_${x.id}" class="form-select">${opts}</select><button class="btn btn-outline-secondary" onclick="actAssign('${x.id}','adm_as_')"><i class="bi bi-check"></i></button></div></td><td>${assignVal}</td></tr>`;
       }).join('');
       window.APP_DATA.adminPool.forEach(x => { if(x.assignee) { const el = document.getElementById(`adm_as_${x.id}`); if(el) el.value = x.assignee; } });
-      renderAdminPanel(); 
+      renderAdminPanel();
    } else {
       document.getElementById('adminTaskView').style.display = 'none';
       document.getElementById('staffTaskView').style.display = 'block';
-      
+
       const wf=window.APP_DATA.workflow;
       const ca=document.getElementById('contAssign');
       if(!wf.toAssign.length) ca.innerHTML='<div class="col-12 text-center text-muted small py-4">No shipments automated by you</div>';
       else {
-          ca.innerHTML = wf.toAssign.map(x => 
+          ca.innerHTML = wf.toAssign.map(x =>
              `<div class="col-12"><div class="panel-card p-3 border-info border-start border-4"><div class="fw-bold">${x.id}</div><div class="small text-muted mb-2">${x.client} • ${x.net}</div><button class="btn btn-outline-primary btn-sm w-100 rounded-pill" onclick="openReassign('${x.id}','Paperwork')"><i class="bi bi-arrow-left-right me-2"></i>Transfer for Paperwork</button></div></div>`
           ).join('');
       }
@@ -467,7 +481,7 @@ function renderTaskHub(){
       const ct=document.getElementById('contTodo');
       if(!wf.toDo.length) ct.innerHTML='<div class="col-12 text-center text-muted small py-4">No tasks assigned to you</div>';
       else {
-          ct.innerHTML = wf.toDo.map(x => 
+          ct.innerHTML = wf.toDo.map(x =>
              `<div class="col-12"><div class="panel-card p-3 border-warning border-start border-4"><div class="d-flex justify-content-between"><div><div class="fw-bold">${x.id}</div><div class="small text-muted">${x.subtitle}</div></div><button class="btn btn-sm btn-light" onclick="openReassign('${x.id}','Paperwork')"><i class="bi bi-arrow-left-right"></i></button></div><div class="small text-primary my-2">${x.details}</div><button class="btn btn-success w-100 btn-sm rounded-pill" onclick="actComplete('${x.id}')">Mark Complete</button></div></div>`
           ).join('');
       }
@@ -507,11 +521,13 @@ function initForms(){
 function updDd(){
    if(!window.APP_DATA.static) return;
    const dd=window.APP_DATA.static.dropdowns;
+   if(!dd) return; // robustness check
+
    fillSel('f_net', dd.networks);
    const mn=document.getElementById('man_net');
    if(mn && mn.options.length<=1 && dd.networks){ let opts=''; dd.networks.forEach(x=>opts+=`<option value="${x}">${x}</option>`); mn.innerHTML+=opts; }
-   if(window.tomInstances.client){ window.tomInstances.client.clearOptions(); dd.clients.forEach(x=>window.tomInstances.client.addOption({value:x,text:x})); window.tomInstances.client.sync(); }
-   if(window.tomInstances.dest){ window.tomInstances.dest.clearOptions(); dd.destinations.forEach(x=>window.tomInstances.dest.addOption({value:x,text:x})); window.tomInstances.dest.sync(); }
+   if(window.tomInstances.client && dd.clients){ window.tomInstances.client.clearOptions(); dd.clients.forEach(x=>window.tomInstances.client.addOption({value:x,text:x})); window.tomInstances.client.sync(); }
+   if(window.tomInstances.dest && dd.destinations){ window.tomInstances.dest.clearOptions(); dd.destinations.forEach(x=>window.tomInstances.dest.addOption({value:x,text:x})); window.tomInstances.dest.sync(); }
    const ex=document.getElementById('f_extra'); if(ex && dd.extraCharges) ex.innerHTML=dd.extraCharges.map(x=>`<div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label small">${x}</label></div>`).join('');
    if(curRole==='admin'){
      const cat=document.getElementById('dd_cat').value; const targetList = dd[{'network':'networks','client':'clients','destination':'destinations','extra':'extraCharges'}[cat]];
@@ -525,35 +541,46 @@ document.getElementById('shipForm').onsubmit = async (e)=>{
    e.preventDefault();
    // Validation: Payment
    const cl = document.getElementById('f_client').value;
-   if(cl === "COUNTER SALE CASH - CASH") {
-       const pd = parseFloat(document.getElementById('f_payPaid').value)||0;
+   if(cl.includes("COUNTER SALE CASH - CASH")) {
        const pt = parseFloat(document.getElementById('f_payTotal').value)||0;
        if(pt <= 0) return alert("Total Amount Required for Cash Sale");
    }
 
+   // Validation: Paperwork
+   let pw = [];
+   document.querySelectorAll('#f_paperwork input:checked').forEach(c => pw.push(c.value));
+   if(pw.length === 0) return alert("Please select required Paperwork");
+
    showSpin(true);
-   let boxes=[], extra=[]; 
+   let boxes=[], extra=[];
    document.querySelectorAll('#boxTable tr').forEach((tr,i)=>{
       let inps=tr.querySelectorAll('input');
       if(inps.length) boxes.push({no:i+1, weight:inps[0].value, length:inps[1].value, breath:inps[2].value, height:inps[3].value});
    });
    document.querySelectorAll('#f_extra input:checked').forEach(c=>extra.push(c.value));
-   
-   const r = await callApi({ 
-     action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, 
-     date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, 
-     network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, 
-     destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, 
+
+   const r = await callApi({
+     action: 'submit', username: curUser, awb: document.getElementById('f_awb').value,
+     date: document.getElementById('f_date').value, type: document.getElementById('f_type').value,
+     network: document.getElementById('f_net').value, client: document.getElementById('f_client').value,
+     destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value,
      extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes,
      payTotal: document.getElementById('f_payTotal').value || 0,
      payPaid: document.getElementById('f_payPaid').value || 0,
-     payPending: document.getElementById('f_payPending').value || 0
+     payPending: document.getElementById('f_payPending').value || 0,
+     paperwork: pw.join(', ')
    });
    showSpin(false);
    if(r.result==='success') { toast("Entry Saved"); resetForm(); syncData(false); }
    else alert(r.message);
 };
-function resetForm(){ document.getElementById('shipForm').reset(); document.getElementById('boxTable').innerHTML=''; window.tomInstances.client.clear(); window.tomInstances.dest.clear(); document.getElementById('f_date').valueAsDate=new Date(); }
+function resetForm(){
+    document.getElementById('shipForm').reset();
+    document.getElementById('boxTable').innerHTML='';
+    window.tomInstances.client.clear();
+    window.tomInstances.dest.clear();
+    document.getElementById('f_date').valueAsDate=new Date();
+}
 window.chkDox=function(){
    const t=document.getElementById('f_type').value;
    if(t==='Dox'){
@@ -562,9 +589,9 @@ window.chkDox=function(){
    }
 }
 window.genBoxes=function(){
-   const n=document.getElementById('f_boxes').value; const tb=document.getElementById('boxTable'); 
+   const n=document.getElementById('f_boxes').value; const tb=document.getElementById('boxTable');
    let html = '';
-   for(let i=1;i<=n;i++) html += `<tr><td>${i}</td><td><input type="number" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="val-chg">0</td></tr>`;
+   for(let i=1;i<=n;i++) html += `<tr><td>${i}</td><td><input type="number" step="0.01" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" step="0.01" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" step="0.01" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" step="0.01" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="val-chg">0</td></tr>`;
    tb.innerHTML = html;
 }
 window.cBox=function(el){
@@ -585,12 +612,23 @@ window.openReassign=function(id, type){ curReassign={id,type}; document.getEleme
 window.sendTransfer=async function(){ const to=document.getElementById('rStaff').value; if(!to)return; bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide(); await callApi({action:"requestTransfer", taskId:curReassign.id, type:curReassign.type, by:curUser, to:to}); toast("Request Sent"); }
 window.manDd=async function(act){ const v=document.getElementById('dd_val').value, c=document.getElementById('dd_cat').value; if(!v)return; await callApi({action:"manageData",subAction:act,category:c,value:v}); document.getElementById('dd_val').value=''; syncData(false); }
 window.delDd=async function(){ const v=document.getElementById('dd_del').value, c=document.getElementById('dd_cat').value; if(!v)return; if(confirm("Delete?")) await callApi({action:"manageData",subAction:"delete",category:c,value:v}); syncData(false); }
-window.addUser=async function(){ await callApi({action:"addUser", u:document.getElementById('nu_u').value, p:document.getElementById('nu_p').value, n:document.getElementById('nu_n').value, r:document.getElementById('nu_r').value}); loadUsers(); }
+window.addUser=async function(){
+    await callApi({action:"addUser", u:document.getElementById('nu_u').value, p:document.getElementById('nu_p').value, n:document.getElementById('nu_n').value, r:document.getElementById('nu_r').value});
+    document.getElementById('nu_u').value=''; document.getElementById('nu_p').value=''; document.getElementById('nu_n').value=''; // Reset
+    loadUsers();
+}
 window.delUser=async function(u){ if(confirm("Del?")) await callApi({action:"deleteUser", username:u}); loadUsers(); }
+window.changePass=async function(u){
+    const p = prompt("New Password for "+u+":");
+    if(p) { await callApi({action:"changePassword", username:u, newPass:p}); loadUsers(); alert("Password Changed"); }
+}
+window.togglePass=function(el, pass){ el.textContent = el.textContent==='****' ? pass : '****'; }
+
 async function loadUsers() { renderAdminPanel(); }
 async function renderAdminPanel(){
    if(curRole!=='admin') return;
-   const r=await fetchGet('getUsers'); const t=document.getElementById('userList'); if(r.users) t.innerHTML = r.users.map(u => `<tr><td>${u[0]}</td><td>****</td><td>${u[2]}</td><td><button class="btn btn-sm btn-outline-danger py-0" onclick="delUser('${u[0]}')">x</button></td></tr>`).join('');
+   const r=await fetchGet('getUsers'); const t=document.getElementById('userList');
+   if(r.users) t.innerHTML = r.users.map(u => `<tr><td>${u[0]}</td><td style="cursor:pointer; font-family:monospace;" onclick="togglePass(this, '${u[1]}')">****</td><td>${u[2]}</td><td><div class="d-flex gap-1"><button class="btn btn-sm btn-outline-primary py-0" onclick="changePass('${u[0]}')" title="Change Pass"><i class="bi bi-key"></i></button><button class="btn btn-sm btn-outline-danger py-0" onclick="delUser('${u[0]}')"><i class="bi bi-x-lg"></i></button></div></td></tr>`).join('');
    const rr=await fetchGet('getAdminRequests'); const rl=document.getElementById('reqList'); if(rr.requests) rl.innerHTML = rr.requests.map(x => `<div class="list-group-item d-flex justify-content-between"><small><strong>${x.taskId}</strong> (${x.type})<br>${x.by} to ${x.to}</small><div><button class="btn btn-sm btn-success py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">ok</button><button class="btn btn-sm btn-danger py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">x</button></div></div>`).join('');
 }
 window.decideTr=async function(rid,tid,typ,to,dec){ showSpin(true); await callApi({action:"approveTransfer", reqId:rid, taskId:tid, type:typ, to:to, decision:dec}); renderAdminPanel(); showSpin(false); }
@@ -619,7 +657,7 @@ window.renderManifest = function() {
       return;
    }
    document.getElementById('manifestEmptyState').style.display = 'none';
-   list.innerHTML = filtered.map(x => `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`).join('');
+   list.innerHTML = filtered.map(x => `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`).join('');
 };
 window.toggleAllMan = function(el) { document.querySelectorAll('.batch-check').forEach(c => c.checked = el.checked); }
 window.createBatch = async function() {
@@ -656,7 +694,7 @@ window.renderManifestHistory = function() {
 window.exportBatch = function(batchId) {
    const items = window.APP_DATA.manifest.filter(x => x.batchNo === batchId);
    if(!items.length) return alert("Empty Batch");
-   const data = items.map(x => ({ "AWB": x.id, "Date": x.date, "Network": x.net, "Client": x.client, "Destination": x.dest, "Pieces": x.boxes, "Weight": x.chgWgt, "Type": x.type, "Batch": x.batchNo }));
+   const data = items.map(x => ({ "AWB": x.id, "Date": x.date, "Network": x.net, "Network No": x.netNo, "Client": x.client.slice(-4), "Destination": x.dest, "Pieces": x.boxes, "Weight": x.chgWgt, "Type": x.type, "Batch": x.batchNo }));
    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), batchId); XLSX.writeFile(wb, `Manifest_${batchId}.xlsx`);
 };
 </script>
