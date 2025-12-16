@@ -40,7 +40,7 @@
     
     .panel-card { background: white; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); height: 100%; overflow: hidden; }
     .panel-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); font-weight: 600; background: #fdfdfd; display:flex; justify-content:space-between; align-items:center; }
-    
+
     .stat-card { background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); display: flex; justify-content: space-between; }
     .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--primary-color); }
 
@@ -62,9 +62,14 @@
     .form-check-input { border-color: #64748b; border-width: 2px; }
     .form-check-input:checked { background-color: var(--primary-color); border-color: var(--primary-color); }
 
-    /* Excel-like Table */
-    .excel-table th { background-color: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; border: 1px solid #e2e8f0; }
-    .excel-table td { border: 1px solid #e2e8f0; font-size: 0.85rem; padding: 0.5rem; }
+    /* Overview Table - Enhanced */
+    .overview-table th { background-color: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; padding: 1rem; }
+    .overview-table td { border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; padding: 1rem; color: #334155; vertical-align: middle; }
+    .overview-table tr:hover td { background-color: #f8fafc; }
+
+    /* Excel-like Table (Admin) - Compact */
+    .excel-table th { background-color: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; border: 1px solid #e2e8f0; padding: 0.5rem; }
+    .excel-table td { border: 1px solid #e2e8f0; font-size: 0.85rem; padding: 0.5rem; vertical-align: middle; }
     .excel-table tr:hover td { background-color: #f8fafc; }
 
     /* Fix sticky overlap */
@@ -118,7 +123,7 @@
        <div class="d-flex align-items-center text-white">
           <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px"><i class="bi bi-person"></i></div>
           <div style="flex:1; overflow:hidden;"><div id="userDisplay" class="fw-bold small text-truncate">User</div></div>
-          <button onclick="logout()" class="btn btn-link text-danger p-0"><i class="bi bi-box-arrow-right"></i></button>
+          <button onclick="logout()" class="btn btn-link text-danger p-0" title="Logout"><i class="bi bi-box-arrow-right"></i></button>
        </div>
     </div>
   </aside>
@@ -129,9 +134,12 @@
         <button class="mobile-toggle me-3" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
         <h5 class="m-0 fw-bold text-primary" id="pageTitle">Overview</h5>
       </div>
-      <div class="text-end">
-         <div class="small fw-bold text-muted" id="dateDisplay"></div>
-         <div class="small fw-bold text-muted" id="timeDisplay"></div>
+      <div class="d-flex align-items-center gap-3">
+         <div class="text-end d-none d-md-block">
+            <div class="small fw-bold text-muted" id="dateDisplay"></div>
+            <div class="small fw-bold text-muted" id="timeDisplay"></div>
+         </div>
+         <button class="btn btn-light border text-primary fw-bold btn-sm shadow-sm" onclick="refreshApp()" title="Refresh Data"><i class="bi bi-arrow-clockwise me-1"></i> Refresh</button>
       </div>
     </div>
 
@@ -168,9 +176,9 @@
                   <h6 class="fw-bold text-success mb-3"><i class="bi bi-box-seam me-2"></i>Package Details</h6>
                   <div class="row g-3 align-items-end mb-3">
                      <div class="col-md-4">
-                        <label class="fun-label">Total Quantity *</label>
+                        <label class="fun-label">Total No. of Boxes *</label>
                         <div class="input-group">
-                           <input type="number" id="f_boxes" class="form-control fun-input" required placeholder="Qty">
+                           <input type="number" id="f_boxes" class="form-control fun-input" required placeholder="">
                            <button type="button" class="btn btn-success" onclick="genBoxes()">Generate</button>
                         </div>
                      </div>
@@ -238,7 +246,7 @@
                  <button class="btn btn-sm btn-outline-danger bg-white" onclick="exportOverview('auto')">Export</button>
               </div>
               <div class="panel-body p-0 overflow-auto" style="height:540px">
-                 <table class="table table-hover align-middle mb-0 excel-table">
+                 <table class="table overview-table mb-0">
                     <thead class="sticky-top bg-light"><tr><th>AWB</th><th>Network</th><th>Client</th><th>Entry User</th><th>Boxes</th><th>Weight</th></tr></thead>
                     <tbody id="listAuto"></tbody>
                  </table>
@@ -252,7 +260,7 @@
                  <button class="btn btn-sm btn-outline-warning bg-white text-dark" onclick="exportOverview('paper')">Export</button>
               </div>
               <div class="panel-body p-0 overflow-auto" style="height:540px">
-                 <table class="table table-hover align-middle mb-0 excel-table">
+                 <table class="table overview-table mb-0">
                     <thead class="sticky-top bg-light"><tr><th>AWB</th><th>Network</th><th>Client</th><th>Auto By</th><th>Boxes</th><th>Weight</th></tr></thead>
                     <tbody id="listPaper"></tbody>
                  </table>
@@ -394,6 +402,7 @@ const API_URL="https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9
 const LOOKER_URL = "https://lookerstudio.google.com/embed/reporting/YOUR_REPORT_ID/page/YOUR_PAGE_ID";
 
 let curUser="", curRole="", curReassign={};
+let lastReqCount = 0;
 window.APP_DATA={staff:[], dropdowns:{}, overview:{auto:[],paper:[]}, workflow:{toAssign:[],toDo:[]}, manifest:[]};
 window.tomInstances={client:null,dest:null,del:null};
 
@@ -439,6 +448,12 @@ window.doLogin=async function(){
   } else { showSpin(false); document.getElementById('loginError').textContent=r.message; document.getElementById('loginError').style.display='block'; }
 }
 window.logout=function(){location.reload();}
+window.refreshApp=async function(){
+    showSpin(true);
+    await syncData(false);
+    showSpin(false);
+    toast("Data Refreshed");
+}
 
 // --- DATA ---
 async function syncData(init=false){
@@ -446,6 +461,16 @@ async function syncData(init=false){
      const r = await fetchGet('getAllData');
      if(r.result==="success"){
         window.APP_DATA = r;
+
+        // Admin Notification Logic
+        if(curRole === 'admin') {
+            const newCount = r.stats.requests || 0;
+            if(!init && newCount > lastReqCount) {
+                toast(`<strong>New Transfer Request!</strong><br>${newCount} pending actions.`, 'danger');
+            }
+            lastReqCount = newCount;
+        }
+
         if(init) initForms(); else updDd();
         renderUI();
      }
@@ -467,10 +492,10 @@ function renderUI(){
   else {
       la.innerHTML = d.auto.map(x =>
         `<tr>
-           <td class="fw-bold font-monospace">${x.id}</td>
-           <td>${x.net}</td>
-           <td>${x.client}</td>
-           <td>${x.user}</td>
+           <td class="fw-bold font-monospace text-nowrap">${x.id}</td>
+           <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${x.net}</span></td>
+           <td><small class="fw-bold text-dark">${x.client}</small></td>
+           <td class="small text-muted">${x.user}</td>
            <td>${x.boxes}</td>
            <td>${x.chgWgt}</td>
         </tr>`
@@ -484,10 +509,10 @@ function renderUI(){
   else {
       lp.innerHTML = sortedP.map(x =>
         `<tr>
-           <td class="fw-bold font-monospace">${x.id}</td>
-           <td>${x.net}</td>
-           <td>${x.client}</td>
-           <td>${x.autoDoer || '-'}</td>
+           <td class="fw-bold font-monospace text-nowrap">${x.id}</td>
+           <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${x.net}</span></td>
+           <td><small class="fw-bold text-dark">${x.client}</small></td>
+           <td class="small text-muted">${x.autoDoer || '-'}</td>
            <td>${x.boxes}</td>
            <td>${x.chgWgt}</td>
         </tr>`
