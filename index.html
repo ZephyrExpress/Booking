@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js" defer></script>
 
   <style>
     :root {
@@ -676,7 +676,7 @@ window.cPay=function(){
 }
 
 // --- ADMIN ---
-window.openReassign=function(id, type){ curReassign={id,type}; document.getElementById('rId').textContent=id; const s=document.getElementById('rStaff'); s.innerHTML='<option value="">Select...</option>'; window.APP_DATA.static.staff.forEach(x=>s.innerHTML+=`<option value="${x}">${x}</option>`); new bootstrap.Modal(document.getElementById('reassignModal')).show(); }
+window.openReassign=function(id, type){ curReassign={id,type}; document.getElementById('rId').textContent=id; const s=document.getElementById('rStaff'); const opts = window.APP_DATA.static.staff.map(x=>`<option value="${x}">${x}</option>`).join(''); s.innerHTML='<option value="">Select...</option>' + opts; new bootstrap.Modal(document.getElementById('reassignModal')).show(); }
 window.sendTransfer=async function(){ const to=document.getElementById('rStaff').value; if(!to)return; bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide(); await callApi({action:"requestTransfer", taskId:curReassign.id, type:curReassign.type, by:curUser, to:to}); toast("Request Sent"); }
 window.manDd=async function(act){ const v=document.getElementById('dd_val').value, c=document.getElementById('dd_cat').value; if(!v)return; await callApi({action:"manageData",subAction:act,category:c,value:v}); document.getElementById('dd_val').value=''; syncData(false); }
 window.delDd=async function(){ const v=document.getElementById('dd_del').value, c=document.getElementById('dd_cat').value; if(!v)return; if(confirm("Delete?")) await callApi({action:"manageData",subAction:"delete",category:c,value:v}); syncData(false); }
