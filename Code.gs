@@ -167,8 +167,8 @@ function getAllData(username) {
     }
     else {
       pendingPaper.push(item);
-      // Staff Panel 1: Automation done by me
-      if (autoBy === targetUser) toAssign.push(item);
+      // Staff Panel 1: Automation done by me AND not yet assigned/transferred
+      if (autoBy === targetUser && assignee === "") toAssign.push(item);
       // Staff Panel 2: Assigned to me
       if (assignee === targetUser) myToDo.push({...item, subtitle: `Assigned by ${r[18]}`});
     }

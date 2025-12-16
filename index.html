@@ -20,11 +20,11 @@
       --font-main: 'Inter', sans-serif;
     }
     body { background-color: var(--bg-color); font-family: var(--font-main); color: var(--secondary-color); margin: 0; padding: 0; }
-    
+
     /* Login */
     .login-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%); position: fixed; top: 0; left: 0; width: 100%; z-index: 2000; }
     .login-card { width: 100%; max-width: 420px; padding: 3rem; background: white; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.1); }
-    
+
     /* Layout */
     .sidebar { width: var(--sidebar-width); background-color: var(--primary-color); position: fixed; top: 0; bottom: 0; left: 0; z-index: 1000; transition: transform 0.3s; transform: translateX(-100%); color: #94a3b8; display:flex; flex-direction:column; }
     .sidebar.show { transform: translateX(0); }
@@ -43,7 +43,7 @@
     
     .stat-card { background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); display: flex; justify-content: space-between; }
     .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--primary-color); }
-    
+
     .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1060; }
     .spinner-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; display:none; justify-content:center; align-items:center; }
     .mobile-toggle { display: block !important; background:none; border:none; font-size:1.5rem; color:var(--primary-color); }
@@ -66,6 +66,9 @@
     .excel-table th { background-color: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; border: 1px solid #e2e8f0; }
     .excel-table td { border: 1px solid #e2e8f0; font-size: 0.85rem; padding: 0.5rem; }
     .excel-table tr:hover td { background-color: #f8fafc; }
+
+    /* Fix sticky overlap */
+    .sticky-top { z-index: 10; }
   </style>
 </head>
 <body>
@@ -199,7 +202,7 @@
                           <label class="form-check-label small fw-bold">Select All</label>
                       </div>
                   </div>
-                  <div id="f_paperwork" class="d-flex flex-wrap gap-3 p-3 bg-white rounded border">
+                  <div id="f_paperwork" class="d-flex flex-wrap gap-2 p-3 bg-white rounded border">
                      <div class="form-check"><input class="form-check-input pw-chk" type="checkbox" value="KYC"><label class="form-check-label fw-bold">KYC</label></div>
                      <div class="form-check"><input class="form-check-input pw-chk" type="checkbox" value="INVOICE"><label class="form-check-label fw-bold">INVOICE</label></div>
                      <div class="form-check"><input class="form-check-input pw-chk" type="checkbox" value="LOA"><label class="form-check-label fw-bold">LOA</label></div>
@@ -228,11 +231,11 @@
         </div>
 
         <div class="row g-4">
-          <div class="col-lg-12">
+          <div class="col-lg-6">
             <div class="panel-card" style="height:600px">
               <div class="panel-header bg-danger bg-opacity-10 text-danger border-danger border-opacity-25">
-                 <span><i class="bi bi-hourglass-split me-2"></i>Pending Automation</span>
-                 <span class="badge bg-danger" id="badgeAuto">0</span>
+                 <span><i class="bi bi-hourglass-split me-2"></i>Pending Automation <span class="badge bg-danger ms-2" id="badgeAuto">0</span></span>
+                 <button class="btn btn-sm btn-outline-danger bg-white" onclick="exportOverview('auto')">Export</button>
               </div>
               <div class="panel-body p-0 overflow-auto" style="height:540px">
                  <table class="table table-hover align-middle mb-0 excel-table">
@@ -242,23 +245,20 @@
               </div>
             </div>
           </div>
-          <!-- Merged Paperwork view or separate if user wanted separate?
-               Wait, "In Overview ... Need entry user, box, weight details in Pending automation."
-               User didn't say remove Pending Paperwork from Overview. But layout might need adjustment.
-               I'll make Overview have 2 cols again, but Pending Auto will be a table.
-          -->
-        </div>
-
-        <div class="row g-4 mt-2">
-           <div class="col-lg-12">
-            <div class="panel-card" style="height:400px">
+          <div class="col-lg-6">
+            <div class="panel-card" style="height:600px">
               <div class="panel-header bg-warning bg-opacity-10 text-dark border-warning border-opacity-25">
-                 <span><i class="bi bi-clock-history me-2"></i>Pending Paperwork Overview</span>
-                 <span class="badge bg-warning text-dark" id="badgePaper">0</span>
+                 <span><i class="bi bi-clock-history me-2"></i>Pending Paperwork <span class="badge bg-warning text-dark ms-2" id="badgePaper">0</span></span>
+                 <button class="btn btn-sm btn-outline-warning bg-white text-dark" onclick="exportOverview('paper')">Export</button>
               </div>
-              <div class="panel-body p-0 overflow-auto" style="height:340px" id="listPaper"></div>
+              <div class="panel-body p-0 overflow-auto" style="height:540px">
+                 <table class="table table-hover align-middle mb-0 excel-table">
+                    <thead class="sticky-top bg-light"><tr><th>AWB</th><th>Network</th><th>Client</th><th>Auto By</th><th>Boxes</th><th>Weight</th></tr></thead>
+                    <tbody id="listPaper"></tbody>
+                 </table>
+              </div>
             </div>
-           </div>
+          </div>
         </div>
       </div>
 
@@ -432,6 +432,7 @@ window.doLogin=async function(){
          document.getElementById('taskLabel').textContent = "Task Manager";
      } else {
          document.getElementById('taskLabel').textContent = "My Tasks";
+         switchTab('inbound'); // Redirect Staff
      }
 
      syncData(true);
@@ -476,15 +477,21 @@ function renderUI(){
       ).join('');
   }
 
-  // Paper List - Standard List
+  // Paper List - Table Format
   const lp=document.getElementById('listPaper');
   const sortedP = [...d.paper].sort((a,b)=>(a.assignee?1:-1)-(b.assignee?1:-1));
-  if(!sortedP.length) lp.innerHTML='<div class="text-center p-4 text-muted small">No Pending Paperwork</div>';
+  if(!sortedP.length) lp.innerHTML='<tr><td colspan="6" class="text-center p-4 text-muted small">No Pending Paperwork</td></tr>';
   else {
-      lp.innerHTML = sortedP.map(x => {
-         let badge = x.assignee ? `<span class="badge bg-success bg-opacity-10 text-success border-success border"><i class="bi bi-person-check me-1"></i>${x.assignee}</span>` : `<span class="badge bg-secondary"><i class="bi bi-robot me-1"></i>Auto by ${x.autoDoer}</span>`;
-         return `<div class="list-group-item p-3 border-bottom"><div class="d-flex justify-content-between"><strong>${x.id}</strong><small class="text-muted">${x.net}</small></div><div class="small fw-bold text-primary">${x.client}</div><div class="mb-1">${badge}</div><div class="small text-muted">${x.details}</div></div>`;
-      }).join('');
+      lp.innerHTML = sortedP.map(x =>
+        `<tr>
+           <td class="fw-bold font-monospace">${x.id}</td>
+           <td>${x.net}</td>
+           <td>${x.client}</td>
+           <td>${x.autoDoer || '-'}</td>
+           <td>${x.boxes}</td>
+           <td>${x.chgWgt}</td>
+        </tr>`
+      ).join('');
   }
 
   renderTaskHub();
@@ -550,8 +557,15 @@ async function actAssign(id, pfx='as_'){
 async function actDirectTransfer(id){
    const s=document.getElementById('direct_tr_'+id).value; if(!s) return alert("Select Staff");
    if(!confirm(`Transfer ${id} to ${s}?`)) return;
+
+   // Optimistic UI Remove
+   const card = document.getElementById('direct_tr_'+id).closest('.col-12');
+   if(card) card.remove();
+
    await callApi({action:"directTransfer", taskId:id, to:s, by:curUser});
-   syncData(false); toast("Transferred Successfully");
+   // syncData(false); // No need to full sync if optimistic update works, but better to sync for consistency eventually.
+   // Or just rely on next auto sync? User said "it is not disappearing". Removing element fixes visual immediately.
+   toast("Transferred Successfully");
 }
 async function actComplete(id){
    if(!confirm(`Complete paperwork for ${id}?`)) return;
@@ -601,8 +615,17 @@ function fillSel(id, arr){
 }
 
 window.toggleAllPaperwork = function(el) {
-    document.querySelectorAll('.pw-chk').forEach(c => c.checked = el.checked);
+    document.querySelectorAll('.pw-chk').forEach(c => {
+        if(c.value !== "N/A") c.checked = el.checked;
+    });
 }
+
+window.exportOverview = function(type) {
+    const d = window.APP_DATA.overview[type] || [];
+    if(!d.length) return alert("Nothing to export");
+    const data = d.map(x => ({ "AWB": x.id, "Network": x.net, "Client": x.client, "User/Auto": x.user||x.autoDoer, "Boxes": x.boxes, "Weight": x.chgWgt }));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), type.toUpperCase()); XLSX.writeFile(wb, `Overview_${type}.xlsx`);
+};
 
 // --- FORM SUBMIT ---
 document.getElementById('shipForm').onsubmit = async (e)=>{
