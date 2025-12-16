@@ -1,5 +1,5 @@
 /* =========================================
-   ZEPHYR PRO API (v4.2 - Mandatory MCQ + Admin Fixes)
+   ZEPHYR PRO API (v4.3 - Direct Transfer + UI Updates)
    ========================================= */
 
 const TASK_SHEET_ID = "1_8VSzZdn8rKrzvXpzIfY_oz3XT9gi30jgzdxzQP4Bac";
@@ -32,6 +32,7 @@ function doPost(e) {
     // WORKFLOW
     if (act === "assignTask") return handleAssignTask(body);
     if (act === "markPaperworkDone") return handlePaperDone(body);
+    if (act === "directTransfer") return handleDirectTransfer(body);
 
     // MANIFEST
     if (act === "updateManifestBatch") return handleManifestBatch(body);
@@ -89,7 +90,6 @@ function getAllData(username) {
   }
 
   // 3. READ SHIPMENTS (Cols A-AA -> 27 cols)
-  // U:NetNo, V-X:Pay, Y-Z:Man, AA:Paperwork
   const lastRow = sh.getLastRow();
   const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 27).getDisplayValues() : [];
 
@@ -167,7 +167,9 @@ function getAllData(username) {
     }
     else {
       pendingPaper.push(item);
+      // Staff Panel 1: Automation done by me
       if (autoBy === targetUser) toAssign.push(item);
+      // Staff Panel 2: Assigned to me
       if (assignee === targetUser) myToDo.push({...item, subtitle: `Assigned by ${r[18]}`});
     }
   });
@@ -196,6 +198,21 @@ function handleAssignTask(b) {
   ss.getRange(row, 17, 1, 3).setValues([["Assigned", b.staff, b.assigner]]);
   syncFMS(b.id, { assignee: b.staff, assigner: b.assigner });
   return jsonResponse("success", "Task Assigned");
+}
+
+function handleDirectTransfer(b) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
+  const row = findRow(ss, b.taskId);
+  if (row === -1) return jsonResponse("error", "Shipment Not Found");
+
+  const oldLog = ss.getRange(row, 20).getValue();
+  ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Direct Transfer by ${b.by} to ${b.to}]`);
+
+  // Update Assigned To (Col R / 18)
+  ss.getRange(row, 18).setValue(b.to);
+  syncFMS(b.taskId, { assignee: b.to });
+
+  return jsonResponse("success", "Transferred");
 }
 
 function handlePaperDone(b) {
@@ -236,7 +253,6 @@ function handleSubmit(body){
     return["'"+body.awb,b.no,w,l,br,h,v.toFixed(2),c.toFixed(2)];
   });
 
-  // Append 27 columns: A-Z (26) + AA (Paperwork)
   sh.appendRow([
       "'"+body.awb, body.date, body.type, body.network, body.client, body.destination,
       body.totalBoxes, body.extraCharges, body.username, new Date(),
