@@ -402,6 +402,7 @@ const API_URL="https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9
 const LOOKER_URL = "https://lookerstudio.google.com/embed/reporting/YOUR_REPORT_ID/page/YOUR_PAGE_ID";
 
 let curUser="", curRole="", curReassign={};
+let lastReqCount = 0;
 window.APP_DATA={staff:[], dropdowns:{}, overview:{auto:[],paper:[]}, workflow:{toAssign:[],toDo:[]}, manifest:[]};
 window.tomInstances={client:null,dest:null,del:null};
 
@@ -460,6 +461,16 @@ async function syncData(init=false){
      const r = await fetchGet('getAllData');
      if(r.result==="success"){
         window.APP_DATA = r;
+
+        // Admin Notification Logic
+        if(curRole === 'admin') {
+            const newCount = r.stats.requests || 0;
+            if(!init && newCount > lastReqCount) {
+                toast(`<strong>New Transfer Request!</strong><br>${newCount} pending actions.`, 'danger');
+            }
+            lastReqCount = newCount;
+        }
+
         if(init) initForms(); else updDd();
         renderUI();
      }
