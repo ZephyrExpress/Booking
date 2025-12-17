@@ -262,7 +262,38 @@ function handleSubmit(body){
   ]);
 
   if(br.length) bx.getRange(bx.getLastRow()+1,1,br.length,8).setValues(br);
+
+  // Sync New Entry to FMS
+  addToFMS({
+      awb: body.awb, date: body.date, type: body.type, net: body.network,
+      client: body.client, dest: body.destination, boxes: body.totalBoxes,
+      wgt: tC.toFixed(2), user: body.username
+  });
+
   return jsonResponse("success","Saved");
+}
+
+function addToFMS(d) {
+    try {
+        const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
+        if(fms) {
+            const lr = fms.getLastRow();
+            const row = lr + 1;
+            // Best-effort mapping to FMS Columns (A=1)
+            // A:SNo, B:AWB, C:Date, D:Type, E:Net, F:Client, G:Dest, H:Boxes, I:Wgt ... N:User, Q:Status
+            fms.getRange(row, 1).setValue(row-6); // S.No (Assuming data starts row 7, 7-6=1)
+            fms.getRange(row, 2).setValue("'"+d.awb);
+            fms.getRange(row, 3).setValue(d.date);
+            fms.getRange(row, 4).setValue(d.type);
+            fms.getRange(row, 5).setValue(d.net);
+            fms.getRange(row, 6).setValue(d.client);
+            fms.getRange(row, 7).setValue(d.dest);
+            fms.getRange(row, 8).setValue(d.boxes);
+            fms.getRange(row, 9).setValue(d.wgt);
+            fms.getRange(row, 14).setValue(d.user); // N
+            fms.getRange(row, 17).setValue("PENDING"); // Q
+        }
+    } catch(e) { console.error("FMS Add Error", e); }
 }
 
 function findRow(sheet, id) {
