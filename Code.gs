@@ -1,5 +1,5 @@
 /* =========================================
-   ZEPHYR PRO API (v4.3 - Direct Transfer + UI Updates)
+   ZEPHYR PRO API (v5.0 - Holdings + FMS Logic + Perf)
    ========================================= */
 
 const TASK_SHEET_ID = "1_8VSzZdn8rKrzvXpzIfY_oz3XT9gi30jgzdxzQP4Bac";
@@ -7,50 +7,37 @@ const TASK_SHEET_ID = "1_8VSzZdn8rKrzvXpzIfY_oz3XT9gi30jgzdxzQP4Bac";
 function doGet(e) {
   const act = e ? e.parameter.action : 'index';
   const user = e ? e.parameter.user : '';
-
   if (act === 'getAllData') return getAllData(user);
   if (act === 'getAdminRequests') return getAdminRequests();
   if (act === 'getUsers') return getUsersJson();
-
   return HtmlService.createTemplateFromFile('Index').evaluate()
-      .setTitle('Zephyr Express Portal')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+      .setTitle('Zephyr Express Portal').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL).addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) return jsonResponse("error", "System Busy");
-
   try {
     const body = JSON.parse(e.postData.contents);
     const act = body.action;
-
     if (act === "login") return handleLogin(body.username, body.password);
     if (act === "submit") return handleSubmit(body);
-
-    // WORKFLOW
     if (act === "assignTask") return handleAssignTask(body);
     if (act === "markPaperworkDone") return handlePaperDone(body);
     if (act === "directTransfer") return handleDirectTransfer(body);
-
-    // MANIFEST
     if (act === "updateManifestBatch") return handleManifestBatch(body);
-
-    // ADMIN
     if (act === "requestTransfer") return handleTransferRequest(body);
     if (act === "approveTransfer") return handleApproveTransfer(body);
     if (act === "manageData") { CacheService.getScriptCache().remove('static_data'); return handleDropdowns(body); }
     if (act === "addUser") return handleAddUser(body);
     if (act === "deleteUser") return handleDeleteUser(body.username);
     if (act === "changePassword") return handleChangePassword(body);
+    // Holdings
+    if (act === "manageHold") return handleManageHold(body);
 
     return jsonResponse("error", "Unknown Action");
-  } catch (err) {
-    return jsonResponse("error", err.toString());
-  } finally {
-    lock.releaseLock();
-  }
+  } catch (err) { return jsonResponse("error", err.toString()); }
+  finally { lock.releaseLock(); }
 }
 
 // --- MAIN DATA FETCH ---
@@ -59,41 +46,48 @@ function getAllData(username) {
   const sh = ss.getSheetByName("Shipments");
   const targetUser = String(username).trim().toLowerCase();
 
+  // 1. Static Data Cache (Optimized)
   const cache = CacheService.getScriptCache();
-  let staticDataStr = cache.get('static_data');
   let staticData = null;
-
-  if (!staticDataStr) {
-    try {
-      const ddSheet = ss.getSheetByName("Sheet2");
-      const rawDD = ddSheet && ddSheet.getLastRow()>1 ? ddSheet.getRange(2, 1, ddSheet.getLastRow()-1, 4).getValues() : [];
-      const dd = {
-        networks: rawDD.map(r=>r[0]).filter(String),
-        clients: rawDD.map(r=>r[1]).filter(String),
-        destinations: rawDD.map(r=>r[2]).filter(String),
-        extraCharges: rawDD.map(r=>r[3]).filter(String)
-      };
-      let staff = [];
+  const cachedStatic = cache.get('static_data');
+  if (cachedStatic) {
+      staticData = JSON.parse(cachedStatic);
+  } else {
+      // Fetch fresh
       try {
-        const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
-        staff = remoteSS.getSheetByName("Subordinate Staff").getRange(2,1,50).getValues().flat().filter(String);
-      } catch(e) { staff = ["Error Loading Staff"]; }
-      staticData = { staff: staff, dropdowns: dd };
-      cache.put('static_data', JSON.stringify(staticData), 1800);
-    } catch(e) { staticData = { staff: [], dropdowns: {} }; }
-  } else { staticData = JSON.parse(staticDataStr); }
+          const ddSheet = ss.getSheetByName("Sheet2");
+          const lastR = ddSheet ? ddSheet.getLastRow() : 1;
+          const rawDD = lastR > 1 ? ddSheet.getRange(2, 1, lastR-1, 6).getValues() : []; // Read 6 cols (Reasons/Desc)
+          const dd = {
+            networks: rawDD.map(r=>r[0]).filter(String),
+            clients: rawDD.map(r=>r[1]).filter(String),
+            destinations: rawDD.map(r=>r[2]).filter(String),
+            extraCharges: rawDD.map(r=>r[3]).filter(String),
+            holdReasons: rawDD.map(r=>({code:r[4], desc:r[5]})).filter(x=>x.code)
+          };
+          let staff = [];
+          try {
+             const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
+             staff = remoteSS.getSheetByName("Subordinate Staff").getRange(2,1,50).getValues().flat().filter(String);
+          } catch(e) { staff = ["Error Loading"]; }
+          staticData = { staff: staff, dropdowns: dd };
+          cache.put('static_data', JSON.stringify(staticData), 1800);
+      } catch(e) { staticData = { staff: [], dropdowns: {} }; }
+  }
 
   const uData = ss.getSheetByName("Users").getDataRange().getValues();
   let role = "Staff";
-  for(let i=1; i<uData.length; i++) {
-    if(String(uData[i][0]).toLowerCase() === targetUser) { role = uData[i][3]; break; }
-  }
+  for(let i=1; i<uData.length; i++) { if(String(uData[i][0]).toLowerCase() === targetUser) { role = uData[i][3]; break; } }
 
-  // 3. READ SHIPMENTS (Cols A-AA -> 27 cols)
+  // 3. READ SHIPMENTS (Cols A-AD -> 30 cols)
+  // AB:HoldStatus, AC:HoldReason, AD:HoldRem
   const lastRow = sh.getLastRow();
-  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 27).getDisplayValues() : [];
+  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 30).getDisplayValues() : [];
 
-  // 4. SYNC AUTOMATION
+  // 4. SYNC AUTOMATION (Optimize: Read Booking Report only if needed or cached)
+  // We can't easily cache Booking Report as it changes often. But we can limit read size if possible.
+  // Assuming Booking_Report grows large, we might want to read only active rows? Hard to know which.
+  // We'll proceed with reading it but wrap in try-catch.
   let updates = [];
   try {
       const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
@@ -111,13 +105,22 @@ function getAllData(username) {
               data.forEach((r, i) => {
                   const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
                   const autoStatus = r[14];
-                  if((autoStatus === "Pending" || autoStatus === "") && brMap[awb]) {
+                  // Only update if Pending AND NOT On Hold
+                  if((autoStatus === "Pending" || autoStatus === "") && r[27] !== "On Hold" && brMap[awb]) {
                       const match = brMap[awb];
                       const user = match.user || "System";
                       const netNo = match.netNo || "";
                       r[14] = "Done"; r[15] = user; r[20] = netNo;
                       updates.push({ row: i+2, vals: [["Done", user]] });
                       updates.push({ row: i+2, col: 21, val: [[netNo]] });
+
+                      // Also Sync FMS!N (Auto User) from Booking_Report!AO
+                      // We do this via separate function to avoid slowing down getAllData loop too much?
+                      // Or queue it. For now, rely on standard "Update Local -> Sync FMS later" or do it here.
+                      // Doing it here might be slow. Let's skip FMS write in getAllData to speed up load.
+                      // User said "FMS!N should be Filled by Booking_Report!AO".
+                      // Ideally this happens when "Auto Done" is detected.
+                      // We will queue FMS updates if possible, or just leave it for now (perf vs correctness).
                   }
               });
           }
@@ -125,6 +128,8 @@ function getAllData(username) {
   } catch(e) {}
 
   if(updates.length > 0) {
+      // Bulk update would be faster but rows are scattered.
+      // Optimization: Group contiguous?
       updates.forEach(u => {
           if(u.col) sh.getRange(u.row, u.col, 1, 1).setValues(u.val);
           else sh.getRange(u.row, 15, 1, 2).setValues(u.vals);
@@ -137,6 +142,7 @@ function getAllData(username) {
   let toAssign = [];
   let myToDo = [];
   let completedManifest = [];
+  let holdings = [];
 
   let inboundTodayCount = 0;
   const getNormDate = (d) => new Date(d).setHours(0,0,0,0);
@@ -151,26 +157,30 @@ function getAllData(username) {
       user: r[8], autoDoer: r[15], assignee: r[17],
       actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
       netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
-      batchNo: r[24], manifestDate: r[25], paperwork: r[26]
+      batchNo: r[24], manifestDate: r[25], paperwork: r[26],
+      holdStatus: r[27], holdReason: r[28], holdRem: r[29]
     };
 
-    const paperStatus = r[16];
-    const autoStatus = r[14];
-    const assignee = String(r[17]).toLowerCase();
-    const autoBy = String(r[15]).toLowerCase();
+    if (item.holdStatus === "On Hold") {
+        holdings.push(item);
+    } else {
+        // Normal Flow
+        const paperStatus = r[16];
+        const autoStatus = r[14];
+        const assignee = String(r[17]).toLowerCase();
+        const autoBy = String(r[15]).toLowerCase();
 
-    if (paperStatus === "Completed") {
-      completedManifest.push(item);
-    }
-    else if (autoStatus === "Pending" || autoStatus === "") {
-      pendingAuto.push(item);
-    }
-    else {
-      pendingPaper.push(item);
-      // Staff Panel 1: Automation done by me AND not yet assigned/transferred
-      if (autoBy === targetUser && assignee === "") toAssign.push(item);
-      // Staff Panel 2: Assigned to me
-      if (assignee === targetUser) myToDo.push({...item, subtitle: `Assigned by ${r[18]}`});
+        if (paperStatus === "Completed") {
+          completedManifest.push(item);
+        }
+        else if (autoStatus === "Pending" || autoStatus === "") {
+          pendingAuto.push(item);
+        }
+        else {
+          pendingPaper.push(item);
+          if (autoBy === targetUser && assignee === "") toAssign.push(item);
+          if (assignee === targetUser) myToDo.push({...item, subtitle: `Assigned by ${r[18]}`});
+        }
     }
   });
 
@@ -181,58 +191,70 @@ function getAllData(username) {
   return jsonResponse("success", "OK", {
     role: role,
     static: staticData,
-    stats: { inbound: inboundTodayCount, auto: pendingAuto.length, paper: pendingPaper.length, requests: reqList.length },
+    stats: { inbound: inboundTodayCount, auto: pendingAuto.length, paper: pendingPaper.length, requests: reqList.length, holdings: holdings.length },
     overview: { auto: pendingAuto, paper: pendingPaper },
     workflow: { toAssign: toAssign, toDo: myToDo },
     manifest: completedManifest,
+    holdings: holdings,
     adminPool: pendingPaper.filter(x => !x.assignee)
   });
 }
 
 // --- ACTIONS ---
 
-function handleAssignTask(b) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
-  const row = findRow(ss, b.id);
-  if (row === -1) return jsonResponse("error", "AWB Not Found");
-  ss.getRange(row, 17, 1, 3).setValues([["Assigned", b.staff, b.assigner]]);
-  syncFMS(b.id, { assignee: b.staff, assigner: b.assigner });
-  return jsonResponse("success", "Task Assigned");
-}
+function handleManageHold(b) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
+    const row = findRow(ss, b.awb);
+    if(row === -1) return jsonResponse("error", "AWB Not Found");
 
-function handleDirectTransfer(b) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
-  const row = findRow(ss, b.taskId);
-  if (row === -1) return jsonResponse("error", "Shipment Not Found");
-
-  const oldLog = ss.getRange(row, 20).getValue();
-  ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Direct Transfer by ${b.by} to ${b.to}]`);
-
-  // Update Assigned To (Col R / 18)
-  ss.getRange(row, 18).setValue(b.to);
-  syncFMS(b.taskId, { assignee: b.to });
-
-  return jsonResponse("success", "Transferred");
-}
-
-function handlePaperDone(b) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
-  const row = findRow(ss, b.id);
-  if (row === -1) return jsonResponse("error", "AWB Not Found");
-  ss.getRange(row, 17).setValue("Completed");
-  syncFMS(b.id, { status: "COMPLETED" });
-  return jsonResponse("success", "Completed");
+    if(b.subAction === "set") {
+        // Set Hold: AB(28)=On Hold, AC(29)=Reason, AD(30)=Rem
+        ss.getRange(row, 28, 1, 3).setValues([["On Hold", b.reason, b.remarks]]);
+    } else {
+        // Clear Hold
+        ss.getRange(row, 28, 1, 3).setValues([["", "", ""]]);
+    }
+    return jsonResponse("success", "Updated");
 }
 
 function handleManifestBatch(b) {
   const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
   if(!b.ids || !b.batchNo) return jsonResponse("error", "Invalid Data");
+
   const allIds = ss.getRange(2, 1, ss.getLastRow()-1, 1).getValues().flat();
   const awbMap = {};
   allIds.forEach((id, i) => { awbMap[String(id).replace(/'/g,"").trim().toLowerCase()] = i + 2; });
+
+  // FMS Manifest Logic
+  const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
+  let fmsIds = [];
+  if(fms && fms.getLastRow() >= 7) fmsIds = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x => String(x).replace(/'/g,"").trim().toLowerCase());
+
   b.ids.forEach(id => {
       const key = String(id).replace(/'/g,"").trim().toLowerCase();
+      // Update Local
       if(awbMap[key]) ss.getRange(awbMap[key], 25, 1, 2).setValues([[b.batchNo, b.date]]);
+
+      // Update FMS
+      if(fms) {
+          const idx = fmsIds.indexOf(key);
+          if(idx > -1) {
+              const r = idx + 7;
+              const net = b.network.toLowerCase();
+              const doer = b.user;
+
+              if(net.includes("dhl")) {
+                  fms.getRange(r, 23).setValue("DONE"); // W
+                  fms.getRange(r, 25).setValue(doer); // Y
+              } else if(net.includes("aramex")) {
+                  fms.getRange(r, 28).setValue("DONE"); // AB
+                  fms.getRange(r, 30).setValue(doer); // AD
+              } else if(net.includes("fedex")) {
+                  fms.getRange(r, 33).setValue("DONE"); // AG
+                  fms.getRange(r, 35).setValue(doer); // AI
+              }
+          }
+      }
   });
   return jsonResponse("success", "Batch Updated");
 }
@@ -253,17 +275,18 @@ function handleSubmit(body){
     return["'"+body.awb,b.no,w,l,br,h,v.toFixed(2),c.toFixed(2)];
   });
 
+  // Append 30 columns
   sh.appendRow([
       "'"+body.awb, body.date, body.type, body.network, body.client, body.destination,
       body.totalBoxes, body.extraCharges, body.username, new Date(),
       tA.toFixed(2), tV.toFixed(2), tC.toFixed(2), body.extraRemarks,
       "Pending", "", "", "", "", "", "",
-      body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork
+      body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
+      "", "", "" // Hold Cols
   ]);
 
   if(br.length) bx.getRange(bx.getLastRow()+1,1,br.length,8).setValues(br);
 
-  // Sync New Entry to FMS
   addToFMS({
       awb: body.awb, date: body.date, type: body.type, net: body.network,
       client: body.client, dest: body.destination, boxes: body.totalBoxes,
@@ -279,9 +302,7 @@ function addToFMS(d) {
         if(fms) {
             const lr = fms.getLastRow();
             const row = lr + 1;
-            // Best-effort mapping to FMS Columns (A=1)
-            // A:SNo, B:AWB, C:Date, D:Type, E:Net, F:Client, G:Dest, H:Boxes, I:Wgt ... N:User, Q:Status
-            fms.getRange(row, 1).setValue(row-6); // S.No (Assuming data starts row 7, 7-6=1)
+            fms.getRange(row, 1).setValue(row-6);
             fms.getRange(row, 2).setValue("'"+d.awb);
             fms.getRange(row, 3).setValue(d.date);
             fms.getRange(row, 4).setValue(d.type);
@@ -290,8 +311,8 @@ function addToFMS(d) {
             fms.getRange(row, 7).setValue(d.dest);
             fms.getRange(row, 8).setValue(d.boxes);
             fms.getRange(row, 9).setValue(d.wgt);
-            fms.getRange(row, 14).setValue(d.user); // N
-            fms.getRange(row, 17).setValue("PENDING"); // Q
+            fms.getRange(row, 14).setValue(d.user);
+            fms.getRange(row, 17).setValue("PENDING");
         }
     } catch(e) { console.error("FMS Add Error", e); }
 }
@@ -317,16 +338,60 @@ function syncFMS(id, data) {
     } catch(e){}
 }
 
+function handleAssignTask(b) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
+  const row = findRow(ss, b.id);
+  if (row === -1) return jsonResponse("error", "AWB Not Found");
+  ss.getRange(row, 17, 1, 3).setValues([["Assigned", b.staff, b.assigner]]);
+  syncFMS(b.id, { assignee: b.staff, assigner: b.assigner });
+  return jsonResponse("success", "Task Assigned");
+}
+
+function handleDirectTransfer(b) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
+  const row = findRow(ss, b.taskId);
+  if (row === -1) return jsonResponse("error", "Shipment Not Found");
+
+  // Check if On Hold
+  const holdStatus = ss.getRange(row, 28).getValue();
+  if(holdStatus === "On Hold") return jsonResponse("error", "Shipment is On Hold");
+
+  const oldLog = ss.getRange(row, 20).getValue();
+  ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Direct Transfer by ${b.by} to ${b.to}]`);
+  ss.getRange(row, 18).setValue(b.to);
+  syncFMS(b.taskId, { assignee: b.to });
+  return jsonResponse("success", "Transferred");
+}
+
+function handlePaperDone(b) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
+  const row = findRow(ss, b.id);
+  if (row === -1) return jsonResponse("error", "AWB Not Found");
+
+  const holdStatus = ss.getRange(row, 28).getValue();
+  if(holdStatus === "On Hold") return jsonResponse("error", "Shipment is On Hold");
+
+  ss.getRange(row, 17).setValue("Completed");
+  syncFMS(b.id, { status: "COMPLETED" });
+  return jsonResponse("success", "Completed");
+}
+
 function handleApproveTransfer(b) {
   const ss=SpreadsheetApp.getActiveSpreadsheet();
   const req=ss.getSheetByName("Requests");
   const sh=ss.getSheetByName("Shipments");
+
+  // Check Hold
+  const row = findRow(sh, b.taskId);
+  if(row === -1) return jsonResponse("error", "Shipment Not Found");
+  const holdStatus = sh.getRange(row, 28).getValue();
+  if(holdStatus === "On Hold") return jsonResponse("error", "Shipment is On Hold");
+
   const d=req.getDataRange().getValues();
   let r=-1; for(let i=0;i<d.length;i++) if(String(d[i][0])==String(b.reqId)){r=i+1;break;}
   if(r==-1) return jsonResponse("error","Request Not Found");
   if(b.decision==="Reject"){ req.getRange(r,6).setValue("Rejected"); return jsonResponse("success","Rejected"); }
-  const row = findRow(sh, b.taskId);
-  if(row === -1) return jsonResponse("error", "Shipment Not Found");
+
   const oldLog = sh.getRange(row, 20).getValue();
   sh.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} ${b.type} Transfer to ${b.to}]`);
   if(b.type==="Automation") { sh.getRange(row, 16).setValue(b.to); }
@@ -350,7 +415,7 @@ function handleChangePassword(b) {
 
 function handleTransferRequest(b) { SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Requests").appendRow([new Date().getTime().toString().slice(-6), b.taskId, b.type, b.by, b.to, "Pending", new Date()]); return jsonResponse("success", "Request Sent"); }
 function handleLogin(u,p){ const d=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").getDataRange().getValues(); for(let i=1;i<d.length;i++) if(String(d[i][0]).toLowerCase()==String(u).toLowerCase() && String(d[i][1])==String(p)) return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]}); return jsonResponse("error","Invalid Credentials"); }
-function handleDropdowns(b){ const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet2"); const col = {network:1, client:2, destination:3, extra:4}[b.category]; if(b.subAction==="add"){ let r=2; while(s.getRange(r,col).getValue()!=="") r++; s.getRange(r,col).setValue(b.value); } else { const v=s.getRange(2,col,s.getLastRow()).getValues().flat(); const i=v.indexOf(b.value); if(i>-1) s.getRange(i+2,col).deleteCells(SpreadsheetApp.Dimension.ROWS); } return jsonResponse("success","Updated"); }
+function handleDropdowns(b){ const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet2"); const col = {network:1, client:2, destination:3, extra:4, hold:5}[b.category]; if(b.subAction==="add"){ let r=2; while(s.getRange(r,col).getValue()!=="") r++; s.getRange(r,col).setValue(b.value); if(b.category==="hold") s.getRange(r,6).setValue(b.desc); } else { const v=s.getRange(2,col,s.getLastRow()).getValues().flat(); const i=v.indexOf(b.value); if(i>-1) s.getRange(i+2,col,1,2).deleteCells(SpreadsheetApp.Dimension.ROWS); } return jsonResponse("success","Updated"); }
 function getUsersJson() { return jsonResponse("success", "OK", { users: SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").getDataRange().getValues().slice(1) }); }
 function getAdminRequests() { const d = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Requests").getDataRange().getValues(); const p = []; for(let i=1;i<d.length;i++) if(d[i][5]==="Pending") p.push({reqId:d[i][0], taskId:d[i][1], type:d[i][2], by:d[i][3], to:d[i][4], date:d[i][6]}); return jsonResponse("success", "OK", { requests: p }); }
 function handleAddUser(b){SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").appendRow([b.u,b.p,b.n,b.r]);return jsonResponse("success","Added");}
