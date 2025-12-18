@@ -17,10 +17,10 @@
       --sidebar-width: 260px;
       --header-height: 64px;
       /* Brand Colors */
-      --brand-blue: #003399;
-      --brand-red: #d40511;
+      --brand-blue: #003399; 
+      --brand-red: #d40511; 
       --brand-yellow: #ffcc00;
-
+      
       --primary-color: var(--brand-blue);
       --secondary-color: #334155;
       --bg-color: #f8fafc;
@@ -28,21 +28,35 @@
       --font-main: 'Inter', sans-serif;
     }
     body { background-color: var(--bg-color); font-family: var(--font-main); color: var(--secondary-color); margin: 0; padding: 0; }
-
-    /* Login */
-    .login-wrapper {
-        min-height: 100vh; display: flex; align-items: center; justify-content: center;
-        background-color: #f8fafc;
-        background-image: url('https://cdn.pixabay.com/photo/2016/09/22/12/32/cargo-1687070_1280.jpg'); /* Cargo Plane */
+    
+    /* Login - Split Layout */
+    .login-wrapper { 
+        min-height: 100vh; display: flex; flex-direction: row;
+        background-color: #ffffff;
+        position: fixed; top: 0; left: 0; width: 100%; z-index: 2000; 
+    }
+    .login-left {
+        width: 50%; height: 100vh;
+        background-image: url('https://cdn.pixabay.com/photo/2016/09/22/12/32/cargo-1687070_1280.jpg'); 
         background-size: cover; background-position: center;
-        position: fixed; top: 0; left: 0; width: 100%; z-index: 2000;
+        position: relative;
     }
-    .login-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0, 51, 153, 0.7); z-index: 1; }
-    .login-card {
-        width: 100%; max-width: 420px; padding: 3rem; background: white; border-radius: 20px;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.3); z-index: 2; position: relative;
+    .login-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0, 51, 153, 0.4); }
+    .login-right {
+        width: 50%; height: 100vh;
+        display: flex; align-items: center; justify-content: center;
+        background: white;
     }
-
+    .login-card { 
+        width: 100%; max-width: 420px; padding: 3rem; 
+        /* Removed card styling since it's now part of the right pane layout */
+        z-index: 2; position: relative; 
+    }
+    @media (max-width: 768px) {
+        .login-left { display: none; }
+        .login-right { width: 100%; }
+    }
+    
     /* Layout */
     .sidebar { width: var(--sidebar-width); background-color: var(--brand-blue); position: fixed; top: 0; bottom: 0; left: 0; z-index: 1000; transition: transform 0.3s; transform: translateX(-100%); color: white; display:flex; flex-direction:column; box-shadow: 4px 0 24px rgba(0,0,0,0.1); }
     .sidebar.show { transform: translateX(0); }
@@ -58,10 +72,10 @@
     
     .panel-card { background: white; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); height: 100%; overflow: hidden; }
     .panel-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); font-weight: 600; background: #fdfdfd; display:flex; justify-content:space-between; align-items:center; }
-
+    
     .stat-card { background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); display: flex; justify-content: space-between; }
     .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--primary-color); }
-
+    
     .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1060; }
     .spinner-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; display:none; justify-content:center; align-items:center; }
     .mobile-toggle { display: block !important; background:none; border:none; font-size:1.5rem; color:var(--primary-color); }
@@ -83,7 +97,7 @@
     /* Tables */
     .overview-table th, .excel-table th { background-color: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; border: 1px solid #e2e8f0; padding: 0.75rem; }
     .overview-table td, .excel-table td { border: 1px solid #e2e8f0; font-size: 0.85rem; padding: 0.75rem; vertical-align: middle; }
-    .sticky-top { z-index: 10; }
+    .sticky-top { z-index: 10; } 
   </style>
 </head>
 <body>
@@ -93,27 +107,29 @@
 
 <!-- LOGIN -->
 <div id="loginSection" class="login-wrapper">
-  <div class="login-overlay"></div>
-  <div class="login-card">
-    <div class="text-center mb-4"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="60"></div>
-    <h4 class="text-center fw-bold mb-1">ZEPHYR EXPRESS</h4>
-    <p class="text-center text-muted small mb-4">PORTAL LOGIN v5.0</p>
-    <form onsubmit="event.preventDefault(); doLogin();">
-      <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required>
-      <input type="text" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required>
-      <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold" style="background-color: var(--brand-blue); border:none;">SIGN IN</button>
-    </form>
-    <div id="loginError" class="alert alert-danger mt-3 small text-center" style="display:none;"></div>
+  <div class="login-left"><div class="login-overlay"></div></div>
+  <div class="login-right">
+      <div class="login-card">
+        <div class="text-center mb-4"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="80"></div>
+        <h4 class="text-center fw-bold mb-1">ZEPHYR EXPRESS</h4>
+        <p class="text-center text-muted small mb-4">PORTAL LOGIN v5.1</p>
+        <form onsubmit="event.preventDefault(); doLogin();">
+          <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required>
+          <input type="text" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required>
+          <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm" style="background-color: var(--brand-blue); border:none;">SIGN IN</button>
+        </form>
+        <div id="loginError" class="alert alert-danger mt-3 small text-center" style="display:none;"></div>
+      </div>
   </div>
 </div>
 
 <!-- MAIN APP -->
 <div id="appSection" class="main-wrapper" style="display:none;">
   <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
-
+  
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="30" class="me-2" style="filter: brightness(0) invert(1);"> ZEPHYR PRO
+      <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="30" class="me-2" style="filter: brightness(0) invert(1);"> 
     </div>
     <div class="sidebar-nav">
       <div class="nav-label">Main Menu</div>
@@ -193,7 +209,7 @@
                      <div class="col-md-4"><label class="fun-label">Pending Amount</label><input type="number" step="0.01" id="f_payPending" class="form-control fun-input bg-warning bg-opacity-10 fw-bold" readonly value="0"></div>
                   </div>
                </div>
-
+               
                <div class="mb-3">
                   <div class="d-flex justify-content-between align-items-center mb-2">
                       <label class="fun-label m-0">Required Paperwork *</label>
@@ -209,7 +225,7 @@
 
                <div class="mb-3"><label class="fun-label">Extra Charges</label><div id="f_extra" class="d-flex flex-wrap gap-2 p-3 bg-white rounded border"></div></div>
                <div class="mb-4"><label class="fun-label">Extra Charges Remarks (if applicable)</label><textarea id="f_remarks" class="form-control fun-input" rows="2"></textarea></div>
-
+               
                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
                  <button type="button" class="btn btn-light rounded-pill px-4" onclick="resetForm()">Reset</button>
                  <button class="btn btn-primary px-5 rounded-pill fw-bold py-2 shadow-sm">Submit Entry</button>
@@ -227,7 +243,7 @@
            <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">PENDING PAPERWORK</div><div class="stat-value text-warning" id="ovPaper">0</div></div><i class="bi bi-files fs-1 text-warning opacity-25"></i></div></div>
            <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">TOTAL HOLDINGS</div><div class="stat-value text-secondary" id="ovHoldings">0</div></div><i class="bi bi-pause-circle fs-1 text-secondary opacity-25"></i></div></div>
         </div>
-
+        
         <div class="row g-4">
           <div class="col-lg-6">
             <div class="panel-card" style="height:600px">
@@ -273,7 +289,7 @@
                      <span class="fs-2 fw-800 text-danger" id="totalHoldings">0</span>
                  </div>
              </div>
-
+             
              <div class="row g-3">
                  <div class="col-md-5">
                      <div class="input-group input-group-lg">
@@ -392,7 +408,7 @@
                <div class="panel-card p-4">
                   <h5 class="fw-bold text-primary mb-3">User & Permission Management</h5>
                   <div class="alert alert-light border small text-muted"><i class="bi bi-info-circle me-2"></i>Owners can promote/demote. Admins can manage data. Staff access is restricted by permissions.</div>
-
+                  
                   <!-- Add User -->
                   <div class="input-group mb-4">
                       <input id="nu_u" class="form-control" placeholder="New Username">
@@ -401,7 +417,7 @@
                       <select id="nu_r" class="form-select" style="max-width:120px"><option>Staff</option><option>Admin</option></select>
                       <button class="btn btn-success" onclick="addUser()">Add User</button>
                   </div>
-
+                  
                   <!-- User Table -->
                   <div class="table-responsive border rounded">
                       <table class="table table-hover align-middle mb-0">
@@ -411,7 +427,7 @@
                   </div>
                </div>
             </div>
-
+            
             <div class="col-md-6">
                <div class="panel-card p-3 h-100">
                   <h6 class="fw-bold text-warning mb-3">Transfer Requests</h6>
@@ -460,6 +476,19 @@
   </div>
 </div>
 
+<div class="modal fade" id="actionModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header bg-dark text-white border-0"><h5 class="modal-title fw-bold" id="actionModalTitle">Action</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body p-4">
+         <p class="text-muted mb-3">Please provide mandatory remarks for this action.</p>
+         <div class="mb-4"><label class="form-label small fw-bold text-muted">Remarks *</label><textarea id="actionModalRem" class="form-control" rows="3" required></textarea></div>
+         <button class="btn btn-dark w-100 btn-lg fw-bold" onclick="submitActionFromModal()">Confirm Action</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="scanModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -476,7 +505,7 @@
 
 <script>
 const API_URL="https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
-const LOOKER_URL = "https://lookerstudio.google.com/embed/reporting/YOUR_REPORT_ID/page/YOUR_PAGE_ID";
+const LOOKER_URL = "https://lookerstudio.google.com/embed/reporting/YOUR_REPORT_ID/page/YOUR_PAGE_ID"; 
 
 let curUser="", curRole="", curReassign={}, curPerms=[];
 let lastReqCount = 0;
@@ -486,7 +515,7 @@ window.APP_DATA={staff:[], dropdowns:{}, overview:{auto:[],paper:[]}, workflow:{
 window.tomInstances={client:null,dest:null,del:null,holdReason:null};
 
 // --- INIT ---
-document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener('DOMContentLoaded', ()=>{ 
   document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'short',day:'numeric'});
   setInterval(() => document.getElementById('timeDisplay').textContent = new Date().toLocaleTimeString('en-US'), 1000);
   document.getElementById('f_date').valueAsDate=new Date();
@@ -507,7 +536,7 @@ window.doLogin=async function(){
   showSpin(true); const u=document.getElementById('uIn').value, p=document.getElementById('pIn').value;
   const r=await callApi({action:"login",username:u,password:p});
   if(r.result==="success"){
-     curUser=r.username; curRole=r.role; // Case sensitive role from backend? Backend returns as is.
+     curUser=r.username; curRole=r.role; // Case sensitive role from backend? Backend returns as is. 
      document.getElementById('userDisplay').textContent=r.name;
      document.getElementById('loginSection').style.display='none';
      document.getElementById('appSection').style.display='flex';
@@ -521,12 +550,6 @@ async function syncData(init=false){
   try {
      const r = await fetchGet('getAllData');
      if(r.result==="success"){
-        // Optimization: Pre-format dates to avoid repeated parsing in render loops
-        if(r.manifest) {
-            r.manifest.forEach(x => {
-                x.fmtDate = x.date ? new Date(x.date).toLocaleDateString() : '';
-            });
-        }
         window.APP_DATA = r;
         curPerms = r.perms || []; // Update perms
         if(curRole === 'Admin' || curRole === 'Owner') { // Backend returns Title Case likely
@@ -550,18 +573,18 @@ function updateNavVisibility() {
         if(role === 'owner' || role === 'admin' || p.includes(permName)) el.style.display='flex';
         else el.style.display='none';
     };
-
+    
     show('nav-inbound', 'inbound');
     show('nav-overview', 'overview');
     show('nav-holdings', 'holdings');
     show('nav-taskhub', 'taskhub');
     show('nav-manifest', 'manifest');
     // Analytics removed
-    document.getElementById('nav-analytics').style.display='none';
-
+    document.getElementById('nav-analytics').style.display='none'; 
+    
     if(role === 'owner' || role === 'admin') document.getElementById('adminNavGroup').style.display='block';
     else document.getElementById('adminNavGroup').style.display='none';
-
+    
     // Redirect if current tab not allowed? Simplest is ensuring staff starts at allowed tab.
     // If init, doLogin handled it.
 }
@@ -618,7 +641,7 @@ window.renderHoldings = function() {
     const items = window.APP_DATA.holdings || [];
     if(!items.length) list.innerHTML='<tr><td colspan="7" class="text-center p-5 text-muted"><h5>No Active Holdings</h5><p class="small">Shipments placed on hold will appear here.</p></td></tr>';
     else {
-        list.innerHTML = items.map(x =>
+        list.innerHTML = items.map(x => 
             `<tr>
                 <td class="fw-bold font-monospace">${x.id}</td>
                 <td><span class="badge bg-light text-dark border">${x.netNo||'-'}</span></td>
@@ -639,16 +662,16 @@ window.searchHoldings = function() {
     const awb = document.getElementById('holdSearchAwb').value.toLowerCase().trim();
     const net = document.getElementById('holdSearchNet').value.toLowerCase().trim();
     const resPanel = document.getElementById('holdResultPanel');
-
+    
     if(!awb && !net) { resPanel.style.display='none'; return; }
-
+    
     const all = [...window.APP_DATA.overview.auto, ...window.APP_DATA.overview.paper, ...window.APP_DATA.holdings, ...window.APP_DATA.manifest];
     const match = all.find(x => (awb && x.id.toLowerCase().includes(awb)) || (net && x.netNo && x.netNo.toLowerCase().includes(net)));
-
+    
     if(match) {
         const isOnHold = match.holdStatus === "On Hold";
         let actionBtn = "";
-
+        
         if(isOnHold) {
             actionBtn = `
                 <button class="btn btn-success btn-lg w-100 mb-2" onclick="actClearHold('${match.id}')">Clear Hold</button>
@@ -657,7 +680,7 @@ window.searchHoldings = function() {
         } else {
             actionBtn = `<button class="btn btn-danger btn-lg w-100" onclick="openHoldModal('${match.id}', '${match.netNo||'-'}')">Put On Hold</button>`;
         }
-
+        
         resPanel.innerHTML = `
             <div class="panel-card border-2 ${isOnHold ? 'border-warning' : 'border-success'} p-4">
                 <div class="row align-items-center">
@@ -696,14 +719,14 @@ window.openHoldModal = function(id, netNo) {
     selectedHoldAwb = id;
     document.getElementById('modalHoldAwb').textContent = id;
     document.getElementById('modalHoldNet').textContent = netNo;
-
-    // Populate dropdown with TomSelect or HTML?
+    
+    // Populate dropdown with TomSelect or HTML? 
     // Requirement: Search bar required in reason dropdown. Code Bold, Reason Sentence case.
     const reasons = window.APP_DATA.static.dropdowns.holdReasons || [];
     const sel = document.getElementById('modalHoldReason');
     sel.innerHTML = `<option value="">Select Reason...</option>` + reasons.map(r => `<option value="${r.code}">${r.code} - ${r.desc}</option>`).join('');
     document.getElementById('modalHoldRem').value = "";
-
+    
     // Init TomSelect for Searchable
     if(window.tomInstances.holdReason) window.tomInstances.holdReason.destroy();
     window.tomInstances.holdReason = new TomSelect("#modalHoldReason",{
@@ -715,7 +738,7 @@ window.openHoldModal = function(id, netNo) {
             }
         }
     });
-
+    
     new bootstrap.Modal(document.getElementById('holdModal')).show();
 }
 
@@ -723,26 +746,41 @@ window.submitHoldFromModal = async function() {
     const r = document.getElementById('modalHoldReason').value;
     const rem = document.getElementById('modalHoldRem').value;
     if(!r) return alert("Select Reason");
-
+    
     bootstrap.Modal.getInstance(document.getElementById('holdModal')).hide();
     document.getElementById('holdResultPanel').style.display='none';
-
+    
     await callApi({action:"manageHold", subAction:"set", awb:selectedHoldAwb, reason:r, remarks:rem});
     syncData(false); toast("Shipment put on Hold");
     clearHoldSearch();
 }
 
-window.actClearHold = async function(id) {
-    if(!confirm("Clear Hold for "+id+"?")) return;
-    await callApi({action:"manageHold", subAction:"clear", awb:id});
-    syncData(false); toast("Hold Cleared");
-    clearHoldSearch();
+let currentActionType = "";
+window.actClearHold = function(id) {
+    currentActionType = "clear";
+    selectedHoldAwb = id;
+    document.getElementById('actionModalTitle').textContent = "Clear Hold - " + id;
+    document.getElementById('actionModalRem').value = "";
+    new bootstrap.Modal(document.getElementById('actionModal')).show();
 }
 
-window.actRTO = async function(id) {
-    if(!confirm("Mark Shipment "+id+" as RTO (Return to Origin)?")) return;
-    await callApi({action:"manageHold", subAction:"rto", awb:id});
-    syncData(false); toast("Marked as RTO");
+window.actRTO = function(id) {
+    currentActionType = "rto";
+    selectedHoldAwb = id;
+    document.getElementById('actionModalTitle').textContent = "Mark RTO - " + id;
+    document.getElementById('actionModalRem').value = "";
+    new bootstrap.Modal(document.getElementById('actionModal')).show();
+}
+
+window.submitActionFromModal = async function() {
+    const rem = document.getElementById('actionModalRem').value;
+    if(!rem.trim()) return alert("Remarks are mandatory");
+    
+    bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+    document.getElementById('holdResultPanel').style.display='none';
+    
+    await callApi({action:"manageHold", subAction:currentActionType, awb:selectedHoldAwb, remarks:rem});
+    syncData(false); toast("Action Completed");
     clearHoldSearch();
 }
 
@@ -786,13 +824,13 @@ window.savePerms = async function(target) {
 
 async function renderAdminPanel(){
    if(curRole.toLowerCase()==='staff') return; // Double check
-   const r=await fetchGet('getUsers'); const t=document.getElementById('userList');
+   const r=await fetchGet('getUsers'); const t=document.getElementById('userList'); 
    if(r.users) t.innerHTML = r.users.map(u => {
        const isMe = u.user === curUser;
        const isOwner = u.role === "Owner";
        const isAdmin = u.role === "Admin";
        const canEdit = (curRole.toLowerCase() === "owner");
-
+       
        let roleActions = "";
        if(canEdit && !isMe && !isOwner) {
            roleActions = `
@@ -806,7 +844,7 @@ async function renderAdminPanel(){
        } else {
            roleActions = `<span class="badge ${isOwner?'bg-primary':(isAdmin?'bg-info':'bg-secondary')}">${u.role}</span>`;
        }
-
+       
        // Permissions
        const allPerms = ['inbound','overview','holdings','taskhub','manifest'];
        const userPerms = (u.perms||"").split(',');
@@ -840,7 +878,7 @@ async function renderAdminPanel(){
          </div></td>
        </tr>`;
    }).join('');
-
+   
    const rr=await fetchGet('getAdminRequests'); const rl=document.getElementById('reqList'); if(rr.requests) rl.innerHTML = rr.requests.map(x => `<div class="list-group-item d-flex justify-content-between"><small><strong>${x.taskId}</strong> (${x.type})<br>${x.by} to ${x.to}</small><div><button class="btn btn-sm btn-success py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">ok</button><button class="btn btn-sm btn-danger py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">x</button></div></div>`).join('');
 }
 
@@ -867,12 +905,12 @@ function initForms(){
 }
 function updDd(){
    if(!window.APP_DATA.static) return;
-   const dd=window.APP_DATA.static.dropdowns; if(!dd) return;
+   const dd=window.APP_DATA.static.dropdowns; if(!dd) return; 
    fillSel('f_net', dd.networks); const mn=document.getElementById('man_net'); if(mn && mn.options.length<=1 && dd.networks){ let opts=''; dd.networks.forEach(x=>opts+=`<option value="${x}">${x}</option>`); mn.innerHTML+=opts; }
    if(window.tomInstances.client && dd.clients){ window.tomInstances.client.clearOptions(); dd.clients.forEach(x=>window.tomInstances.client.addOption({value:x,text:x})); window.tomInstances.client.sync(); }
    if(window.tomInstances.dest && dd.destinations){ window.tomInstances.dest.clearOptions(); dd.destinations.forEach(x=>window.tomInstances.dest.addOption({value:x,text:x})); window.tomInstances.dest.sync(); }
    const ex=document.getElementById('f_extra'); if(ex && dd.extraCharges) ex.innerHTML=dd.extraCharges.map(x=>`<div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label small">${x}</label></div>`).join('');
-
+   
    if(curRole==='admin' || curRole==='owner'){
      const cat=document.getElementById('dd_cat').value;
      if(cat==="hold") document.getElementById('dd_desc').style.display='block'; else document.getElementById('dd_desc').style.display='none';
@@ -901,9 +939,9 @@ window.genBoxes=function(){ const n=document.getElementById('f_boxes').value; co
 window.cBox=function(el){ const i=el.closest('tr').querySelectorAll('input'); const w=parseFloat(i[0].value)||0, v=(parseFloat(i[1].value)*parseFloat(i[2].value)*parseFloat(i[3].value))/5000; el.closest('tr').querySelector('.val-chg').textContent=Math.max(w,v).toFixed(2); let tot=0; document.querySelectorAll('.val-chg').forEach(x=>tot+=parseFloat(x.textContent)); document.getElementById('f_totalChg').value=tot.toFixed(2); }
 window.cPay=function(){ const t=parseFloat(document.getElementById('f_payTotal').value)||0; const p=parseFloat(document.getElementById('f_payPaid').value)||0; document.getElementById('f_payPending').value = (t-p).toFixed(2); }
 
-window.manDd=async function(act){
-    const v=document.getElementById('dd_val').value, c=document.getElementById('dd_cat').value, d=document.getElementById('dd_desc').value; if(!v)return;
-    await callApi({action:"manageData",subAction:act,category:c,value:v,desc:d}); document.getElementById('dd_val').value=''; document.getElementById('dd_desc').value=''; syncData(false);
+window.manDd=async function(act){ 
+    const v=document.getElementById('dd_val').value, c=document.getElementById('dd_cat').value, d=document.getElementById('dd_desc').value; if(!v)return; 
+    await callApi({action:"manageData",subAction:act,category:c,value:v,desc:d}); document.getElementById('dd_val').value=''; document.getElementById('dd_desc').value=''; syncData(false); 
 }
 window.delDd=async function(){ const v=document.getElementById('dd_del').value, c=document.getElementById('dd_cat').value; if(!v)return; if(confirm("Delete?")) await callApi({action:"manageData",subAction:"delete",category:c,value:v}); syncData(false); }
 window.addUser=async function(){ await callApi({action:"addUser", u:document.getElementById('nu_u').value, p:document.getElementById('nu_p').value, n:document.getElementById('nu_n').value, r:document.getElementById('nu_r').value}); document.getElementById('nu_u').value=''; document.getElementById('nu_p').value=''; document.getElementById('nu_n').value=''; loadUsers(); }
@@ -914,7 +952,7 @@ window.decideTr=async function(rid,tid,typ,to,dec){ showSpin(true); await callAp
 window.reloadFrame=function(){ document.getElementById('lookerFrame').src += ''; }
 window.exportPool=function(){ const data = window.APP_DATA.adminPool.map(x=>({"AWB":x.id,"Client":x.client,"Net":x.net,"Status":x.assignee?"Assigned":"Unassigned","Assignee":x.assignee||""})); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Pool"); XLSX.writeFile(wb, "Pool.xlsx"); }
 window.switchManifestView = function(view) { document.querySelectorAll('#manTabs .nav-link').forEach(el => el.classList.remove('active')); const idx = view === 'pending' ? 0 : 1; document.querySelectorAll('#manTabs .nav-link')[idx].classList.add('active'); document.getElementById('man-pending-view').style.display = view === 'pending' ? 'block' : 'none'; document.getElementById('man-history-view').style.display = view === 'history' ? 'block' : 'none'; if(view === 'pending') renderManifest(); if(view === 'history') renderManifestHistory(); }
-window.renderManifest = function() { const net = document.getElementById('man_net').value; const list = document.getElementById('manifestList'); const items = window.APP_DATA.manifest || []; const filtered = net ? items.filter(x => x.net === net && !x.batchNo) : []; if (!net || filtered.length === 0) { list.innerHTML = ''; document.getElementById('manifestEmptyState').style.display = 'block'; document.getElementById('manifestEmptyState').querySelector('h6').textContent = !net ? "No Network Selected" : `No Pending Items for ${net}`; return; } document.getElementById('manifestEmptyState').style.display = 'none'; list.innerHTML = filtered.map(x => `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${x.fmtDate||(new Date(x.date).toLocaleDateString())}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`).join(''); };
+window.renderManifest = function() { const net = document.getElementById('man_net').value; const list = document.getElementById('manifestList'); const items = window.APP_DATA.manifest || []; const filtered = net ? items.filter(x => x.net === net && !x.batchNo) : []; if (!net || filtered.length === 0) { list.innerHTML = ''; document.getElementById('manifestEmptyState').style.display = 'block'; document.getElementById('manifestEmptyState').querySelector('h6').textContent = !net ? "No Network Selected" : `No Pending Items for ${net}`; return; } document.getElementById('manifestEmptyState').style.display = 'none'; list.innerHTML = filtered.map(x => `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`).join(''); };
 window.toggleAllMan = function(el) { document.querySelectorAll('.batch-check').forEach(c => c.checked = el.checked); }
 window.createBatch = async function() { const net = document.getElementById('man_net').value; if(!net) return alert("Select Network"); const chks = document.querySelectorAll('.batch-check:checked'); if(chks.length === 0) return alert("Select at least one item"); const ids = Array.from(chks).map(c => c.value); const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`; const manifestDate = new Date().toLocaleDateString(); if(!confirm(`Generate Manifest Batch "${batchId}" for ${ids.length} items?`)) return; window.APP_DATA.manifest.forEach(x => { if(ids.includes(x.id)) { x.batchNo = batchId; x.manifestDate = manifestDate; } }); exportBatch(batchId); renderManifest(); await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser }); toast("Batch Created & Exported"); };
 window.renderManifestHistory = function() { const con = document.getElementById('batchContainer'); const all = window.APP_DATA.manifest || []; const batches = {}; all.forEach(x => { if(x.batchNo) { if(!batches[x.batchNo]) batches[x.batchNo] = []; batches[x.batchNo].push(x); } }); const keys = Object.keys(batches).sort().reverse(); if(keys.length === 0) { con.innerHTML = ''; document.getElementById('batchEmptyState').style.display = 'block'; return; } document.getElementById('batchEmptyState').style.display = 'none'; con.innerHTML = keys.map(k => { const group = batches[k]; const net = group[0].net; const date = group[0].manifestDate || "N/A"; const count = group.length; const rows = group.map(g => `<tr><td>${g.id}</td><td>${g.dest}</td><td>${g.chgWgt}</td></tr>`).join(''); return `<div class="col-md-6 col-xl-4"><div class="panel-card h-100"><div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light"><div><div class="fw-bold text-primary">${k}</div><div class="small text-muted">${date} • ${net}</div></div><span class="badge bg-primary rounded-pill">${count} Items</span></div><div class="p-3"><div class="d-flex gap-2 mb-3"><button class="btn btn-sm btn-outline-primary flex-fill" onclick="exportBatch('${k}')"><i class="bi bi-download me-1"></i> Re-Export</button><button class="btn btn-sm btn-outline-secondary flex-fill" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_${k}">View Items</button></div><div class="collapse" id="collapse_${k}"><div class="table-responsive border rounded" style="max-height:200px; overflow-y:auto;"><table class="table table-sm table-striped mb-0 small"><thead><tr><th>AWB</th><th>Destination</th><th>Weight</th></tr></thead><tbody>${rows}</tbody></table></div></div></div></div></div>`; }).join(''); }
