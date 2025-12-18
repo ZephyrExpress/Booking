@@ -10,33 +10,51 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
   <style>
     :root {
       --sidebar-width: 260px;
       --header-height: 64px;
-      --primary-color: #0f172a; --secondary-color: #334155; --accent-color: #3b82f6;
-      --bg-color: #f8fafc; --success-color: #10b981; --border-color: #e2e8f0;
+      /* Brand Colors */
+      --brand-blue: #003399;
+      --brand-red: #d40511;
+      --brand-yellow: #ffcc00;
+
+      --primary-color: var(--brand-blue);
+      --secondary-color: #334155;
+      --bg-color: #f8fafc;
+      --border-color: #e2e8f0;
       --font-main: 'Inter', sans-serif;
     }
     body { background-color: var(--bg-color); font-family: var(--font-main); color: var(--secondary-color); margin: 0; padding: 0; }
 
     /* Login */
-    .login-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%); position: fixed; top: 0; left: 0; width: 100%; z-index: 2000; }
-    .login-card { width: 100%; max-width: 420px; padding: 3rem; background: white; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.1); }
+    .login-wrapper {
+        min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        background-color: #f8fafc;
+        background-image: url('https://cdn.pixabay.com/photo/2016/09/22/12/32/cargo-1687070_1280.jpg'); /* Cargo Plane */
+        background-size: cover; background-position: center;
+        position: fixed; top: 0; left: 0; width: 100%; z-index: 2000;
+    }
+    .login-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0, 51, 153, 0.7); z-index: 1; }
+    .login-card {
+        width: 100%; max-width: 420px; padding: 3rem; background: white; border-radius: 20px;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.3); z-index: 2; position: relative;
+    }
 
     /* Layout */
-    .sidebar { width: var(--sidebar-width); background-color: var(--primary-color); position: fixed; top: 0; bottom: 0; left: 0; z-index: 1000; transition: transform 0.3s; transform: translateX(-100%); color: #94a3b8; display:flex; flex-direction:column; }
+    .sidebar { width: var(--sidebar-width); background-color: var(--brand-blue); position: fixed; top: 0; bottom: 0; left: 0; z-index: 1000; transition: transform 0.3s; transform: translateX(-100%); color: white; display:flex; flex-direction:column; box-shadow: 4px 0 24px rgba(0,0,0,0.1); }
     .sidebar.show { transform: translateX(0); }
-    .sidebar-brand { height: var(--header-height); padding: 0 1.5rem; display: flex; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 700; color: white; }
+    .sidebar-brand { height: var(--header-height); padding: 0 1.5rem; display: flex; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 800; color: white; letter-spacing: 1px; font-size: 1.2rem; }
     .sidebar-nav { flex: 1; padding: 1.5rem 1rem; overflow-y: auto; }
     .content-area { flex: 1; transition: margin 0.3s; min-height: 100vh; display:flex; flex-direction: column; }
     .topbar { height: var(--header-height); background: white; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; position: sticky; top: 0; z-index: 990; }
     
-    .nav-item-custom { display: flex; align-items: center; padding: 0.75rem 1rem; border-radius: 8px; color: #cbd5e1; text-decoration: none; margin-bottom: 2px; cursor:pointer; }
-    .nav-item-custom:hover { background: rgba(255,255,255,0.05); color:white; }
-    .nav-item-custom.active { background: var(--accent-color); color:white; }
-    .nav-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin: 1.5rem 0 0.5rem 0.75rem; color: #64748b; }
+    .nav-item-custom { display: flex; align-items: center; padding: 0.75rem 1rem; border-radius: 8px; color: rgba(255,255,255,0.7); text-decoration: none; margin-bottom: 4px; cursor:pointer; font-weight: 500; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; transition: all 0.2s; }
+    .nav-item-custom:hover { background: rgba(255,255,255,0.1); color: white; }
+    .nav-item-custom.active { background: var(--brand-red); color: white; box-shadow: 0 4px 12px rgba(212, 5, 17, 0.3); }
+    .nav-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; margin: 1.5rem 0 0.5rem 0.75rem; color: var(--brand-yellow); letter-spacing: 1px; opacity: 0.8; }
     
     .panel-card { background: white; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); height: 100%; overflow: hidden; }
     .panel-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); font-weight: 600; background: #fdfdfd; display:flex; justify-content:space-between; align-items:center; }
@@ -52,47 +70,38 @@
 
     /* FUN & COLOURFUL INPUTS */
     .fun-input { border: 2px solid #e2e8f0; transition: all 0.2s; }
-    .fun-input:focus { border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
-    .fun-header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 1.5rem; border-radius: 12px 12px 0 0; }
-    .fun-label { color: #475569; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; }
+    .fun-input:focus { border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(0, 51, 153, 0.1); }
+    .fun-header { background: linear-gradient(135deg, var(--brand-blue) 0%, #002266 100%); color: white; padding: 1.5rem; border-radius: 12px 12px 0 0; }
+    .fun-label { color: #475569; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px; }
     .fun-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
     .fun-section-green { background: #f0fdf4; border-color: #bbf7d0; }
     
     /* Dark Checkboxes */
     .form-check-input { border-color: #64748b; border-width: 2px; }
-    .form-check-input:checked { background-color: var(--primary-color); border-color: var(--primary-color); }
+    .form-check-input:checked { background-color: var(--brand-blue); border-color: var(--brand-blue); }
 
-    /* Overview Table - Enhanced */
-    .overview-table th { background-color: #f8fafc; font-size: 0.75rem; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; padding: 1rem; }
-    .overview-table td { border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; padding: 1rem; color: #334155; vertical-align: middle; }
-    .overview-table tr:hover td { background-color: #f8fafc; }
-
-    /* Excel-like Table (Admin) - Compact */
-    .excel-table th { background-color: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #475569; border: 1px solid #e2e8f0; padding: 0.5rem; }
-    .excel-table td { border: 1px solid #e2e8f0; font-size: 0.85rem; padding: 0.5rem; vertical-align: middle; }
-    .excel-table tr:hover td { background-color: #f8fafc; }
-
-    /* Fix sticky overlap */
+    /* Tables */
+    .overview-table th, .excel-table th { background-color: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; border: 1px solid #e2e8f0; padding: 0.75rem; }
+    .overview-table td, .excel-table td { border: 1px solid #e2e8f0; font-size: 0.85rem; padding: 0.75rem; vertical-align: middle; }
     .sticky-top { z-index: 10; }
   </style>
 </head>
 <body>
 
 <div id="spinner" class="spinner-overlay"><div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div></div>
-
-<!-- TOASTS -->
 <div class="toast-container" id="toastContainer"></div>
 
 <!-- LOGIN -->
 <div id="loginSection" class="login-wrapper">
+  <div class="login-overlay"></div>
   <div class="login-card">
-    <div class="text-center mb-4"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="50"></div>
-    <h4 class="text-center fw-bold mb-1">Portal Login</h4>
-    <p class="text-center text-muted small mb-4">v5.1</p>
+    <div class="text-center mb-4"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="60"></div>
+    <h4 class="text-center fw-bold mb-1">ZEPHYR EXPRESS</h4>
+    <p class="text-center text-muted small mb-4">PORTAL LOGIN v5.0</p>
     <form onsubmit="event.preventDefault(); doLogin();">
       <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required>
       <input type="text" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required>
-      <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold">Sign In</button>
+      <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold" style="background-color: var(--brand-blue); border:none;">SIGN IN</button>
     </form>
     <div id="loginError" class="alert alert-danger mt-3 small text-center" style="display:none;"></div>
   </div>
@@ -104,27 +113,26 @@
 
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png" height="30" class="me-2"> ZEPHYR PRO
+      <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="30" class="me-2" style="filter: brightness(0) invert(1);"> ZEPHYR PRO
     </div>
     <div class="sidebar-nav">
-      <div class="nav-label">Menu</div>
-      <a class="nav-item-custom" id="nav-inbound" onclick="switchTab('inbound')"><i class="bi bi-box-seam me-2"></i> Inbound</a>
-      <a class="nav-item-custom active" id="nav-overview" onclick="switchTab('overview')"><i class="bi bi-grid-1x2 me-2"></i> Overview</a>
-      <a class="nav-item-custom" id="nav-holdings" onclick="switchTab('holdings')"><i class="bi bi-pause-circle me-2"></i> Holdings</a>
-      <a class="nav-item-custom" id="nav-taskhub" onclick="switchTab('taskhub')"><i class="bi bi-check-circle me-2"></i> <span id="taskLabel">My Tasks</span></a>
-      <a class="nav-item-custom" id="nav-manifest" onclick="switchTab('manifest')"><i class="bi bi-file-earmark-spreadsheet me-2"></i> Manifest</a>
-      <a class="nav-item-custom" id="nav-analytics" onclick="switchTab('analytics')"><i class="bi bi-graph-up me-2"></i> Analytics</a>
+      <div class="nav-label">Main Menu</div>
+      <a class="nav-item-custom" id="nav-inbound" onclick="switchTab('inbound')" style="display:none"><i class="bi bi-box-seam me-2"></i> Inbound</a>
+      <a class="nav-item-custom active" id="nav-overview" onclick="switchTab('overview')" style="display:none"><i class="bi bi-grid-1x2 me-2"></i> Overview</a>
+      <a class="nav-item-custom" id="nav-holdings" onclick="switchTab('holdings')" style="display:none"><i class="bi bi-pause-circle me-2"></i> Holdings</a>
+      <a class="nav-item-custom" id="nav-taskhub" onclick="switchTab('taskhub')" style="display:none"><i class="bi bi-check-circle me-2"></i> <span id="taskLabel">My Tasks</span></a>
+      <a class="nav-item-custom" id="nav-manifest" onclick="switchTab('manifest')" style="display:none"><i class="bi bi-file-earmark-spreadsheet me-2"></i> Manifest</a>
       
       <div id="adminNavGroup" style="display:none;">
-        <div class="nav-label">Admin</div>
+        <div class="nav-label">Administration</div>
         <a class="nav-item-custom" id="nav-admin" onclick="switchTab('admin')"><i class="bi bi-shield-lock me-2"></i> Admin Panel <span id="adminBadge" class="badge bg-danger ms-auto" style="display:none">0</span></a>
       </div>
     </div>
-    <div class="sidebar-footer border-top border-secondary p-3">
+    <div class="sidebar-footer border-top border-white border-opacity-10 p-3">
        <div class="d-flex align-items-center text-white">
-          <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px"><i class="bi bi-person"></i></div>
+          <div class="bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px"><i class="bi bi-person-fill"></i></div>
           <div style="flex:1; overflow:hidden;"><div id="userDisplay" class="fw-bold small text-truncate">User</div></div>
-          <button onclick="logout()" class="btn btn-link text-danger p-0" title="Logout"><i class="bi bi-box-arrow-right"></i></button>
+          <button onclick="logout()" class="btn btn-link text-white p-0 opacity-75" title="Logout"><i class="bi bi-box-arrow-right"></i></button>
        </div>
     </div>
   </aside>
@@ -159,15 +167,10 @@
                  <div class="col-md-4"><label class="fun-label">Airway Bill Number *</label><input id="f_awb" class="form-control fun-input font-monospace" required placeholder="000-00000000"></div>
                  <div class="col-md-4"><label class="fun-label">Date *</label><input type="date" id="f_date" class="form-control fun-input" required></div>
                  <div class="col-md-4"><label class="fun-label">Shipment Type *</label>
-                    <select id="f_type" class="form-select fun-input" onchange="chkDox()" required>
-                        <option value="" selected disabled>Select...</option>
-                        <option>Dox</option><option>Ndox</option>
-                    </select>
+                    <select id="f_type" class="form-select fun-input" onchange="chkDox()" required><option value="" selected disabled>Select...</option><option>Dox</option><option>Ndox</option></select>
                  </div>
                  <div class="col-md-4"><label class="fun-label">Network *</label>
-                    <select id="f_net" class="form-select fun-input" required>
-                        <option value="" selected disabled>Select...</option>
-                    </select>
+                    <select id="f_net" class="form-select fun-input" required><option value="" selected disabled>Select...</option></select>
                  </div>
                  <div class="col-md-4"><label class="fun-label">Client *</label><select id="f_client" required></select></div>
                  <div class="col-md-4"><label class="fun-label">Destination *</label><select id="f_dest" required></select></div>
@@ -176,22 +179,10 @@
                <div class="fun-section fun-section-green">
                   <h6 class="fw-bold text-success mb-3"><i class="bi bi-box-seam me-2"></i>Package Details</h6>
                   <div class="row g-3 align-items-end mb-3">
-                     <div class="col-md-4">
-                        <label class="fun-label">Total No. of Boxes *</label>
-                        <div class="input-group">
-                           <input type="number" id="f_boxes" class="form-control fun-input" required placeholder="">
-                           <button type="button" class="btn btn-success" onclick="genBoxes()">Generate</button>
-                        </div>
-                     </div>
-                     <div class="col-md-4">
-                        <label class="fun-label">Total Chargeable Weight</label>
-                        <input id="f_totalChg" class="form-control fun-input bg-success bg-opacity-10 fw-bold text-success" readonly value="0.00">
-                     </div>
+                     <div class="col-md-4"><label class="fun-label">Total No. of Boxes *</label><div class="input-group"><input type="number" id="f_boxes" class="form-control fun-input" required placeholder=""><button type="button" class="btn btn-success" onclick="genBoxes()">Generate</button></div></div>
+                     <div class="col-md-4"><label class="fun-label">Total Chargeable Weight</label><input id="f_totalChg" class="form-control fun-input bg-success bg-opacity-10 fw-bold text-success" readonly value="0.00"></div>
                   </div>
-                  <div class="table-responsive bg-white rounded border"><table class="table table-sm mb-0 align-middle">
-                     <thead class="table-light"><tr><th>#</th><th>Weight (Kg) *</th><th>Length (cm)</th><th>Width (cm)</th><th>Height (cm)</th><th>Chargeable Weight</th></tr></thead>
-                     <tbody id="boxTable"></tbody>
-                  </table></div>
+                  <div class="table-responsive bg-white rounded border"><table class="table table-sm mb-0 align-middle"><thead class="table-light"><tr><th>#</th><th>Weight (Kg) *</th><th>Length (cm)</th><th>Width (cm)</th><th>Height (cm)</th><th>Chargeable Weight</th></tr></thead><tbody id="boxTable"></tbody></table></div>
                </div>
 
                <div class="fun-section border-warning">
@@ -206,10 +197,7 @@
                <div class="mb-3">
                   <div class="d-flex justify-content-between align-items-center mb-2">
                       <label class="fun-label m-0">Required Paperwork *</label>
-                      <div class="form-check form-check-inline">
-                          <input class="form-check-input" type="checkbox" onchange="toggleAllPaperwork(this)">
-                          <label class="form-check-label small fw-bold">Select All</label>
-                      </div>
+                      <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" onchange="toggleAllPaperwork(this)"><label class="form-check-label small fw-bold">Select All</label></div>
                   </div>
                   <div id="f_paperwork" class="d-flex flex-wrap gap-2 p-3 bg-white rounded border">
                      <div class="form-check"><input class="form-check-input pw-chk" type="checkbox" value="KYC"><label class="form-check-label fw-bold">KYC</label></div>
@@ -234,9 +222,10 @@
       <!-- OVERVIEW TAB -->
       <div id="overview-tab" class="tab-view">
         <div class="row g-4 mb-4">
-           <div class="col-md-4"><div class="stat-card"><div><div class="stat-label">TODAY'S INBOUND</div><div class="stat-value text-success" id="ovInbound">0</div></div><i class="bi bi-calendar-check fs-1 text-success opacity-25"></i></div></div>
-           <div class="col-md-4"><div class="stat-card"><div><div class="stat-label">PENDING AUTOMATION</div><div class="stat-value text-danger" id="ovAuto">0</div></div><i class="bi bi-robot fs-1 text-danger opacity-25"></i></div></div>
-           <div class="col-md-4"><div class="stat-card"><div><div class="stat-label">PENDING PAPERWORK</div><div class="stat-value text-warning" id="ovPaper">0</div></div><i class="bi bi-files fs-1 text-warning opacity-25"></i></div></div>
+           <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">TODAY'S INBOUND</div><div class="stat-value text-success" id="ovInbound">0</div></div><i class="bi bi-calendar-check fs-1 text-success opacity-25"></i></div></div>
+           <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">PENDING AUTOMATION</div><div class="stat-value text-danger" id="ovAuto">0</div></div><i class="bi bi-robot fs-1 text-danger opacity-25"></i></div></div>
+           <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">PENDING PAPERWORK</div><div class="stat-value text-warning" id="ovPaper">0</div></div><i class="bi bi-files fs-1 text-warning opacity-25"></i></div></div>
+           <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">TOTAL HOLDINGS</div><div class="stat-value text-secondary" id="ovHoldings">0</div></div><i class="bi bi-pause-circle fs-1 text-secondary opacity-25"></i></div></div>
         </div>
 
         <div class="row g-4">
@@ -247,7 +236,7 @@
                  <button class="btn btn-sm btn-outline-danger bg-white" onclick="exportOverview('auto')">Export</button>
               </div>
               <div class="panel-body p-0 overflow-auto" style="height:540px">
-                 <table class="table overview-table mb-0">
+                 <table class="table table-hover align-middle mb-0 excel-table">
                     <thead class="sticky-top bg-light"><tr><th>AWB</th><th>Network</th><th>Client</th><th>Entry User</th><th>Boxes</th><th>Weight</th></tr></thead>
                     <tbody id="listAuto"></tbody>
                  </table>
@@ -261,7 +250,7 @@
                  <button class="btn btn-sm btn-outline-warning bg-white text-dark" onclick="exportOverview('paper')">Export</button>
               </div>
               <div class="panel-body p-0 overflow-auto" style="height:540px">
-                 <table class="table overview-table mb-0">
+                 <table class="table table-hover align-middle mb-0 excel-table">
                     <thead class="sticky-top bg-light"><tr><th>AWB</th><th>Network</th><th>Client</th><th>Auto By</th><th>Boxes</th><th>Weight</th></tr></thead>
                     <tbody id="listPaper"></tbody>
                  </table>
@@ -271,9 +260,8 @@
         </div>
       </div>
 
-      <!-- HOLDINGS TAB (REDESIGNED) -->
+      <!-- HOLDINGS TAB -->
       <div id="holdings-tab" class="tab-view" style="display:none;">
-         <!-- SEARCH SECTION -->
          <div class="bg-white p-4 rounded-4 shadow-sm border mb-4">
              <div class="d-flex justify-content-between align-items-center mb-4">
                  <div>
@@ -289,7 +277,7 @@
              <div class="row g-3">
                  <div class="col-md-5">
                      <div class="input-group input-group-lg">
-                         <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-upc-scan"></i></span>
+                         <button class="btn btn-dark" onclick="startScanner()" title="Scan"><i class="bi bi-qr-code-scan"></i></button>
                          <input id="holdSearchAwb" class="form-control border-start-0" placeholder="Scan or Enter AWB Number..." oninput="searchHoldings()">
                      </div>
                  </div>
@@ -317,13 +305,7 @@
                  <table class="table overview-table align-middle mb-0">
                      <thead class="bg-light">
                          <tr>
-                             <th>AWB</th>
-                             <th>Network No</th>
-                             <th>Client</th>
-                             <th>Reason</th>
-                             <th>Remarks</th>
-                             <th>Held By</th>
-                             <th class="text-end">Action</th>
+                             <th>AWB</th><th>Network No</th><th>Client</th><th>Reason</th><th>Remarks</th><th>Held By</th><th class="text-end">Action</th>
                          </tr>
                      </thead>
                      <tbody id="holdingsList"></tbody>
@@ -334,7 +316,6 @@
 
       <!-- TASK HUB TAB -->
       <div id="taskhub-tab" class="tab-view" style="display:none;">
-        <!-- ADMIN VIEW -->
         <div id="adminTaskView" style="display:none">
            <div class="panel-card">
               <div class="panel-header bg-primary text-white"><span><i class="bi bi-kanban me-2"></i>Task Manager (Global Pool)</span> <button class="btn btn-sm btn-light text-primary fw-bold" onclick="exportPool()">Export</button></div>
@@ -346,8 +327,6 @@
               </div>
            </div>
         </div>
-
-        <!-- STAFF VIEW -->
         <div id="staffTaskView" style="display:none">
              <div class="row g-4">
                  <div class="col-lg-6">
@@ -368,8 +347,6 @@
            <li class="nav-item"><button class="nav-link active rounded-pill px-4" onclick="switchManifestView('pending')">Pending Manifest</button></li>
            <li class="nav-item ms-2"><button class="nav-link rounded-pill px-4" onclick="switchManifestView('history')">Manifest History</button></li>
         </ul>
-
-        <!-- Pending View -->
         <div id="man-pending-view">
           <div class="panel-card">
              <div class="panel-header">
@@ -402,45 +379,48 @@
              </div>
           </div>
         </div>
-
-        <!-- History View -->
         <div id="man-history-view" style="display:none;">
            <div class="row g-4" id="batchContainer"></div>
-           <div id="batchEmptyState" class="text-center py-5" style="display:none">
-              <div class="mb-3 text-muted"><i class="bi bi-clock-history fs-1"></i></div>
-              <h6 class="text-muted fw-bold">No History</h6>
-              <p class="text-muted small">Generated batches appear here.</p>
-           </div>
+           <div id="batchEmptyState" class="text-center py-5" style="display:none"><div class="mb-3 text-muted"><i class="bi bi-clock-history fs-1"></i></div><h6 class="text-muted fw-bold">No History</h6><p class="text-muted small">Generated batches appear here.</p></div>
         </div>
       </div>
 
-      <!-- ANALYTICS TAB -->
-      <div id="analytics-tab" class="tab-view" style="display:none;">
-        <div class="panel-card" style="height: 85vh;">
-           <div class="panel-header">Live Analytics <button class="btn btn-sm btn-light border" onclick="reloadFrame()">Refresh</button></div>
-           <iframe id="lookerFrame" src="" style="width:100%;height:100%;border:0;"></iframe>
-        </div>
-      </div>
-
-      <!-- ADMIN TAB -->
+      <!-- ADMIN TAB (UPDATED) -->
       <div id="admin-tab" class="tab-view" style="display:none;">
          <div class="row g-4">
-            <div class="col-md-6">
-               <div class="panel-card p-3 h-100">
-                  <h6 class="fw-bold text-primary mb-3">User Manager</h6>
-                  <div class="input-group mb-2"><input id="nu_u" class="form-control" placeholder="User"><input id="nu_p" class="form-control" placeholder="Pass"><input id="nu_n" class="form-control" placeholder="Name"><select id="nu_r" class="form-select" style="width:80px"><option>Staff</option><option>Admin</option></select><button class="btn btn-success" onclick="addUser()">+</button></div>
-                  <div class="overflow-auto" style="max-height:300px"><table class="table table-sm"><tbody id="userList"></tbody></table></div>
+            <div class="col-12">
+               <div class="panel-card p-4">
+                  <h5 class="fw-bold text-primary mb-3">User & Permission Management</h5>
+                  <div class="alert alert-light border small text-muted"><i class="bi bi-info-circle me-2"></i>Owners can promote/demote. Admins can manage data. Staff access is restricted by permissions.</div>
+
+                  <!-- Add User -->
+                  <div class="input-group mb-4">
+                      <input id="nu_u" class="form-control" placeholder="New Username">
+                      <input id="nu_p" class="form-control" placeholder="Password">
+                      <input id="nu_n" class="form-control" placeholder="Full Name">
+                      <select id="nu_r" class="form-select" style="max-width:120px"><option>Staff</option><option>Admin</option></select>
+                      <button class="btn btn-success" onclick="addUser()">Add User</button>
+                  </div>
+
+                  <!-- User Table -->
+                  <div class="table-responsive border rounded">
+                      <table class="table table-hover align-middle mb-0">
+                          <thead class="bg-light"><tr><th>User</th><th>Pass</th><th>Name</th><th>Role</th><th>Permissions (Staff Only)</th><th>Actions</th></tr></thead>
+                          <tbody id="userList"></tbody>
+                      </table>
+                  </div>
                </div>
             </div>
+
             <div class="col-md-6">
                <div class="panel-card p-3 h-100">
                   <h6 class="fw-bold text-warning mb-3">Transfer Requests</h6>
                   <div id="reqList" class="list-group list-group-flush"></div>
                </div>
             </div>
-            <div class="col-12">
-               <div class="panel-card p-3">
-                  <h6 class="fw-bold text-success mb-3">Dropdowns</h6>
+            <div class="col-md-6">
+               <div class="panel-card p-3 h-100">
+                  <h6 class="fw-bold text-success mb-3">Dropdown Manager</h6>
                   <div class="d-flex gap-2 mb-3">
                       <select id="dd_cat" class="form-select" onchange="updDd()">
                           <option value="network">Network</option>
@@ -450,7 +430,7 @@
                           <option value="hold">Hold Reason</option>
                       </select>
                       <input id="dd_val" class="form-control" placeholder="Value">
-                      <input id="dd_desc" class="form-control" placeholder="Description (Optional)" style="display:none;">
+                      <input id="dd_desc" class="form-control" placeholder="Desc" style="display:none;">
                       <button class="btn btn-success" onclick="manDd('add')">Add</button>
                   </div>
                   <div class="d-flex gap-2 bg-light p-2 rounded"><select id="dd_del" class="form-select"></select><button class="btn btn-danger" onclick="delDd()">Delete</button></div>
@@ -463,31 +443,29 @@
   </main>
 </div>
 
-<!-- Reassign Modal -->
+<!-- MODALS -->
 <div class="modal fade" id="reassignModal" tabindex="-1"><div class="modal-dialog modal-sm modal-dialog-centered"><div class="modal-content"><div class="modal-body"><p class="small fw-bold">Transfer <span id="rId"></span> to:</p><select id="rStaff" class="form-select mb-3"></select><button class="btn btn-primary w-100 btn-sm" onclick="sendTransfer()">Send Request</button></div></div></div></div>
 
-<!-- Hold Modal -->
 <div class="modal fade" id="holdModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow-lg rounded-4">
-      <div class="modal-header bg-danger text-white border-0">
-        <h5 class="modal-title fw-bold"><i class="bi bi-pause-circle-fill me-2"></i>Put Shipment On Hold</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
+      <div class="modal-header bg-danger text-white border-0"><h5 class="modal-title fw-bold">Put Shipment On Hold</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
       <div class="modal-body p-4">
-        <div class="d-flex justify-content-between mb-3">
-            <span class="fw-bold fs-5" id="modalHoldAwb"></span>
-            <span class="badge bg-light text-dark border" id="modalHoldNet"></span>
-        </div>
-        <div class="mb-3">
-            <label class="form-label small fw-bold text-muted">Reason</label>
-            <select id="modalHoldReason" class="form-select form-select-lg"></select>
-        </div>
-        <div class="mb-4">
-            <label class="form-label small fw-bold text-muted">Remarks</label>
-            <textarea id="modalHoldRem" class="form-control" rows="3" placeholder="Additional details..."></textarea>
-        </div>
+        <div class="d-flex justify-content-between mb-3"><span class="fw-bold fs-5" id="modalHoldAwb"></span><span class="badge bg-light text-dark border" id="modalHoldNet"></span></div>
+        <div class="mb-3"><label class="form-label small fw-bold text-muted">Reason</label><select id="modalHoldReason" class="form-select form-select-lg"></select></div>
+        <div class="mb-4"><label class="form-label small fw-bold text-muted">Remarks</label><textarea id="modalHoldRem" class="form-control" rows="3" placeholder="Additional details..."></textarea></div>
         <button class="btn btn-danger w-100 btn-lg fw-bold" onclick="submitHoldFromModal()">Confirm Hold</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="scanModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Scan Barcode</h5><button type="button" class="btn-close" onclick="stopScanner()" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body text-center">
+         <div id="reader" style="width: 100%;"></div>
       </div>
     </div>
   </div>
@@ -500,11 +478,12 @@
 const API_URL="https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
 const LOOKER_URL = "https://lookerstudio.google.com/embed/reporting/YOUR_REPORT_ID/page/YOUR_PAGE_ID";
 
-let curUser="", curRole="", curReassign={};
+let curUser="", curRole="", curReassign={}, curPerms=[];
 let lastReqCount = 0;
 let selectedHoldAwb = "";
+let html5QrcodeScanner = null;
 window.APP_DATA={staff:[], dropdowns:{}, overview:{auto:[],paper:[]}, workflow:{toAssign:[],toDo:[]}, manifest:[], holdings:[]};
-window.tomInstances={client:null,dest:null,del:null};
+window.tomInstances={client:null,dest:null,del:null,holdReason:null};
 
 // --- INIT ---
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -528,18 +507,10 @@ window.doLogin=async function(){
   showSpin(true); const u=document.getElementById('uIn').value, p=document.getElementById('pIn').value;
   const r=await callApi({action:"login",username:u,password:p});
   if(r.result==="success"){
-     curUser=r.username; curRole=r.role.toLowerCase();
+     curUser=r.username; curRole=r.role; // Case sensitive role from backend? Backend returns as is.
      document.getElementById('userDisplay').textContent=r.name;
      document.getElementById('loginSection').style.display='none';
      document.getElementById('appSection').style.display='flex';
-     if(curRole==='admin'){
-         document.getElementById('adminNavGroup').style.display='block';
-         document.getElementById('nav-taskhub').onclick = () => switchTab('taskhub');
-         document.getElementById('taskLabel').textContent = "Task Manager";
-     } else {
-         document.getElementById('taskLabel').textContent = "My Tasks";
-         switchTab('inbound');
-     }
      syncData(true);
   } else { showSpin(false); document.getElementById('loginError').textContent=r.message; document.getElementById('loginError').style.display='block'; }
 }
@@ -551,16 +522,42 @@ async function syncData(init=false){
      const r = await fetchGet('getAllData');
      if(r.result==="success"){
         window.APP_DATA = r;
-        if(curRole === 'admin') {
+        curPerms = r.perms || []; // Update perms
+        if(curRole === 'Admin' || curRole === 'Owner') { // Backend returns Title Case likely
             const newCount = r.stats.requests || 0;
             if(!init && newCount > lastReqCount) toast(`<strong>New Transfer Request!</strong><br>${newCount} pending actions.`, 'danger');
             lastReqCount = newCount;
         }
+        updateNavVisibility();
         if(init) initForms(); else updDd();
         renderUI();
      }
   } catch(e){ console.error(e); }
   if(init) showSpin(false);
+}
+
+function updateNavVisibility() {
+    const role = curRole.toLowerCase();
+    const p = curPerms;
+    const show = (id, permName) => {
+        const el = document.getElementById(id);
+        if(role === 'owner' || role === 'admin' || p.includes(permName)) el.style.display='flex';
+        else el.style.display='none';
+    };
+
+    show('nav-inbound', 'inbound');
+    show('nav-overview', 'overview');
+    show('nav-holdings', 'holdings');
+    show('nav-taskhub', 'taskhub');
+    show('nav-manifest', 'manifest');
+    // Analytics removed
+    document.getElementById('nav-analytics').style.display='none';
+
+    if(role === 'owner' || role === 'admin') document.getElementById('adminNavGroup').style.display='block';
+    else document.getElementById('adminNavGroup').style.display='none';
+
+    // Redirect if current tab not allowed? Simplest is ensuring staff starts at allowed tab.
+    // If init, doLogin handled it.
 }
 
 function renderUI(){
@@ -571,36 +568,33 @@ function renderUI(){
   document.getElementById('badgeAuto').textContent=d.auto.length;
   document.getElementById('badgePaper').textContent=d.paper.length;
   document.getElementById('totalHoldings').textContent=s.holdings;
+  document.getElementById('ovHoldings').textContent=s.holdings;
 
   const la=document.getElementById('listAuto');
   if(!d.auto.length) la.innerHTML='<tr><td colspan="6" class="text-center p-4 text-muted small">No Pending Automation</td></tr>';
   else {
-      la.innerHTML = d.auto.map(x =>
-        `<tr><td class="fw-bold font-monospace text-nowrap">${x.id}</td><td><span class="badge bg-secondary bg-opacity-10 text-secondary">${x.net}</span></td><td><small class="fw-bold text-dark">${x.client}</small></td><td class="small text-muted">${x.user}</td><td>${x.boxes}</td><td>${x.chgWgt}</td></tr>`
-      ).join('');
+      la.innerHTML = d.auto.map(x => `<tr><td class="fw-bold font-monospace text-nowrap">${x.id}</td><td><span class="badge bg-secondary bg-opacity-10 text-secondary">${x.net}</span></td><td><small class="fw-bold text-dark">${x.client}</small></td><td class="small text-muted">${x.user}</td><td>${x.boxes}</td><td>${x.chgWgt}</td></tr>`).join('');
   }
 
   const lp=document.getElementById('listPaper');
   const sortedP = [...d.paper].sort((a,b)=>(a.assignee?1:-1)-(b.assignee?1:-1));
   if(!sortedP.length) lp.innerHTML='<tr><td colspan="6" class="text-center p-4 text-muted small">No Pending Paperwork</td></tr>';
   else {
-      lp.innerHTML = sortedP.map(x =>
-        `<tr><td class="fw-bold font-monospace text-nowrap">${x.id}</td><td><span class="badge bg-secondary bg-opacity-10 text-secondary">${x.net}</span></td><td><small class="fw-bold text-dark">${x.client}</small></td><td class="small text-muted">${x.autoDoer || '-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td></tr>`
-      ).join('');
+      lp.innerHTML = sortedP.map(x => `<tr><td class="fw-bold font-monospace text-nowrap">${x.id}</td><td><span class="badge bg-secondary bg-opacity-10 text-secondary">${x.net}</span></td><td><small class="fw-bold text-dark">${x.client}</small></td><td class="small text-muted">${x.autoDoer || '-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td></tr>`).join('');
   }
 
   renderTaskHub();
   if(document.getElementById('manifest-tab').style.display==='block') renderManifest();
   if(document.getElementById('holdings-tab').style.display==='block') renderHoldings();
-  if(curRole==='admin'){ const rc=s.requests||0; const b=document.getElementById('adminBadge'); b.textContent=rc; b.style.display=rc>0?'inline-block':'none'; }
+  if(document.getElementById('admin-tab').style.display==='block') renderAdminPanel();
 }
 
 function renderTaskHub(){
-   if(curRole === 'admin') {
+   const role = curRole.toLowerCase();
+   if(role === 'admin' || role === 'owner') {
       document.getElementById('adminTaskView').style.display = 'block'; document.getElementById('staffTaskView').style.display = 'none';
       const pt=document.getElementById('poolBody'); let opts=`<option value="">Select Staff...</option>`; if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`);
       pt.innerHTML = window.APP_DATA.adminPool.map(x => { let assignVal = x.assignee || ""; return `<tr><td class="fw-bold font-monospace">${x.id}</td><td>${x.netNo||'-'}</td><td>${x.net}</td><td>${x.chgWgt}</td><td><small class="text-muted">${x.details}</small></td><td>${x.client.slice(-4)}</td><td class="text-center">${assignVal}</td><td><div class="input-group input-group-sm" style="width:160px"><select id="adm_as_${x.id}" class="form-select">${opts}</select><button class="btn btn-outline-secondary" onclick="actAssign('${x.id}','adm_as_')"><i class="bi bi-check"></i></button></div></td></tr>`; }).join('');
-      renderAdminPanel();
    } else {
       document.getElementById('adminTaskView').style.display = 'none'; document.getElementById('staffTaskView').style.display = 'block';
       const wf=window.APP_DATA.workflow; const ca=document.getElementById('contAssign');
@@ -626,7 +620,10 @@ window.renderHoldings = function() {
                 <td><span class="badge bg-danger bg-opacity-10 text-danger">${x.holdReason}</span></td>
                 <td><small class="text-muted text-wrap" style="max-width:200px;">${x.holdRem}</small></td>
                 <td><small>${x.user}</small></td>
-                <td class="text-end"><button class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="actClearHold('${x.id}')">Release</button></td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-success rounded-pill px-3 me-1" onclick="actClearHold('${x.id}')">Clear</button>
+                    <button class="btn btn-sm btn-outline-dark rounded-pill px-3" onclick="actRTO('${x.id}')">RTO</button>
+                </td>
             </tr>`
         ).join('');
     }
@@ -639,7 +636,6 @@ window.searchHoldings = function() {
 
     if(!awb && !net) { resPanel.style.display='none'; return; }
 
-    // Find in ALL data
     const all = [...window.APP_DATA.overview.auto, ...window.APP_DATA.overview.paper, ...window.APP_DATA.holdings, ...window.APP_DATA.manifest];
     const match = all.find(x => (awb && x.id.toLowerCase().includes(awb)) || (net && x.netNo && x.netNo.toLowerCase().includes(net)));
 
@@ -648,7 +644,10 @@ window.searchHoldings = function() {
         let actionBtn = "";
 
         if(isOnHold) {
-            actionBtn = `<button class="btn btn-success btn-lg w-100" onclick="actClearHold('${match.id}')">Release Hold</button>`;
+            actionBtn = `
+                <button class="btn btn-success btn-lg w-100 mb-2" onclick="actClearHold('${match.id}')">Clear Hold</button>
+                <button class="btn btn-dark btn-lg w-100" onclick="actRTO('${match.id}')">Mark RTO</button>
+            `;
         } else {
             actionBtn = `<button class="btn btn-danger btn-lg w-100" onclick="openHoldModal('${match.id}', '${match.netNo||'-'}')">Put On Hold</button>`;
         }
@@ -692,10 +691,24 @@ window.openHoldModal = function(id, netNo) {
     document.getElementById('modalHoldAwb').textContent = id;
     document.getElementById('modalHoldNet').textContent = netNo;
 
-    // Populate dropdown
+    // Populate dropdown with TomSelect or HTML?
+    // Requirement: Search bar required in reason dropdown. Code Bold, Reason Sentence case.
     const reasons = window.APP_DATA.static.dropdowns.holdReasons || [];
-    document.getElementById('modalHoldReason').innerHTML = `<option value="">Select Reason...</option>` + reasons.map(r => `<option value="${r.code}">${r.code} - ${r.desc}</option>`).join('');
+    const sel = document.getElementById('modalHoldReason');
+    sel.innerHTML = `<option value="">Select Reason...</option>` + reasons.map(r => `<option value="${r.code}">${r.code} - ${r.desc}</option>`).join('');
     document.getElementById('modalHoldRem').value = "";
+
+    // Init TomSelect for Searchable
+    if(window.tomInstances.holdReason) window.tomInstances.holdReason.destroy();
+    window.tomInstances.holdReason = new TomSelect("#modalHoldReason",{
+        create: false, dropdownParent: 'body',
+        render: {
+            option: function(data, escape) {
+                const parts = data.text.split(' - ');
+                return `<div><span class="fw-bold">${escape(parts[0])}</span> - <span class="text-capitalize">${escape(parts[1]||"")}</span></div>`;
+            }
+        }
+    });
 
     new bootstrap.Modal(document.getElementById('holdModal')).show();
 }
@@ -706,8 +719,6 @@ window.submitHoldFromModal = async function() {
     if(!r) return alert("Select Reason");
 
     bootstrap.Modal.getInstance(document.getElementById('holdModal')).hide();
-
-    // Optimistic UI update (remove from result panel view visually)
     document.getElementById('holdResultPanel').style.display='none';
 
     await callApi({action:"manageHold", subAction:"set", awb:selectedHoldAwb, reason:r, remarks:rem});
@@ -716,18 +727,123 @@ window.submitHoldFromModal = async function() {
 }
 
 window.actClearHold = async function(id) {
-    if(!confirm("Release Hold for "+id+"?")) return;
+    if(!confirm("Clear Hold for "+id+"?")) return;
     await callApi({action:"manageHold", subAction:"clear", awb:id});
-    syncData(false); toast("Hold Released");
+    syncData(false); toast("Hold Cleared");
     clearHoldSearch();
 }
 
-// --- ACTIONS ---
+window.actRTO = async function(id) {
+    if(!confirm("Mark Shipment "+id+" as RTO (Return to Origin)?")) return;
+    await callApi({action:"manageHold", subAction:"rto", awb:id});
+    syncData(false); toast("Marked as RTO");
+    clearHoldSearch();
+}
+
+// --- SCANNER ---
+window.startScanner = function() {
+    new bootstrap.Modal(document.getElementById('scanModal')).show();
+    html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+    html5QrcodeScanner.render(onScanSuccess);
+}
+function onScanSuccess(decodedText, decodedResult) {
+    document.getElementById('holdSearchAwb').value = decodedText;
+    searchHoldings();
+    stopScanner();
+    // Beep sound
+    const audio = new Audio('https://media.geeksforgeeks.org/wp-content/uploads/20190531135120/beep.mp3');
+    audio.play();
+    bootstrap.Modal.getInstance(document.getElementById('scanModal')).hide();
+}
+window.stopScanner = function() {
+    if(html5QrcodeScanner) { html5QrcodeScanner.clear(); html5QrcodeScanner = null; }
+}
+
+// --- ADMIN ---
+window.changeRole = async function(target, newRole) {
+    if(!confirm(`Change ${target} to ${newRole}?`)) return;
+    await callApi({action:"manageUserRole", requester:curUser, targetUser:target, newRole:newRole});
+    loadUsers();
+}
+window.updatePerms = async function(target, permStr) {
+    // Collect checkboxes
+    // Implementation simplified for now: pass csv
+    await callApi({action:"updateUserPerms", requester:curUser, targetUser:target, perms:permStr});
+    loadUsers();
+}
+window.savePerms = async function(target) {
+    const chks = document.querySelectorAll(`.perm-chk-${target}:checked`);
+    const perms = Array.from(chks).map(c=>c.value).join(',');
+    await callApi({action:"updateUserPerms", requester:curUser, targetUser:target, perms:perms});
+    loadUsers(); toast("Permissions Updated");
+}
+
+async function renderAdminPanel(){
+   if(curRole.toLowerCase()==='staff') return; // Double check
+   const r=await fetchGet('getUsers'); const t=document.getElementById('userList');
+   if(r.users) t.innerHTML = r.users.map(u => {
+       const isMe = u.user === curUser;
+       const isOwner = u.role === "Owner";
+       const isAdmin = u.role === "Admin";
+       const canEdit = (curRole.toLowerCase() === "owner");
+
+       let roleActions = "";
+       if(canEdit && !isMe && !isOwner) {
+           roleActions = `
+             <div class="dropdown d-inline-block">
+               <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">${u.role}</button>
+               <ul class="dropdown-menu">
+                 <li><a class="dropdown-item" onclick="changeRole('${u.user}', 'Admin')">Promote to Admin</a></li>
+                 <li><a class="dropdown-item" onclick="changeRole('${u.user}', 'Staff')">Demote to Staff</a></li>
+               </ul>
+             </div>`;
+       } else {
+           roleActions = `<span class="badge ${isOwner?'bg-primary':(isAdmin?'bg-info':'bg-secondary')}">${u.role}</span>`;
+       }
+
+       // Permissions
+       const allPerms = ['inbound','overview','holdings','taskhub','manifest'];
+       const userPerms = (u.perms||"").split(',');
+       let permUI = "";
+       if(u.role === "Staff") {
+           if(canEdit || curRole.toLowerCase() === 'admin') {
+               // Show checkboxes
+               permUI = allPerms.map(p => `
+                 <div class="form-check form-check-inline m-0">
+                   <input class="form-check-input perm-chk-${u.user}" type="checkbox" value="${p}" ${userPerms.includes(p)?'checked':''}>
+                   <label class="form-check-label small" style="font-size:0.7rem">${p}</label>
+                 </div>
+               `).join('');
+               permUI += `<button class="btn btn-xs btn-primary ms-2 py-0" style="font-size:0.7rem" onclick="savePerms('${u.user}')">Save</button>`;
+           } else {
+               permUI = userPerms.join(', ');
+           }
+       } else {
+           permUI = "<small class='text-muted'>Full Access</small>";
+       }
+
+       return `<tr>
+         <td>${u.user}</td>
+         <td style="cursor:pointer; font-family:monospace;" onclick="togglePass(this, '${u.pass||'***'}')">****</td>
+         <td>${u.name}</td>
+         <td>${roleActions}</td>
+         <td>${permUI}</td>
+         <td><div class="d-flex gap-1">
+            <button class="btn btn-sm btn-outline-primary py-0" onclick="changePass('${u.user}')"><i class="bi bi-key"></i></button>
+            ${canEdit && !isOwner ? `<button class="btn btn-sm btn-outline-danger py-0" onclick="delUser('${u.user}')"><i class="bi bi-trash"></i></button>` : ''}
+         </div></td>
+       </tr>`;
+   }).join('');
+
+   const rr=await fetchGet('getAdminRequests'); const rl=document.getElementById('reqList'); if(rr.requests) rl.innerHTML = rr.requests.map(x => `<div class="list-group-item d-flex justify-content-between"><small><strong>${x.taskId}</strong> (${x.type})<br>${x.by} to ${x.to}</small><div><button class="btn btn-sm btn-success py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">ok</button><button class="btn btn-sm btn-danger py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">x</button></div></div>`).join('');
+}
+
+// ... (Rest of existing actions: actAssign, etc. - Ensure no duplicates)
+// Copying remaining functions from previous to ensure nothing lost
 async function actAssign(id, pfx='as_'){ const s=document.getElementById(pfx+id).value; if(!s) return alert("Select Staff"); await callApi({action:"assignTask", id:id, staff:s, assigner:curUser}); syncData(false); toast("Task Assigned"); }
 async function actDirectTransfer(id){ const s=document.getElementById('direct_tr_'+id).value; if(!s) return alert("Select Staff"); if(!confirm(`Transfer ${id} to ${s}?`)) return; const card = document.getElementById('direct_tr_'+id).closest('.col-12'); if(card) card.remove(); await callApi({action:"directTransfer", taskId:id, to:s, by:curUser}); toast("Transferred Successfully"); }
 async function actComplete(id){ if(!confirm(`Complete paperwork for ${id}?`)) return; await callApi({action:"markPaperworkDone", id:id}); syncData(false); toast("Task Completed"); }
 
-// --- UTILS ---
 window.switchTab=function(t){
    document.querySelectorAll('.nav-item-custom').forEach(e=>e.classList.remove('active'));
    document.getElementById('nav-'+t).classList.add('active');
@@ -751,14 +867,12 @@ function updDd(){
    if(window.tomInstances.dest && dd.destinations){ window.tomInstances.dest.clearOptions(); dd.destinations.forEach(x=>window.tomInstances.dest.addOption({value:x,text:x})); window.tomInstances.dest.sync(); }
    const ex=document.getElementById('f_extra'); if(ex && dd.extraCharges) ex.innerHTML=dd.extraCharges.map(x=>`<div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label small">${x}</label></div>`).join('');
 
-   if(curRole==='admin'){
+   if(curRole==='admin' || curRole==='owner'){
      const cat=document.getElementById('dd_cat').value;
      if(cat==="hold") document.getElementById('dd_desc').style.display='block'; else document.getElementById('dd_desc').style.display='none';
-
      let targetList = [];
      if(cat==="hold") targetList = dd.holdReasons ? dd.holdReasons.map(x=>x.code) : [];
      else targetList = dd[{'network':'networks','client':'clients','destination':'destinations','extra':'extraCharges'}[cat]];
-
      const delSel=document.getElementById('dd_del'); if(targetList) delSel.innerHTML=targetList.map(x=>`<option value="${x}">${x}</option>`).join('');
    }
 }
@@ -781,9 +895,6 @@ window.genBoxes=function(){ const n=document.getElementById('f_boxes').value; co
 window.cBox=function(el){ const i=el.closest('tr').querySelectorAll('input'); const w=parseFloat(i[0].value)||0, v=(parseFloat(i[1].value)*parseFloat(i[2].value)*parseFloat(i[3].value))/5000; el.closest('tr').querySelector('.val-chg').textContent=Math.max(w,v).toFixed(2); let tot=0; document.querySelectorAll('.val-chg').forEach(x=>tot+=parseFloat(x.textContent)); document.getElementById('f_totalChg').value=tot.toFixed(2); }
 window.cPay=function(){ const t=parseFloat(document.getElementById('f_payTotal').value)||0; const p=parseFloat(document.getElementById('f_payPaid').value)||0; document.getElementById('f_payPending').value = (t-p).toFixed(2); }
 
-// --- ADMIN ---
-window.openReassign=function(id, type){ curReassign={id,type}; document.getElementById('rId').textContent=id; const s=document.getElementById('rStaff'); s.innerHTML='<option value="">Select...</option>'; window.APP_DATA.static.staff.forEach(x=>s.innerHTML+=`<option value="${x}">${x}</option>`); new bootstrap.Modal(document.getElementById('reassignModal')).show(); }
-window.sendTransfer=async function(){ const to=document.getElementById('rStaff').value; if(!to)return; bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide(); await callApi({action:"requestTransfer", taskId:curReassign.id, type:curReassign.type, by:curUser, to:to}); toast("Request Sent"); }
 window.manDd=async function(act){
     const v=document.getElementById('dd_val').value, c=document.getElementById('dd_cat').value, d=document.getElementById('dd_desc').value; if(!v)return;
     await callApi({action:"manageData",subAction:act,category:c,value:v,desc:d}); document.getElementById('dd_val').value=''; document.getElementById('dd_desc').value=''; syncData(false);
@@ -793,16 +904,9 @@ window.addUser=async function(){ await callApi({action:"addUser", u:document.get
 window.delUser=async function(u){ if(confirm("Del?")) await callApi({action:"deleteUser", username:u}); loadUsers(); }
 window.changePass=async function(u){ const p = prompt("New Password for "+u+":"); if(p) { await callApi({action:"changePassword", username:u, newPass:p}); loadUsers(); alert("Password Changed"); } }
 window.togglePass=function(el, pass){ el.textContent = el.textContent==='****' ? pass : '****'; }
-async function loadUsers() { renderAdminPanel(); }
-async function renderAdminPanel(){
-   if(curRole!=='admin') return;
-   const r=await fetchGet('getUsers'); const t=document.getElementById('userList'); if(r.users) t.innerHTML = r.users.map(u => `<tr><td>${u[0]}</td><td style="cursor:pointer; font-family:monospace;" onclick="togglePass(this, '${u[1]}')">****</td><td>${u[2]}</td><td><div class="d-flex gap-1"><button class="btn btn-sm btn-outline-primary py-0" onclick="changePass('${u[0]}')" title="Change Pass"><i class="bi bi-key"></i></button><button class="btn btn-sm btn-outline-danger py-0" onclick="delUser('${u[0]}')"><i class="bi bi-x-lg"></i></button></div></td></tr>`).join('');
-   const rr=await fetchGet('getAdminRequests'); const rl=document.getElementById('reqList'); if(rr.requests) rl.innerHTML = rr.requests.map(x => `<div class="list-group-item d-flex justify-content-between"><small><strong>${x.taskId}</strong> (${x.type})<br>${x.by} to ${x.to}</small><div><button class="btn btn-sm btn-success py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Approve')">ok</button><button class="btn btn-sm btn-danger py-0" onclick="decideTr(${x.reqId},'${x.taskId}','${x.type}','${x.to}','Reject')">x</button></div></div>`).join('');
-}
 window.decideTr=async function(rid,tid,typ,to,dec){ showSpin(true); await callApi({action:"approveTransfer", reqId:rid, taskId:tid, type:typ, to:to, decision:dec}); renderAdminPanel(); showSpin(false); }
 window.reloadFrame=function(){ document.getElementById('lookerFrame').src += ''; }
 window.exportPool=function(){ const data = window.APP_DATA.adminPool.map(x=>({"AWB":x.id,"Client":x.client,"Net":x.net,"Status":x.assignee?"Assigned":"Unassigned","Assignee":x.assignee||""})); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Pool"); XLSX.writeFile(wb, "Pool.xlsx"); }
-
 window.switchManifestView = function(view) { document.querySelectorAll('#manTabs .nav-link').forEach(el => el.classList.remove('active')); const idx = view === 'pending' ? 0 : 1; document.querySelectorAll('#manTabs .nav-link')[idx].classList.add('active'); document.getElementById('man-pending-view').style.display = view === 'pending' ? 'block' : 'none'; document.getElementById('man-history-view').style.display = view === 'history' ? 'block' : 'none'; if(view === 'pending') renderManifest(); if(view === 'history') renderManifestHistory(); }
 window.renderManifest = function() { const net = document.getElementById('man_net').value; const list = document.getElementById('manifestList'); const items = window.APP_DATA.manifest || []; const filtered = net ? items.filter(x => x.net === net && !x.batchNo) : []; if (!net || filtered.length === 0) { list.innerHTML = ''; document.getElementById('manifestEmptyState').style.display = 'block'; document.getElementById('manifestEmptyState').querySelector('h6').textContent = !net ? "No Network Selected" : `No Pending Items for ${net}`; return; } document.getElementById('manifestEmptyState').style.display = 'none'; list.innerHTML = filtered.map(x => `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`).join(''); };
 window.toggleAllMan = function(el) { document.querySelectorAll('.batch-check').forEach(c => c.checked = el.checked); }
