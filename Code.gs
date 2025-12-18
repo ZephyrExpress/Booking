@@ -66,10 +66,15 @@ function getAllData(username) {
       let staff = [];
       try {
         const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
-        staff = remoteSS.getSheetByName("Subordinate Staff").getRange(2,1,50).getValues().flat().filter(String);
-      } catch(e) { staff = ["Error Loading"]; }
+        const stSh = remoteSS.getSheetByName("Subordinate Staff");
+        if(stSh) staff = stSh.getRange(2,1,50).getValues().flat().filter(String);
+      } catch(e) { console.error(e); }
+
       staticData = { staff: staff, dropdowns: dd };
-      cache.put('static_data', JSON.stringify(staticData), 1800);
+      // Only cache if we actually got data to prevent caching failures
+      if (dd.networks.length > 0) {
+        cache.put('static_data', JSON.stringify(staticData), 1800);
+      }
     } catch(e) { staticData = { staff: [], dropdowns: {} }; }
   } else { staticData = JSON.parse(staticDataStr); }
 
@@ -205,10 +210,15 @@ function handleManageHold(b) {
     if(b.subAction === "set") {
         ss.getRange(row, 28, 1, 3).setValues([["On Hold", b.reason, b.remarks]]);
     } else if(b.subAction === "clear") {
+        // Clear Hold Columns but add to Log
         ss.getRange(row, 28, 1, 3).setValues([["", "", ""]]);
+        const oldLog = ss.getRange(row, 20).getValue();
+        ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Hold Cleared: ${b.remarks}]`);
     } else if(b.subAction === "rto") {
         // Mark RTO in Local
-        ss.getRange(row, 28, 1, 3).setValues([["RTO", "RTO", "Returned to Origin"]]);
+        ss.getRange(row, 28, 1, 3).setValues([["RTO", "RTO", b.remarks || "Returned to Origin"]]);
+        const oldLog = ss.getRange(row, 20).getValue();
+        ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Marked RTO: ${b.remarks}]`);
         // Update FMS Status to RTO
         syncFMS(b.awb, { status: "RTO" });
     }
