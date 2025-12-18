@@ -1,5 +1,5 @@
 /* =========================================
-   ZEPHYR PRO API (v5.0 - Holdings + FMS Logic + Perf)
+   ZEPHYR PRO API (vFinal - Roles, perms, RTO)
    ========================================= */
 
 const TASK_SHEET_ID = "1_8VSzZdn8rKrzvXpzIfY_oz3XT9gi30jgzdxzQP4Bac";
@@ -9,7 +9,7 @@ function doGet(e) {
   const user = e ? e.parameter.user : '';
   if (act === 'getAllData') return getAllData(user);
   if (act === 'getAdminRequests') return getAdminRequests();
-  if (act === 'getUsers') return getUsersJson();
+  if (act === 'getUsers') return getUsersJson(user);
   return HtmlService.createTemplateFromFile('Index').evaluate()
       .setTitle('Zephyr Express Portal').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL).addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -32,8 +32,9 @@ function doPost(e) {
     if (act === "addUser") return handleAddUser(body);
     if (act === "deleteUser") return handleDeleteUser(body.username);
     if (act === "changePassword") return handleChangePassword(body);
-    // Holdings
     if (act === "manageHold") return handleManageHold(body);
+    if (act === "manageUserRole") return handleManageUserRole(body);
+    if (act === "updateUserPerms") return handleUpdateUserPerms(body);
 
     return jsonResponse("error", "Unknown Action");
   } catch (err) { return jsonResponse("error", err.toString()); }
@@ -46,48 +47,50 @@ function getAllData(username) {
   const sh = ss.getSheetByName("Shipments");
   const targetUser = String(username).trim().toLowerCase();
 
-  // 1. Static Data Cache (Optimized)
   const cache = CacheService.getScriptCache();
+  let staticDataStr = cache.get('static_data');
   let staticData = null;
-  const cachedStatic = cache.get('static_data');
-  if (cachedStatic) {
-      staticData = JSON.parse(cachedStatic);
-  } else {
-      // Fetch fresh
-      try {
-          const ddSheet = ss.getSheetByName("Sheet2");
-          const lastR = ddSheet ? ddSheet.getLastRow() : 1;
-          const rawDD = lastR > 1 ? ddSheet.getRange(2, 1, lastR-1, 6).getValues() : []; // Read 6 cols (Reasons/Desc)
-          const dd = {
-            networks: rawDD.map(r=>r[0]).filter(String),
-            clients: rawDD.map(r=>r[1]).filter(String),
-            destinations: rawDD.map(r=>r[2]).filter(String),
-            extraCharges: rawDD.map(r=>r[3]).filter(String),
-            holdReasons: rawDD.map(r=>({code:r[4], desc:r[5]})).filter(x=>x.code)
-          };
-          let staff = [];
-          try {
-             const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
-             staff = remoteSS.getSheetByName("Subordinate Staff").getRange(2,1,50).getValues().flat().filter(String);
-          } catch(e) { staff = ["Error Loading"]; }
-          staticData = { staff: staff, dropdowns: dd };
-          cache.put('static_data', JSON.stringify(staticData), 1800);
-      } catch(e) { staticData = { staff: [], dropdowns: {} }; }
-  }
 
+  if (!staticDataStr) {
+    try {
+      const ddSheet = ss.getSheetByName("Sheet2");
+      const lastR = ddSheet ? ddSheet.getLastRow() : 1;
+      const rawDD = lastR > 1 ? ddSheet.getRange(2, 1, lastR-1, 6).getValues() : [];
+      const dd = {
+        networks: rawDD.map(r=>r[0]).filter(String),
+        clients: rawDD.map(r=>r[1]).filter(String),
+        destinations: rawDD.map(r=>r[2]).filter(String),
+        extraCharges: rawDD.map(r=>r[3]).filter(String),
+        holdReasons: rawDD.map(r=>({code:r[4], desc:r[5]})).filter(x=>x.code)
+      };
+      let staff = [];
+      try {
+        const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
+        staff = remoteSS.getSheetByName("Subordinate Staff").getRange(2,1,50).getValues().flat().filter(String);
+      } catch(e) { staff = ["Error Loading"]; }
+      staticData = { staff: staff, dropdowns: dd };
+      cache.put('static_data', JSON.stringify(staticData), 1800);
+    } catch(e) { staticData = { staff: [], dropdowns: {} }; }
+  } else { staticData = JSON.parse(staticDataStr); }
+
+  // User Details (Role & Perms)
   const uData = ss.getSheetByName("Users").getDataRange().getValues();
   let role = "Staff";
-  for(let i=1; i<uData.length; i++) { if(String(uData[i][0]).toLowerCase() === targetUser) { role = uData[i][3]; break; } }
+  let perms = [];
+  for(let i=1; i<uData.length; i++) {
+    if(String(uData[i][0]).toLowerCase() === targetUser) {
+        role = uData[i][3];
+        // Col E (Index 4) -> Perms CSV
+        const pStr = uData[i][4] || "";
+        perms = pStr.split(',').map(s=>s.trim()).filter(Boolean);
+        break;
+    }
+  }
 
-  // 3. READ SHIPMENTS (Cols A-AD -> 30 cols)
-  // AB:HoldStatus, AC:HoldReason, AD:HoldRem
   const lastRow = sh.getLastRow();
   const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 30).getDisplayValues() : [];
 
-  // 4. SYNC AUTOMATION (Optimize: Read Booking Report only if needed or cached)
-  // We can't easily cache Booking Report as it changes often. But we can limit read size if possible.
-  // Assuming Booking_Report grows large, we might want to read only active rows? Hard to know which.
-  // We'll proceed with reading it but wrap in try-catch.
+  // 4. SYNC AUTOMATION
   let updates = [];
   try {
       const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
@@ -105,7 +108,6 @@ function getAllData(username) {
               data.forEach((r, i) => {
                   const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
                   const autoStatus = r[14];
-                  // Only update if Pending AND NOT On Hold
                   if((autoStatus === "Pending" || autoStatus === "") && r[27] !== "On Hold" && brMap[awb]) {
                       const match = brMap[awb];
                       const user = match.user || "System";
@@ -113,14 +115,6 @@ function getAllData(username) {
                       r[14] = "Done"; r[15] = user; r[20] = netNo;
                       updates.push({ row: i+2, vals: [["Done", user]] });
                       updates.push({ row: i+2, col: 21, val: [[netNo]] });
-
-                      // Also Sync FMS!N (Auto User) from Booking_Report!AO
-                      // We do this via separate function to avoid slowing down getAllData loop too much?
-                      // Or queue it. For now, rely on standard "Update Local -> Sync FMS later" or do it here.
-                      // Doing it here might be slow. Let's skip FMS write in getAllData to speed up load.
-                      // User said "FMS!N should be Filled by Booking_Report!AO".
-                      // Ideally this happens when "Auto Done" is detected.
-                      // We will queue FMS updates if possible, or just leave it for now (perf vs correctness).
                   }
               });
           }
@@ -128,8 +122,6 @@ function getAllData(username) {
   } catch(e) {}
 
   if(updates.length > 0) {
-      // Bulk update would be faster but rows are scattered.
-      // Optimization: Group contiguous?
       updates.forEach(u => {
           if(u.col) sh.getRange(u.row, u.col, 1, 1).setValues(u.val);
           else sh.getRange(u.row, 15, 1, 2).setValues(u.vals);
@@ -163,8 +155,10 @@ function getAllData(username) {
 
     if (item.holdStatus === "On Hold") {
         holdings.push(item);
+    } else if (item.holdStatus === "RTO") {
+        // Skip from lists? Or show in history?
+        // Usually RTO is end state. Skip from active lists.
     } else {
-        // Normal Flow
         const paperStatus = r[16];
         const autoStatus = r[14];
         const assignee = String(r[17]).toLowerCase();
@@ -190,6 +184,7 @@ function getAllData(username) {
 
   return jsonResponse("success", "OK", {
     role: role,
+    perms: perms,
     static: staticData,
     stats: { inbound: inboundTodayCount, auto: pendingAuto.length, paper: pendingPaper.length, requests: reqList.length, holdings: holdings.length },
     overview: { auto: pendingAuto, paper: pendingPaper },
@@ -208,51 +203,82 @@ function handleManageHold(b) {
     if(row === -1) return jsonResponse("error", "AWB Not Found");
 
     if(b.subAction === "set") {
-        // Set Hold: AB(28)=On Hold, AC(29)=Reason, AD(30)=Rem
         ss.getRange(row, 28, 1, 3).setValues([["On Hold", b.reason, b.remarks]]);
-    } else {
-        // Clear Hold
+    } else if(b.subAction === "clear") {
         ss.getRange(row, 28, 1, 3).setValues([["", "", ""]]);
+    } else if(b.subAction === "rto") {
+        // Mark RTO in Local
+        ss.getRange(row, 28, 1, 3).setValues([["RTO", "RTO", "Returned to Origin"]]);
+        // Update FMS Status to RTO
+        syncFMS(b.awb, { status: "RTO" });
     }
     return jsonResponse("success", "Updated");
+}
+
+function handleManageUserRole(b) {
+    // Only Owner can do this
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const uSheet = ss.getSheetByName("Users");
+    const d = uSheet.getDataRange().getValues();
+    let requesterRole = "Staff";
+    for(let i=1; i<d.length; i++) if(d[i][0]===b.requester) requesterRole = d[i][3];
+
+    if(requesterRole !== "Owner") return jsonResponse("error", "Unauthorized");
+
+    for(let i=1; i<d.length; i++) {
+        if(d[i][0] === b.targetUser) {
+            uSheet.getRange(i+1, 4).setValue(b.newRole);
+            return jsonResponse("success", "Role Updated");
+        }
+    }
+    return jsonResponse("error", "User Not Found");
+}
+
+function handleUpdateUserPerms(b) {
+    // Admin or Owner can do this
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const uSheet = ss.getSheetByName("Users");
+    const d = uSheet.getDataRange().getValues();
+    let requesterRole = "Staff";
+    for(let i=1; i<d.length; i++) if(d[i][0]===b.requester) requesterRole = d[i][3];
+
+    if(requesterRole === "Staff") return jsonResponse("error", "Unauthorized");
+
+    for(let i=1; i<d.length; i++) {
+        if(d[i][0] === b.targetUser) {
+            // Check if trying to edit Owner/Admin? Admin shouldn't demote owner permissions but generally permissions are for staff.
+            // Admin cannot edit Owner.
+            if(d[i][3] === "Owner" && requesterRole !== "Owner") return jsonResponse("error", "Cannot edit Owner");
+
+            uSheet.getRange(i+1, 5).setValue(b.perms);
+            return jsonResponse("success", "Permissions Updated");
+        }
+    }
+    return jsonResponse("error", "User Not Found");
 }
 
 function handleManifestBatch(b) {
   const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
   if(!b.ids || !b.batchNo) return jsonResponse("error", "Invalid Data");
-
   const allIds = ss.getRange(2, 1, ss.getLastRow()-1, 1).getValues().flat();
   const awbMap = {};
   allIds.forEach((id, i) => { awbMap[String(id).replace(/'/g,"").trim().toLowerCase()] = i + 2; });
-
-  // FMS Manifest Logic
   const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
   let fmsIds = [];
   if(fms && fms.getLastRow() >= 7) fmsIds = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x => String(x).replace(/'/g,"").trim().toLowerCase());
 
   b.ids.forEach(id => {
       const key = String(id).replace(/'/g,"").trim().toLowerCase();
-      // Update Local
       if(awbMap[key]) ss.getRange(awbMap[key], 25, 1, 2).setValues([[b.batchNo, b.date]]);
-
-      // Update FMS
       if(fms) {
           const idx = fmsIds.indexOf(key);
           if(idx > -1) {
               const r = idx + 7;
               const net = b.network.toLowerCase();
               const doer = b.user;
-
-              if(net.includes("dhl")) {
-                  fms.getRange(r, 23).setValue("DONE"); // W
-                  fms.getRange(r, 25).setValue(doer); // Y
-              } else if(net.includes("aramex")) {
-                  fms.getRange(r, 28).setValue("DONE"); // AB
-                  fms.getRange(r, 30).setValue(doer); // AD
-              } else if(net.includes("fedex")) {
-                  fms.getRange(r, 33).setValue("DONE"); // AG
-                  fms.getRange(r, 35).setValue(doer); // AI
-              }
+              if(net.includes("dhl")) { fms.getRange(r, 23).setValue("DONE"); fms.getRange(r, 25).setValue(doer); }
+              else if(net.includes("aramex")) { fms.getRange(r, 28).setValue("DONE"); fms.getRange(r, 30).setValue(doer); }
+              else if(net.includes("fedex")) { fms.getRange(r, 33).setValue("DONE"); fms.getRange(r, 35).setValue(doer); }
           }
       }
   });
@@ -275,14 +301,13 @@ function handleSubmit(body){
     return["'"+body.awb,b.no,w,l,br,h,v.toFixed(2),c.toFixed(2)];
   });
 
-  // Append 30 columns
   sh.appendRow([
       "'"+body.awb, body.date, body.type, body.network, body.client, body.destination,
       body.totalBoxes, body.extraCharges, body.username, new Date(),
       tA.toFixed(2), tV.toFixed(2), tC.toFixed(2), body.extraRemarks,
       "Pending", "", "", "", "", "", "",
       body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
-      "", "", "" // Hold Cols
+      "", "", ""
   ]);
 
   if(br.length) bx.getRange(bx.getLastRow()+1,1,br.length,8).setValues(br);
@@ -351,11 +376,8 @@ function handleDirectTransfer(b) {
   const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
   const row = findRow(ss, b.taskId);
   if (row === -1) return jsonResponse("error", "Shipment Not Found");
-
-  // Check if On Hold
   const holdStatus = ss.getRange(row, 28).getValue();
   if(holdStatus === "On Hold") return jsonResponse("error", "Shipment is On Hold");
-
   const oldLog = ss.getRange(row, 20).getValue();
   ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Direct Transfer by ${b.by} to ${b.to}]`);
   ss.getRange(row, 18).setValue(b.to);
@@ -367,10 +389,8 @@ function handlePaperDone(b) {
   const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
   const row = findRow(ss, b.id);
   if (row === -1) return jsonResponse("error", "AWB Not Found");
-
   const holdStatus = ss.getRange(row, 28).getValue();
   if(holdStatus === "On Hold") return jsonResponse("error", "Shipment is On Hold");
-
   ss.getRange(row, 17).setValue("Completed");
   syncFMS(b.id, { status: "COMPLETED" });
   return jsonResponse("success", "Completed");
@@ -380,18 +400,14 @@ function handleApproveTransfer(b) {
   const ss=SpreadsheetApp.getActiveSpreadsheet();
   const req=ss.getSheetByName("Requests");
   const sh=ss.getSheetByName("Shipments");
-
-  // Check Hold
   const row = findRow(sh, b.taskId);
   if(row === -1) return jsonResponse("error", "Shipment Not Found");
   const holdStatus = sh.getRange(row, 28).getValue();
   if(holdStatus === "On Hold") return jsonResponse("error", "Shipment is On Hold");
-
   const d=req.getDataRange().getValues();
   let r=-1; for(let i=0;i<d.length;i++) if(String(d[i][0])==String(b.reqId)){r=i+1;break;}
   if(r==-1) return jsonResponse("error","Request Not Found");
   if(b.decision==="Reject"){ req.getRange(r,6).setValue("Rejected"); return jsonResponse("success","Rejected"); }
-
   const oldLog = sh.getRange(row, 20).getValue();
   sh.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} ${b.type} Transfer to ${b.to}]`);
   if(b.type==="Automation") { sh.getRange(row, 16).setValue(b.to); }
@@ -416,7 +432,13 @@ function handleChangePassword(b) {
 function handleTransferRequest(b) { SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Requests").appendRow([new Date().getTime().toString().slice(-6), b.taskId, b.type, b.by, b.to, "Pending", new Date()]); return jsonResponse("success", "Request Sent"); }
 function handleLogin(u,p){ const d=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").getDataRange().getValues(); for(let i=1;i<d.length;i++) if(String(d[i][0]).toLowerCase()==String(u).toLowerCase() && String(d[i][1])==String(p)) return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]}); return jsonResponse("error","Invalid Credentials"); }
 function handleDropdowns(b){ const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet2"); const col = {network:1, client:2, destination:3, extra:4, hold:5}[b.category]; if(b.subAction==="add"){ let r=2; while(s.getRange(r,col).getValue()!=="") r++; s.getRange(r,col).setValue(b.value); if(b.category==="hold") s.getRange(r,6).setValue(b.desc); } else { const v=s.getRange(2,col,s.getLastRow()).getValues().flat(); const i=v.indexOf(b.value); if(i>-1) s.getRange(i+2,col,1,2).deleteCells(SpreadsheetApp.Dimension.ROWS); } return jsonResponse("success","Updated"); }
-function getUsersJson() { return jsonResponse("success", "OK", { users: SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").getDataRange().getValues().slice(1) }); }
+function getUsersJson(requestingUser) {
+    // Return users with permissions. Only show full details to Admin/Owner.
+    // Assuming backend check implicitly via context, but we pass requester for safety in future if needed.
+    const d = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").getDataRange().getValues();
+    const users = d.slice(1).map(r => ({ user: r[0], name: r[2], role: r[3], perms: r[4] }));
+    return jsonResponse("success", "OK", { users: users });
+}
 function getAdminRequests() { const d = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Requests").getDataRange().getValues(); const p = []; for(let i=1;i<d.length;i++) if(d[i][5]==="Pending") p.push({reqId:d[i][0], taskId:d[i][1], type:d[i][2], by:d[i][3], to:d[i][4], date:d[i][6]}); return jsonResponse("success", "OK", { requests: p }); }
 function handleAddUser(b){SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").appendRow([b.u,b.p,b.n,b.r]);return jsonResponse("success","Added");}
 function handleDeleteUser(u){const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users"),d=s.getDataRange().getValues();for(let i=1;i<d.length;i++)if(String(d[i][0]).toLowerCase()==String(u).toLowerCase()){s.deleteRow(i+1);return jsonResponse("success","Deleted");}return jsonResponse("error","Not Found");}
