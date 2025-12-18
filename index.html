@@ -561,7 +561,7 @@ function updateNavVisibility() {
     const p = curPerms;
     const show = (id, permName) => {
         const el = document.getElementById(id);
-        if(role === 'owner' || role === 'admin' || p.includes(permName)) el.style.display='flex';
+        if(role.includes('owner') || role.includes('admin') || p.includes(permName)) el.style.display='flex';
         else el.style.display='none';
     };
 
@@ -570,11 +570,13 @@ function updateNavVisibility() {
     show('nav-holdings', 'holdings');
     show('nav-taskhub', 'taskhub');
     show('nav-manifest', 'manifest');
-    // Analytics removed
-    document.getElementById('nav-analytics').style.display='none';
 
-    if(role === 'owner' || role === 'admin') document.getElementById('adminNavGroup').style.display='block';
-    else document.getElementById('adminNavGroup').style.display='none';
+    // Admin/Owner check - Normalized to lowercase for safety
+    if(role.includes('owner') || role.includes('admin')) {
+        document.getElementById('adminNavGroup').style.display='block';
+    } else {
+        document.getElementById('adminNavGroup').style.display='none';
+    }
 
     // Redirect if current tab not allowed? Simplest is ensuring staff starts at allowed tab.
     // If init, doLogin handled it.
