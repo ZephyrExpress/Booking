@@ -40,7 +40,30 @@
     .login-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0, 51, 153, 0.7); z-index: 1; }
     .login-card {
         width: 90%; max-width: 400px; padding: 2.5rem; background: white; border-radius: 20px;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.3); z-index: 2; position: relative;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.3); z-index: 2; position: relative; text-align: center;
+    }
+
+    /* Login Background Pattern - Planes/Boxes */
+    .login-wrapper {
+        background-color: #f8fafc;
+        /* Using a simple radial gradient pattern to simulate organized items */
+        background-image:
+            radial-gradient(#003399 2px, transparent 2px),
+            radial-gradient(#d40511 2px, transparent 2px);
+        background-size: 40px 40px;
+        background-position: 0 0, 20px 20px;
+        position: fixed; top: 0; left: 0; width: 100%; z-index: 2000;
+        display: flex; align-items: center; justify-content: center;
+    }
+
+    @media (max-width: 768px) {
+        .panel-card { border-radius: 8px; }
+        .panel-header { padding: 0.75rem 1rem; }
+        .fun-header { padding: 1rem; border-radius: 8px 8px 0 0; }
+        .fun-section { padding: 1rem; }
+        .main-container { padding: 1rem !important; }
+        .stat-card { padding: 1rem; margin-bottom: 0.5rem; }
+        .login-card { width: 95%; padding: 1.5rem; }
     }
 
     /* Layout */
@@ -165,7 +188,13 @@
            <div class="p-4">
              <form id="shipForm">
                <div class="row g-4 mb-4">
-                 <div class="col-md-4"><label class="fun-label">Airway Bill Number *</label><input id="f_awb" class="form-control fun-input font-monospace" required placeholder="000-00000000"></div>
+                 <div class="col-md-4">
+                    <label class="fun-label">Airway Bill Number *</label>
+                    <div class="input-group">
+                        <input id="f_awb" class="form-control fun-input font-monospace" required placeholder="000-00000000">
+                        <button class="btn btn-dark" type="button" onclick="startScanner('f_awb')" title="Scan Barcode"><i class="bi bi-qr-code-scan"></i></button>
+                    </div>
+                 </div>
                  <div class="col-md-4"><label class="fun-label">Date *</label><input type="date" id="f_date" class="form-control fun-input" required></div>
                  <div class="col-md-4"><label class="fun-label">Shipment Type *</label>
                     <select id="f_type" class="form-select fun-input" onchange="chkDox()" required><option value="" selected disabled>Select...</option><option>Dox</option><option>Ndox</option></select>
@@ -201,10 +230,10 @@
                       <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" onchange="toggleAllPaperwork(this)"><label class="form-check-label small fw-bold">Select All</label></div>
                   </div>
                   <div id="f_paperwork" class="d-flex flex-wrap gap-2 p-3 bg-white rounded border">
-                     <div class="form-check"><input class="form-check-input pw-chk" type="checkbox" value="KYC"><label class="form-check-label fw-bold">KYC</label></div>
-                     <div class="form-check"><input class="form-check-input pw-chk" type="checkbox" value="INVOICE"><label class="form-check-label fw-bold">INVOICE</label></div>
-                     <div class="form-check"><input class="form-check-input pw-chk" type="checkbox" value="LOA"><label class="form-check-label fw-bold">LOA</label></div>
-                     <div class="form-check"><input class="form-check-input pw-chk" type="checkbox" value="N/A"><label class="form-check-label fw-bold">N/A</label></div>
+                     <div class="form-check"><input class="form-check-input pw-chk" type="checkbox" value="KYC"><label class="form-check-label small">KYC</label></div>
+                     <div class="form-check"><input class="form-check-input pw-chk" type="checkbox" value="INVOICE"><label class="form-check-label small">INVOICE</label></div>
+                     <div class="form-check"><input class="form-check-input pw-chk" type="checkbox" value="LOA"><label class="form-check-label small">LOA</label></div>
+                     <div class="form-check"><input class="form-check-input pw-chk" type="checkbox" value="N/A"><label class="form-check-label small">N/A</label></div>
                   </div>
                </div>
 
@@ -768,7 +797,7 @@ window.actRTO = function(id) {
 window.submitActionFromModal = async function() {
     const rem = document.getElementById('actionModalRem').value;
     if(!rem.trim()) return alert("Remarks are mandatory");
-    
+
     bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
     document.getElementById('holdResultPanel').style.display='none';
 
@@ -778,14 +807,21 @@ window.submitActionFromModal = async function() {
 }
 
 // --- SCANNER ---
-window.startScanner = function() {
+let scanTargetId = 'holdSearchAwb'; // Default
+window.startScanner = function(targetId) {
+    if(targetId) scanTargetId = targetId;
+    else scanTargetId = 'holdSearchAwb';
+
     new bootstrap.Modal(document.getElementById('scanModal')).show();
     html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
     html5QrcodeScanner.render(onScanSuccess);
 }
 function onScanSuccess(decodedText, decodedResult) {
-    document.getElementById('holdSearchAwb').value = decodedText;
-    searchHoldings();
+    const el = document.getElementById(scanTargetId);
+    if(el) {
+        el.value = decodedText;
+        if(scanTargetId === 'holdSearchAwb') searchHoldings();
+    }
     stopScanner();
     // Beep sound
     const audio = new Audio('https://media.geeksforgeeks.org/wp-content/uploads/20190531135120/beep.mp3');
@@ -812,7 +848,8 @@ window.savePerms = async function(target) {
     const chks = document.querySelectorAll(`.perm-chk-${target}:checked`);
     const perms = Array.from(chks).map(c=>c.value).join(',');
     await callApi({action:"updateUserPerms", requester:curUser, targetUser:target, perms:perms});
-    loadUsers(); toast("Permissions Updated");
+    // loadUsers(); // Keep state
+    toast("Permissions Saved Successfully");
 }
 
 async function renderAdminPanel(){
@@ -940,7 +977,13 @@ window.delDd=async function(){ const v=document.getElementById('dd_del').value, 
 window.addUser=async function(){ await callApi({action:"addUser", u:document.getElementById('nu_u').value, p:document.getElementById('nu_p').value, n:document.getElementById('nu_n').value, r:document.getElementById('nu_r').value}); document.getElementById('nu_u').value=''; document.getElementById('nu_p').value=''; document.getElementById('nu_n').value=''; loadUsers(); }
 window.delUser=async function(u){ if(confirm("Del?")) await callApi({action:"deleteUser", username:u}); loadUsers(); }
 window.changePass=async function(u){ const p = prompt("New Password for "+u+":"); if(p) { await callApi({action:"changePassword", username:u, newPass:p}); loadUsers(); alert("Password Changed"); } }
-window.togglePass=function(el, pass){ el.textContent = el.textContent==='****' ? pass : '****'; }
+window.togglePass=function(el, pass){
+    el.onclick = function() { // Ensure onclick is bound effectively
+        el.textContent = el.textContent==='****' ? pass : '****';
+    };
+    // Trigger immediately if called from inline onclick first time
+    el.textContent = el.textContent==='****' ? pass : '****';
+}
 window.decideTr=async function(rid,tid,typ,to,dec){ showSpin(true); await callApi({action:"approveTransfer", reqId:rid, taskId:tid, type:typ, to:to, decision:dec}); renderAdminPanel(); showSpin(false); }
 window.reloadFrame=function(){ document.getElementById('lookerFrame').src += ''; }
 window.exportPool=function(){ const data = window.APP_DATA.adminPool.map(x=>({"AWB":x.id,"Client":x.client,"Net":x.net,"Status":x.assignee?"Assigned":"Unassigned","Assignee":x.assignee||""})); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Pool"); XLSX.writeFile(wb, "Pool.xlsx"); }
