@@ -32,28 +32,16 @@
     /* Login - Centered Card */
     .login-wrapper {
         min-height: 100vh; display: flex; align-items: center; justify-content: center;
-        background-color: #f8fafc;
-        background-image: url('https://cdn.pixabay.com/photo/2016/09/22/12/32/cargo-1687070_1280.jpg'); /* Cargo Plane */
-        background-size: cover; background-position: center;
+        background-color: #f0f4f8;
+        /* Custom SVG Pattern: Planes and Boxes */
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23003399' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3Cpath d='M28.5 18L24 24h9l-4.5-6zm-17 30l-4.5 6h9l-4.5-6zm34 0l-4.5 6h9l-4.5-6z' fill='%23d40511' fill-opacity='0.05'/%3E%3C/g%3E%3C/svg%3E");
         position: fixed; top: 0; left: 0; width: 100%; z-index: 2000;
+        display: flex; align-items: center; justify-content: center;
     }
     .login-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0, 51, 153, 0.7); z-index: 1; }
     .login-card {
         width: 90%; max-width: 400px; padding: 2.5rem; background: white; border-radius: 20px;
         box-shadow: 0 25px 50px rgba(0,0,0,0.3); z-index: 2; position: relative; text-align: center;
-    }
-
-    /* Login Background Pattern - Planes/Boxes */
-    .login-wrapper {
-        background-color: #f8fafc;
-        /* Using a simple radial gradient pattern to simulate organized items */
-        background-image:
-            radial-gradient(#003399 2px, transparent 2px),
-            radial-gradient(#d40511 2px, transparent 2px);
-        background-size: 40px 40px;
-        background-position: 0 0, 20px 20px;
-        position: fixed; top: 0; left: 0; width: 100%; z-index: 2000;
-        display: flex; align-items: center; justify-content: center;
     }
 
     @media (max-width: 768px) {
@@ -64,6 +52,8 @@
         .main-container { padding: 1rem !important; }
         .stat-card { padding: 1rem; margin-bottom: 0.5rem; }
         .login-card { width: 95%; padding: 1.5rem; }
+        .fun-input, .form-select, .form-control { max-width: 100%; }
+        h4, h5 { font-size: 1.1rem; }
     }
 
     /* Layout */
@@ -81,7 +71,7 @@
     .nav-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; margin: 1.5rem 0 0.5rem 0.75rem; color: var(--brand-yellow); letter-spacing: 1px; opacity: 0.8; }
     
     .panel-card { background: white; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); height: 100%; overflow: hidden; }
-    .panel-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); font-weight: 600; background: #fdfdfd; display:flex; justify-content:space-between; align-items:center; }
+    .panel-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); font-weight: 700; background: #fdfdfd; display:flex; justify-content:space-between; align-items:center; text-transform: uppercase; letter-spacing: 0.5px; }
     
     .stat-card { background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); display: flex; justify-content: space-between; }
     .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--primary-color); }
@@ -96,6 +86,7 @@
     .fun-input { border: 2px solid #e2e8f0; transition: all 0.2s; }
     .fun-input:focus { border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(0, 51, 153, 0.1); }
     .fun-header { background: linear-gradient(135deg, var(--brand-blue) 0%, #002266 100%); color: white; padding: 1.5rem; border-radius: 12px 12px 0 0; }
+    .fun-header h5, .modal-title { text-transform: uppercase; letter-spacing: 1px; }
     .fun-label { color: #475569; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px; }
     .fun-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
     .fun-section-green { background: #f0fdf4; border-color: #bbf7d0; }
@@ -119,9 +110,9 @@
 <div id="loginSection" class="login-wrapper">
   <div class="login-overlay"></div>
   <div class="login-card">
-    <div class="text-center mb-4"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="60"></div>
+    <div class="text-center mb-4"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="60" class="d-block mx-auto"></div>
     <h4 class="text-center fw-bold mb-1">ZEPHYR EXPRESS</h4>
-    <p class="text-center text-muted small mb-4">PORTAL LOGIN v5.1</p>
+    <p class="text-center text-muted small mb-4">PORTAL LOGIN v5.2</p>
     <form onsubmit="event.preventDefault(); doLogin();">
       <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required>
       <input type="text" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required>
@@ -266,7 +257,7 @@
                  <button class="btn btn-sm btn-outline-danger bg-white" onclick="exportOverview('auto')">Export</button>
               </div>
               <div class="panel-body p-0 overflow-auto" style="height:540px">
-                 <table class="table table-hover align-middle mb-0 excel-table">
+                 <table class="table table-hover align-middle mb-0 excel-table table-responsive">
                     <thead class="sticky-top bg-light"><tr><th>AWB</th><th>Network</th><th>Client</th><th>Entry User</th><th>Boxes</th><th>Weight</th></tr></thead>
                     <tbody id="listAuto"></tbody>
                  </table>
@@ -280,7 +271,7 @@
                  <button class="btn btn-sm btn-outline-warning bg-white text-dark" onclick="exportOverview('paper')">Export</button>
               </div>
               <div class="panel-body p-0 overflow-auto" style="height:540px">
-                 <table class="table table-hover align-middle mb-0 excel-table">
+                 <table class="table table-hover align-middle mb-0 excel-table table-responsive">
                     <thead class="sticky-top bg-light"><tr><th>AWB</th><th>Network</th><th>Client</th><th>Auto By</th><th>Boxes</th><th>Weight</th></tr></thead>
                     <tbody id="listPaper"></tbody>
                  </table>
@@ -307,7 +298,7 @@
              <div class="row g-3">
                  <div class="col-md-5">
                      <div class="input-group input-group-lg">
-                         <button class="btn btn-dark" onclick="startScanner()" title="Scan"><i class="bi bi-qr-code-scan"></i></button>
+                         <button class="btn btn-dark" onclick="startScanner('holdSearchAwb')" title="Scan"><i class="bi bi-qr-code-scan"></i></button>
                          <input id="holdSearchAwb" class="form-control border-start-0" placeholder="Scan or Enter AWB Number..." oninput="searchHoldings()">
                      </div>
                  </div>
@@ -684,12 +675,12 @@ window.searchHoldings = function() {
     const awb = document.getElementById('holdSearchAwb').value.toLowerCase().trim();
     const net = document.getElementById('holdSearchNet').value.toLowerCase().trim();
     const resPanel = document.getElementById('holdResultPanel');
-    
+
     if(!awb && !net) { resPanel.style.display='none'; return; }
-    
+
     const all = [...window.APP_DATA.overview.auto, ...window.APP_DATA.overview.paper, ...window.APP_DATA.holdings, ...window.APP_DATA.manifest];
     const match = all.find(x => (awb && x.id.toLowerCase().includes(awb)) || (net && x.netNo && x.netNo.toLowerCase().includes(net)));
-    
+
     if(match) {
         const isOnHold = match.holdStatus === "On Hold";
         let actionBtn = "";
@@ -742,25 +733,43 @@ window.openHoldModal = function(id, netNo) {
     document.getElementById('modalHoldAwb').textContent = id;
     document.getElementById('modalHoldNet').textContent = netNo;
     
-    // Populate dropdown with TomSelect or HTML?
-    // Requirement: Search bar required in reason dropdown. Code Bold, Reason Sentence case.
+    // Check if data exists, if not warn
+    if (!window.APP_DATA || !window.APP_DATA.static || !window.APP_DATA.static.dropdowns) {
+        alert("Data not loaded yet. Please wait or refresh.");
+        return;
+    }
     const reasons = window.APP_DATA.static.dropdowns.holdReasons || [];
+
+    // Destroy previous
+    if(window.tomInstances.holdReason) {
+        window.tomInstances.holdReason.destroy();
+        window.tomInstances.holdReason = null;
+    }
+
+    // Clear and rebuild select options manually to ensure clean state
     const sel = document.getElementById('modalHoldReason');
-    sel.innerHTML = `<option value="">Select Reason...</option>` + reasons.map(r => `<option value="${r.code}">${r.code} - ${r.desc}</option>`).join('');
-    document.getElementById('modalHoldRem').value = "";
+    sel.innerHTML = `<option value="">Select Reason...</option>`;
+
+    // Init TomSelect with explicit options
+    const tsOptions = reasons.map(r => ({value: r.code, text: `${r.code} - ${r.desc}`}));
     
-    // Init TomSelect for Searchable
-    if(window.tomInstances.holdReason) window.tomInstances.holdReason.destroy();
     window.tomInstances.holdReason = new TomSelect("#modalHoldReason",{
-        create: false, dropdownParent: 'body',
+        create: false,
+        dropdownParent: 'body',
+        options: tsOptions,
+        items: [],
         render: {
             option: function(data, escape) {
                 const parts = data.text.split(' - ');
                 return `<div><span class="fw-bold">${escape(parts[0])}</span> - <span class="text-capitalize">${escape(parts[1]||"")}</span></div>`;
+            },
+            item: function(data, escape) {
+                return `<div>${escape(data.text)}</div>`;
             }
         }
     });
-    
+
+    document.getElementById('modalHoldRem').value = "";
     new bootstrap.Modal(document.getElementById('holdModal')).show();
 }
 
@@ -775,6 +784,32 @@ window.submitHoldFromModal = async function() {
     await callApi({action:"manageHold", subAction:"set", awb:selectedHoldAwb, reason:r, remarks:rem});
     syncData(false); toast("Shipment put on Hold");
     clearHoldSearch();
+}
+
+// --- SCANNER ---
+let scanTargetId = 'holdSearchAwb'; // Default
+window.startScanner = function(targetId) {
+    if(targetId) scanTargetId = targetId;
+    else scanTargetId = 'holdSearchAwb';
+
+    new bootstrap.Modal(document.getElementById('scanModal')).show();
+    html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+    html5QrcodeScanner.render(onScanSuccess);
+}
+function onScanSuccess(decodedText, decodedResult) {
+    const el = document.getElementById(scanTargetId);
+    if(el) {
+        el.value = decodedText;
+        if(scanTargetId === 'holdSearchAwb') searchHoldings();
+    }
+    stopScanner();
+    // Beep sound
+    const audio = new Audio('https://media.geeksforgeeks.org/wp-content/uploads/20190531135120/beep.mp3');
+    audio.play();
+    bootstrap.Modal.getInstance(document.getElementById('scanModal')).hide();
+}
+window.stopScanner = function() {
+    if(html5QrcodeScanner) { html5QrcodeScanner.clear(); html5QrcodeScanner = null; }
 }
 
 let currentActionType = "";
@@ -804,32 +839,6 @@ window.submitActionFromModal = async function() {
     await callApi({action:"manageHold", subAction:currentActionType, awb:selectedHoldAwb, remarks:rem});
     syncData(false); toast("Action Completed");
     clearHoldSearch();
-}
-
-// --- SCANNER ---
-let scanTargetId = 'holdSearchAwb'; // Default
-window.startScanner = function(targetId) {
-    if(targetId) scanTargetId = targetId;
-    else scanTargetId = 'holdSearchAwb';
-
-    new bootstrap.Modal(document.getElementById('scanModal')).show();
-    html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-    html5QrcodeScanner.render(onScanSuccess);
-}
-function onScanSuccess(decodedText, decodedResult) {
-    const el = document.getElementById(scanTargetId);
-    if(el) {
-        el.value = decodedText;
-        if(scanTargetId === 'holdSearchAwb') searchHoldings();
-    }
-    stopScanner();
-    // Beep sound
-    const audio = new Audio('https://media.geeksforgeeks.org/wp-content/uploads/20190531135120/beep.mp3');
-    audio.play();
-    bootstrap.Modal.getInstance(document.getElementById('scanModal')).hide();
-}
-window.stopScanner = function() {
-    if(html5QrcodeScanner) { html5QrcodeScanner.clear(); html5QrcodeScanner = null; }
 }
 
 // --- ADMIN ---
