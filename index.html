@@ -27,38 +27,25 @@
       --border-color: #e2e8f0;
       --font-main: 'Inter', sans-serif;
     }
-    body { background-color: var(--bg-color); font-family: var(--font-main); color: var(--secondary-color); margin: 0; padding: 0; }
+    body { background-color: var(--bg-color); font-family: var(--font-main); color: var(--secondary-color); margin: 0; padding: 0; overflow-x: hidden; }
 
-    /* Login - Split Layout */
+    /* Login - Centered Card */
     .login-wrapper {
-        min-height: 100vh; display: flex; flex-direction: row;
-        background-color: #ffffff;
+        min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        background-color: #f8fafc;
+        background-image: url('https://cdn.pixabay.com/photo/2016/09/22/12/32/cargo-1687070_1280.jpg'); /* Cargo Plane */
+        background-size: cover; background-position: center;
         position: fixed; top: 0; left: 0; width: 100%; z-index: 2000;
     }
-    .login-left {
-        width: 50%; height: 100vh;
-        background-image: url('https://cdn.pixabay.com/photo/2016/09/22/12/32/cargo-1687070_1280.jpg');
-        background-size: cover; background-position: center;
-        position: relative;
-    }
-    .login-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0, 51, 153, 0.4); }
-    .login-right {
-        width: 50%; height: 100vh;
-        display: flex; align-items: center; justify-content: center;
-        background: white;
-    }
+    .login-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0, 51, 153, 0.7); z-index: 1; }
     .login-card {
-        width: 100%; max-width: 420px; padding: 3rem;
-        /* Removed card styling since it's now part of the right pane layout */
-        z-index: 2; position: relative;
-    }
-    @media (max-width: 768px) {
-        .login-left { display: none; }
-        .login-right { width: 100%; }
+        width: 90%; max-width: 400px; padding: 2.5rem; background: white; border-radius: 20px;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.3); z-index: 2; position: relative;
     }
 
     /* Layout */
     .sidebar { width: var(--sidebar-width); background-color: var(--brand-blue); position: fixed; top: 0; bottom: 0; left: 0; z-index: 1000; transition: transform 0.3s; transform: translateX(-100%); color: white; display:flex; flex-direction:column; box-shadow: 4px 0 24px rgba(0,0,0,0.1); }
+    @media (min-width: 992px) { .sidebar { transform: translateX(-100%); } .sidebar.show { transform: translateX(0); } } /* Default hidden on all */
     .sidebar.show { transform: translateX(0); }
     .sidebar-brand { height: var(--header-height); padding: 0 1.5rem; display: flex; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); font-weight: 800; color: white; letter-spacing: 1px; font-size: 1.2rem; }
     .sidebar-nav { flex: 1; padding: 1.5rem 1rem; overflow-y: auto; }
@@ -107,19 +94,17 @@
 
 <!-- LOGIN -->
 <div id="loginSection" class="login-wrapper">
-  <div class="login-left"><div class="login-overlay"></div></div>
-  <div class="login-right">
-      <div class="login-card">
-        <div class="text-center mb-4"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="80"></div>
-        <h4 class="text-center fw-bold mb-1">ZEPHYR EXPRESS</h4>
-        <p class="text-center text-muted small mb-4">PORTAL LOGIN v5.1</p>
-        <form onsubmit="event.preventDefault(); doLogin();">
-          <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required>
-          <input type="text" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required>
-          <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm" style="background-color: var(--brand-blue); border:none;">SIGN IN</button>
-        </form>
-        <div id="loginError" class="alert alert-danger mt-3 small text-center" style="display:none;"></div>
-      </div>
+  <div class="login-overlay"></div>
+  <div class="login-card">
+    <div class="text-center mb-4"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="60"></div>
+    <h4 class="text-center fw-bold mb-1">ZEPHYR EXPRESS</h4>
+    <p class="text-center text-muted small mb-4">PORTAL LOGIN v5.1</p>
+    <form onsubmit="event.preventDefault(); doLogin();">
+      <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required>
+      <input type="text" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required>
+      <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm" style="background-color: var(--brand-blue); border:none;">SIGN IN</button>
+    </form>
+    <div id="loginError" class="alert alert-danger mt-3 small text-center" style="display:none;"></div>
   </div>
 </div>
 
@@ -551,8 +536,11 @@ async function syncData(init=false){
      const r = await fetchGet('getAllData');
      if(r.result==="success"){
         window.APP_DATA = r;
-        curPerms = r.perms || []; // Update perms
-        if(curRole === 'Admin' || curRole === 'Owner') { // Backend returns Title Case likely
+        // Fix: Use role from backend if available, else keep existing login role
+        if(r.role) curRole = r.role;
+        curPerms = r.perms || [];
+
+        if(curRole === 'Admin' || curRole === 'Owner') {
             const newCount = r.stats.requests || 0;
             if(!init && newCount > lastReqCount) toast(`<strong>New Transfer Request!</strong><br>${newCount} pending actions.`, 'danger');
             lastReqCount = newCount;
@@ -560,8 +548,11 @@ async function syncData(init=false){
         updateNavVisibility();
         if(init) initForms(); else updDd();
         renderUI();
+     } else {
+        console.error("Sync Error:", r.message);
+        if(init) document.getElementById('loginError').textContent = "Data Error: " + r.message;
      }
-  } catch(e){ console.error(e); }
+  } catch(e){ console.error(e); if(init) alert("Network/Parse Error: " + e.message); }
   if(init) showSpin(false);
 }
 
@@ -584,7 +575,7 @@ function updateNavVisibility() {
 
     if(role === 'owner' || role === 'admin') document.getElementById('adminNavGroup').style.display='block';
     else document.getElementById('adminNavGroup').style.display='none';
-    
+
     // Redirect if current tab not allowed? Simplest is ensuring staff starts at allowed tab.
     // If init, doLogin handled it.
 }

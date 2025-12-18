@@ -78,19 +78,26 @@ function getAllData(username) {
     } catch(e) { staticData = { staff: [], dropdowns: {} }; }
   } else { staticData = JSON.parse(staticDataStr); }
 
-  // User Details (Role & Perms)
-  const uData = ss.getSheetByName("Users").getDataRange().getValues();
+  // User Details (Role & Perms) - Robust Fetch
   let role = "Staff";
   let perms = [];
-  for(let i=1; i<uData.length; i++) {
-    if(String(uData[i][0]).toLowerCase() === targetUser) {
-        role = uData[i][3];
-        // Col E (Index 4) -> Perms CSV
-        const pStr = uData[i][4] || "";
-        perms = pStr.split(',').map(s=>s.trim()).filter(Boolean);
-        break;
-    }
-  }
+  try {
+      const uSheet = ss.getSheetByName("Users");
+      if (uSheet && uSheet.getLastRow() > 1) {
+          const uData = uSheet.getDataRange().getValues();
+          for(let i=1; i<uData.length; i++) {
+            if(String(uData[i][0]).toLowerCase() === targetUser) {
+                role = uData[i][3];
+                const pStr = uData[i][4] || "";
+                perms = pStr.split(',').map(s=>s.trim()).filter(Boolean);
+                break;
+            }
+          }
+      } else {
+          // Fallback: If Users sheet missing, assume Admin if username is admin (safety net)
+          if(targetUser.includes("admin") || targetUser.includes("owner")) role = "Admin";
+      }
+  } catch(e) { console.error("User Fetch Error", e); }
 
   const lastRow = sh.getLastRow();
   const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 30).getDisplayValues() : [];
