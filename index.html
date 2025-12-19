@@ -79,8 +79,8 @@
         .col-md-3, .col-lg-6, .col-md-4, .col-md-5, .col-md-2, .col-12 { padding-left: 0; padding-right: 0; }
 
         /* Login Fixes */
-        .login-wrapper { position: absolute; height: auto; min-height: 100vh; padding: 1rem; align-items: flex-start; padding-top: 10vh; }
-        .login-card { width: 100%; padding: 1.5rem; }
+        .login-wrapper { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow-y: auto; padding: 1rem; align-items: flex-start; padding-top: 10vh; z-index: 2000; }
+        .login-card { width: 100%; padding: 1.5rem; margin-bottom: 2rem; }
 
         /* Scrollable Tables */
         .table-responsive { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 1rem; border: 1px solid #eee; }
