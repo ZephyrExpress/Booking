@@ -27,7 +27,7 @@
       --border-color: #e2e8f0;
       --font-main: 'Inter', sans-serif;
     }
-    body { background-color: var(--bg-color); font-family: var(--font-main); color: var(--secondary-color); margin: 0; padding: 0; overflow-x: hidden; width: 100%; position: relative; }
+    body { background-color: var(--bg-color); font-family: var(--font-main); color: var(--secondary-color); margin: 0; padding: 0; width: 100%; position: relative; }
 
     /* Login - Centered Card */
     .login-wrapper {
@@ -48,48 +48,44 @@
     }
     .login-card img { max-width: 80%; height: auto; display: inline-block; }
 
-    /* MOBILE OPTIMIZATIONS (User Provided) */
+    /* ULTRA MOBILE OPTIMIZATIONS (Kakarot Mode) */
     @media (max-width: 768px) {
-        /* Fix Horizontal Scroll caused by negative margins */
-        body, html { overflow-x: hidden; width: 100%; }
+        /* Unlock body scroll, let content flow */
+        body, html { overflow-x: auto; width: 100%; }
 
-        /* Reduce padding significantly on mobile */
-        .main-container { padding: 1rem !important; overflow-x: hidden; }
-        .panel-card { border-radius: 8px; margin-bottom: 1rem; }
+        /* Containers */
+        .main-container { padding: 0.5rem !important; width: 100%; box-sizing: border-box; }
+        .panel-card, .stat-card { width: 100%; margin-bottom: 1rem; border-radius: 8px; }
 
-        /* Stack Flex headers vertically for space */
-        .panel-header { flex-direction: column; align-items: flex-start; gap: 10px; }
-        .panel-header button { width: 100%; margin-top: 5px; }
+        /* Stacking Headers */
+        .panel-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; padding: 0.75rem; }
+        .panel-header button, .panel-header select { width: 100%; margin-top: 0.5rem; }
 
-        /* Fun Header adjustments */
-        .fun-header { padding: 1rem; }
-        .fun-section { padding: 1rem; }
+        /* Topbar Stacking */
+        .topbar { height: auto; padding: 0.75rem; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+        .topbar .d-flex { width: 100%; justify-content: space-between; }
 
-        /* Stack Stat cards */
-        .stat-card { padding: 1rem; margin-bottom: 1rem; }
+        /* Typography Reduction */
+        h4, h5 { font-size: 1rem !important; }
+        .stat-value { font-size: 1.25rem; }
+        .stat-label { font-size: 0.65rem; }
+        th, td { font-size: 0.75rem !important; padding: 0.4rem !important; }
 
-        /* Login Card Fit */
-        .login-card { width: 92%; padding: 1.5rem; max-height: 90vh; overflow-y: auto; }
+        /* Input Constraints */
+        .fun-input, .form-select, .form-control, .input-group { width: 100% !important; max-width: 100% !important; }
 
-        /* Make Inputs Full Width */
-        .fun-input, .form-select, .form-control { max-width: 100%; }
+        /* Grid Fixes */
+        .row { margin: 0; width: 100%; }
+        .col-md-3, .col-lg-6, .col-md-4, .col-md-5, .col-md-2, .col-12 { padding-left: 0; padding-right: 0; }
 
-        /* Adjust Font Sizes */
-        h4, h5 { font-size: 1.1rem; }
-        .stat-value { font-size: 1.5rem; }
+        /* Login Fixes */
+        .login-wrapper { position: absolute; height: auto; min-height: 100vh; padding: 1rem; align-items: flex-start; padding-top: 10vh; }
+        .login-card { width: 100%; padding: 1.5rem; }
 
-        /* Ensure tables scroll INTERNALLY, not the whole page */
-        .table-responsive {
-            display: block;
-            width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
+        /* Scrollable Tables */
+        .table-responsive { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 1rem; border: 1px solid #eee; }
 
-        /* Fix Topbar padding */
-        .topbar { padding: 0 1rem; }
-
-        /* Hide complex elements on mobile if needed */
+        /* Hide non-critical on mobile if needed */
         .d-none-mobile { display: none !important; }
     }
 
@@ -245,7 +241,12 @@
                      <div class="col-md-4"><label class="fun-label">Total No. of Boxes *</label><div class="input-group"><input type="number" id="f_boxes" class="form-control fun-input" required placeholder=""><button type="button" class="btn btn-success" onclick="genBoxes()">Generate</button></div></div>
                      <div class="col-md-4"><label class="fun-label">Total Chargeable Weight</label><input id="f_totalChg" class="form-control fun-input bg-success bg-opacity-10 fw-bold text-success" readonly value="0.00"></div>
                   </div>
-                  <div class="table-responsive bg-white rounded border"><table class="table table-sm mb-0 align-middle"><thead class="table-light"><tr><th>#</th><th>Weight (Kg) *</th><th>Length (cm)</th><th>Width (cm)</th><th>Height (cm)</th><th>Chargeable Weight</th></tr></thead><tbody id="boxTable"></tbody></table></div>
+                  <div class="table-responsive bg-white rounded border">
+                      <table class="table table-sm mb-0 align-middle">
+                          <thead class="table-light"><tr><th>#</th><th>Weight (Kg) *</th><th>L (cm)</th><th>W (cm)</th><th>H (cm)</th><th>Chg Wgt</th></tr></thead>
+                          <tbody id="boxTable"></tbody>
+                      </table>
+                  </div>
                </div>
 
                <div class="fun-section border-warning">
@@ -298,11 +299,13 @@
                  <span><i class="bi bi-hourglass-split me-2"></i>Pending Automation <span class="badge bg-danger ms-2" id="badgeAuto">0</span></span>
                  <button class="btn btn-sm btn-outline-danger bg-white" onclick="exportOverview('auto')">Export</button>
               </div>
-              <div class="panel-body p-0 overflow-auto" style="height:540px">
-                 <table class="table table-hover align-middle mb-0 excel-table table-responsive">
-                    <thead class="sticky-top bg-light"><tr><th>AWB</th><th>Network</th><th>Client</th><th>Entry User</th><th>Boxes</th><th>Weight</th></tr></thead>
-                    <tbody id="listAuto"></tbody>
-                 </table>
+              <div class="panel-body p-0" style="height:540px; overflow-y: auto;">
+                 <div class="table-responsive">
+                     <table class="table table-hover align-middle mb-0 excel-table">
+                        <thead class="sticky-top bg-light"><tr><th>AWB</th><th>Network</th><th>Client</th><th>User</th><th>Box</th><th>Wgt</th></tr></thead>
+                        <tbody id="listAuto"></tbody>
+                     </table>
+                 </div>
               </div>
             </div>
           </div>
@@ -312,11 +315,13 @@
                  <span><i class="bi bi-clock-history me-2"></i>Pending Paperwork <span class="badge bg-warning text-dark ms-2" id="badgePaper">0</span></span>
                  <button class="btn btn-sm btn-outline-warning bg-white text-dark" onclick="exportOverview('paper')">Export</button>
               </div>
-              <div class="panel-body p-0 overflow-auto" style="height:540px">
-                 <table class="table table-hover align-middle mb-0 excel-table table-responsive">
-                    <thead class="sticky-top bg-light"><tr><th>AWB</th><th>Network</th><th>Client</th><th>Auto By</th><th>Boxes</th><th>Weight</th></tr></thead>
-                    <tbody id="listPaper"></tbody>
-                 </table>
+              <div class="panel-body p-0" style="height:540px; overflow-y: auto;">
+                 <div class="table-responsive">
+                     <table class="table table-hover align-middle mb-0 excel-table">
+                        <thead class="sticky-top bg-light"><tr><th>AWB</th><th>Network</th><th>Client</th><th>Auto By</th><th>Box</th><th>Wgt</th></tr></thead>
+                        <tbody id="listPaper"></tbody>
+                     </table>
+                 </div>
               </div>
             </div>
           </div>
