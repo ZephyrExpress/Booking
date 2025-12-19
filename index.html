@@ -577,7 +577,7 @@ function toast(msg, type='success'){
 }
 
 async function callApi(d){ try{const r=await fetch(API_URL,{method:"POST",body:JSON.stringify(d)}); return await r.json();}catch(e){return{result:"error",message:e.toString()};}}
-async function fetchGet(a){ try{const r=await fetch(`${API_URL}?action=${a}&user=${encodeURIComponent(curUser)}`); return await r.json();}catch(e){return{result:"error"};}}
+async function fetchGet(a){ try{const r=await fetch(`${API_URL}?action=${a}&user=${encodeURIComponent(curUser)}&_t=${new Date().getTime()}`); return await r.json();}catch(e){return{result:"error"};}}
 
 window.doLogin=async function(){
   showSpin(true); const u=document.getElementById('uIn').value, p=document.getElementById('pIn').value;
