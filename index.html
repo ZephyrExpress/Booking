@@ -137,6 +137,21 @@
 
     /* Fix TomSelect Dropdown Z-Index inside Modals */
     .ts-dropdown, .ts-wrapper.single.input-active .ts-control { z-index: 10000 !important; }
+
+    /* Brand Button Overrides */
+    .btn-primary { background-color: var(--brand-blue) !important; border-color: var(--brand-blue) !important; color: white !important; }
+    .btn-danger { background-color: var(--brand-red) !important; border-color: var(--brand-red) !important; color: white !important; }
+    .btn-warning { background-color: var(--brand-yellow) !important; border-color: var(--brand-yellow) !important; color: black !important; }
+
+    /* Stacked List Item Style for Overview */
+    .list-item-stacked { border-bottom: 1px solid #e2e8f0; padding: 1rem; transition: background 0.2s; }
+    .list-item-stacked:hover { background: #f8fafc; }
+    .list-item-stacked:last-child { border-bottom: none; }
+    .list-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; }
+    .list-row.last { margin-bottom: 0; }
+    .list-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 600; margin-right: 0.5rem; }
+    .list-val { font-size: 0.9rem; font-weight: 500; color: #1e293b; }
+    .list-val-bold { font-weight: 700; color: var(--brand-blue); font-family: monospace; font-size: 1rem; }
   </style>
 </head>
 <body>
@@ -300,12 +315,7 @@
                  <button class="btn btn-sm btn-outline-danger bg-white" onclick="exportOverview('auto')">Export</button>
               </div>
               <div class="panel-body p-0" style="height:540px; overflow-y: auto;">
-                 <div class="table-responsive">
-                     <table class="table table-hover align-middle mb-0 excel-table">
-                        <thead class="sticky-top bg-light"><tr><th>AWB</th><th>Network</th><th>Client</th><th>User</th><th>Box</th><th>Wgt</th></tr></thead>
-                        <tbody id="listAuto"></tbody>
-                     </table>
-                 </div>
+                 <div id="listAuto" class="list-group list-group-flush"></div>
               </div>
             </div>
           </div>
@@ -316,12 +326,7 @@
                  <button class="btn btn-sm btn-outline-warning bg-white text-dark" onclick="exportOverview('paper')">Export</button>
               </div>
               <div class="panel-body p-0" style="height:540px; overflow-y: auto;">
-                 <div class="table-responsive">
-                     <table class="table table-hover align-middle mb-0 excel-table">
-                        <thead class="sticky-top bg-light"><tr><th>AWB</th><th>Network</th><th>Client</th><th>Auto By</th><th>Box</th><th>Wgt</th></tr></thead>
-                        <tbody id="listPaper"></tbody>
-                     </table>
-                 </div>
+                 <div id="listPaper" class="list-group list-group-flush"></div>
               </div>
             </div>
           </div>
@@ -660,16 +665,48 @@ function renderUI(){
   document.getElementById('ovHoldings').textContent=s.holdings;
 
   const la=document.getElementById('listAuto');
-  if(!d.auto.length) la.innerHTML='<tr><td colspan="6" class="text-center p-4 text-muted small">No Pending Automation</td></tr>';
+  if(!d.auto.length) la.innerHTML='<div class="text-center p-5 text-muted small">No Pending Automation</div>';
   else {
-      la.innerHTML = d.auto.map(x => `<tr><td class="fw-bold font-monospace text-nowrap">${x.id}</td><td><span class="badge bg-secondary bg-opacity-10 text-secondary">${x.net}</span></td><td><small class="fw-bold text-dark">${x.client}</small></td><td class="small text-muted">${x.user}</td><td>${x.boxes}</td><td>${x.chgWgt}</td></tr>`).join('');
+      la.innerHTML = d.auto.map(x => `
+        <div class="list-item-stacked">
+           <div class="list-row">
+              <span class="list-val-bold">${x.id}</span>
+              <div><span class="list-label">Weight</span><span class="list-val">${x.chgWgt}</span></div>
+           </div>
+           <div class="list-row">
+              <div><span class="list-label">Network</span><span class="list-val">${x.net}</span></div>
+              <div><span class="list-label">Boxes</span><span class="list-val">${x.boxes}</span></div>
+           </div>
+           <div class="list-row last">
+              <div><span class="list-label">Client</span><span class="list-val">${(x.client||'').slice(-4)}</span></div>
+              <div><span class="list-label">User</span><span class="list-val text-muted small">${x.user||'-'}</span></div>
+           </div>
+        </div>`).join('');
   }
 
   const lp=document.getElementById('listPaper');
   const sortedP = [...d.paper].sort((a,b)=>(a.assignee?1:-1)-(b.assignee?1:-1));
-  if(!sortedP.length) lp.innerHTML='<tr><td colspan="6" class="text-center p-4 text-muted small">No Pending Paperwork</td></tr>';
+  if(!sortedP.length) lp.innerHTML='<div class="text-center p-5 text-muted small">No Pending Paperwork</div>';
   else {
-      lp.innerHTML = sortedP.map(x => `<tr><td class="fw-bold font-monospace text-nowrap">${x.id}</td><td><span class="badge bg-secondary bg-opacity-10 text-secondary">${x.net}</span></td><td><small class="fw-bold text-dark">${x.client}</small></td><td class="small text-muted">${x.autoDoer || '-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td></tr>`).join('');
+      lp.innerHTML = sortedP.map(x => `
+        <div class="list-item-stacked">
+           <div class="list-row">
+              <span class="list-val-bold">${x.id}</span>
+              <div><span class="list-label">Weight</span><span class="list-val">${x.chgWgt}</span></div>
+           </div>
+           <div class="list-row">
+              <div><span class="list-label">Network</span><span class="list-val">${x.net}</span></div>
+              <div><span class="list-label">Network Number</span><span class="list-val font-monospace">${x.netNo||'-'}</span></div>
+           </div>
+           <div class="list-row last">
+              <div><span class="list-label">Client</span><span class="list-val">${(x.client||'').slice(-4)}</span></div>
+              <div><span class="list-label">Assigned To</span><span class="list-val text-primary fw-bold small">${x.assignee||'Unassigned'}</span></div>
+           </div>
+           <div class="mt-1 d-flex justify-content-end gap-2">
+              <span class="badge bg-light text-dark border">Boxes: ${x.boxes}</span>
+              <span class="badge bg-light text-dark border">Auto By: ${x.autoDoer||'-'}</span>
+           </div>
+        </div>`).join('');
   }
 
   renderTaskHub();
