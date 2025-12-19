@@ -75,7 +75,9 @@
     .nav-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; margin: 1.5rem 0 0.5rem 0.75rem; color: var(--brand-yellow); letter-spacing: 1px; opacity: 0.8; }
     
     .panel-card { background: white; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); height: 100%; overflow: hidden; }
-    .panel-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); font-weight: 700; background: #fdfdfd; display:flex; justify-content:space-between; align-items:center; text-transform: uppercase; letter-spacing: 0.5px; }
+    /* Global Uppercase for Headings */
+    h1, h2, h3, h4, h5, h6, .panel-header, .modal-title, .fun-header, .stat-label, .nav-label, th { text-transform: uppercase !important; letter-spacing: 0.5px; }
+    .panel-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); font-weight: 700; background: #fdfdfd; display:flex; justify-content:space-between; align-items:center; }
 
     .stat-card { background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); display: flex; justify-content: space-between; }
     .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--primary-color); }
@@ -905,12 +907,14 @@ async function renderAdminPanel(){
        if(u.role === "Staff") {
            if(canEdit || curRole.toLowerCase() === 'admin') {
                // Show checkboxes
-               permUI = allPerms.map(p => `
-                 <div class="form-check form-check-inline m-0">
-                   <input class="form-check-input perm-chk-${u.user}" type="checkbox" value="${p}" ${userPerms.includes(p)?'checked':''}>
-                   <label class="form-check-label small" style="font-size:0.7rem">${p}</label>
-                 </div>
-               `).join('');
+               permUI = allPerms.map(p => {
+                   const label = p.charAt(0).toUpperCase() + p.slice(1);
+                   return `
+                     <div class="form-check form-check-inline d-flex align-items-center m-0 me-2">
+                       <input class="form-check-input perm-chk-${u.user}" type="checkbox" value="${p}" ${userPerms.includes(p)?'checked':''} style="margin-top:0;">
+                       <label class="form-check-label small ms-1" style="font-size:0.75rem; vertical-align:middle;">${label}</label>
+                     </div>`;
+               }).join('');
                permUI += `<button class="btn btn-xs btn-primary ms-2 py-0" style="font-size:0.7rem" onclick="savePerms('${u.user}')">Save</button>`;
            } else {
                permUI = userPerms.join(', ');
