@@ -48,18 +48,49 @@
     }
     .login-card img { max-width: 80%; height: auto; display: inline-block; }
 
+    /* MOBILE OPTIMIZATIONS (User Provided) */
     @media (max-width: 768px) {
-        .panel-card { border-radius: 8px; }
-        .panel-header { padding: 0.75rem 1rem; }
-        .fun-header { padding: 1rem; border-radius: 8px 8px 0 0; }
+        /* Fix Horizontal Scroll caused by negative margins */
+        body, html { overflow-x: hidden; width: 100%; }
+
+        /* Reduce padding significantly on mobile */
+        .main-container { padding: 1rem !important; overflow-x: hidden; }
+        .panel-card { border-radius: 8px; margin-bottom: 1rem; }
+
+        /* Stack Flex headers vertically for space */
+        .panel-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+        .panel-header button { width: 100%; margin-top: 5px; }
+
+        /* Fun Header adjustments */
+        .fun-header { padding: 1rem; }
         .fun-section { padding: 1rem; }
-        .main-container { padding: 0.5rem !important; overflow-x: hidden; }
-        .stat-card { padding: 1rem; margin-bottom: 0.5rem; }
-        .login-card { width: 95%; padding: 1.5rem; }
+
+        /* Stack Stat cards */
+        .stat-card { padding: 1rem; margin-bottom: 1rem; }
+
+        /* Login Card Fit */
+        .login-card { width: 92%; padding: 1.5rem; max-height: 90vh; overflow-y: auto; }
+
+        /* Make Inputs Full Width */
         .fun-input, .form-select, .form-control { max-width: 100%; }
+
+        /* Adjust Font Sizes */
         h4, h5 { font-size: 1.1rem; }
-        .row { margin-left: 0; margin-right: 0; } /* Prevent grid overflow */
-        .col-md-3, .col-lg-6, .col-md-4, .col-md-5, .col-md-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+        .stat-value { font-size: 1.5rem; }
+
+        /* Ensure tables scroll INTERNALLY, not the whole page */
+        .table-responsive {
+            display: block;
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Fix Topbar padding */
+        .topbar { padding: 0 1rem; }
+
+        /* Hide complex elements on mobile if needed */
+        .d-none-mobile { display: none !important; }
     }
 
     /* Layout */
