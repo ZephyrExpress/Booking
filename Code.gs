@@ -453,7 +453,8 @@ function getUsersJson(requestingUser) {
     // Return users with permissions. Only show full details to Admin/Owner.
     // Assuming backend check implicitly via context, but we pass requester for safety in future if needed.
     const d = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").getDataRange().getValues();
-    const users = d.slice(1).map(r => ({ user: r[0], name: r[2], role: r[3], perms: r[4] }));
+    // Map password (r[1]) so it can be revealed in Admin Panel
+    const users = d.slice(1).map(r => ({ user: r[0], pass: r[1], name: r[2], role: r[3], perms: r[4] }));
     return jsonResponse("success", "OK", { users: users });
 }
 function getAdminRequests() { const d = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Requests").getDataRange().getValues(); const p = []; for(let i=1;i<d.length;i++) if(d[i][5]==="Pending") p.push({reqId:d[i][0], taskId:d[i][1], type:d[i][2], by:d[i][3], to:d[i][4], date:d[i][6]}); return jsonResponse("success", "OK", { requests: p }); }
