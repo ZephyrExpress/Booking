@@ -42,9 +42,11 @@
     /* Global Mobile Fixes */
     img { max-width: 100%; height: auto; }
     .login-card {
-        width: 90%; max-width: 400px; padding: 2.5rem; background: white; border-radius: 20px;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.3); z-index: 2; position: relative; text-align: center;
+        width: 90%; max-width: 400px; padding: 2.5rem; background: #ffffff; border-radius: 20px;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.5); z-index: 2; position: relative; text-align: center;
+        border: 1px solid rgba(0,0,0,0.1);
     }
+    .login-card img { max-width: 80%; height: auto; display: inline-block; }
 
     @media (max-width: 768px) {
         .panel-card { border-radius: 8px; }
@@ -101,6 +103,9 @@
     .overview-table th, .excel-table th { background-color: #f1f5f9; font-size: 0.75rem; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; border: 1px solid #e2e8f0; padding: 0.75rem; }
     .overview-table td, .excel-table td { border: 1px solid #e2e8f0; font-size: 0.85rem; padding: 0.75rem; vertical-align: middle; }
     .sticky-top { z-index: 10; }
+
+    /* Fix TomSelect Dropdown Z-Index inside Modals */
+    .ts-dropdown, .ts-wrapper.single.input-active .ts-control { z-index: 10000 !important; }
   </style>
 </head>
 <body>
