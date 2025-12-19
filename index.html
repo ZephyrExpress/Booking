@@ -39,6 +39,8 @@
         display: flex; align-items: center; justify-content: center;
     }
     .login-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0, 51, 153, 0.7); z-index: 1; }
+    /* Global Mobile Fixes */
+    img { max-width: 100%; height: auto; }
     .login-card {
         width: 90%; max-width: 400px; padding: 2.5rem; background: white; border-radius: 20px;
         box-shadow: 0 25px 50px rgba(0,0,0,0.3); z-index: 2; position: relative; text-align: center;
@@ -72,14 +74,14 @@
     
     .panel-card { background: white; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); height: 100%; overflow: hidden; }
     .panel-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); font-weight: 700; background: #fdfdfd; display:flex; justify-content:space-between; align-items:center; text-transform: uppercase; letter-spacing: 0.5px; }
-    
+
     .stat-card { background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); display: flex; justify-content: space-between; }
     .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--primary-color); }
 
     .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1060; }
     .spinner-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; display:none; justify-content:center; align-items:center; }
     .mobile-toggle { display: block !important; background:none; border:none; font-size:1.5rem; color:var(--primary-color); }
-    .sidebar-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
+    .sidebar-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
     .sidebar-backdrop.show { display: block; }
 
     /* FUN & COLOURFUL INPUTS */
@@ -751,20 +753,27 @@ window.openHoldModal = function(id, netNo) {
     sel.innerHTML = `<option value="">Select Reason...</option>`;
 
     // Init TomSelect with explicit options
-    const tsOptions = reasons.map(r => ({value: r.code, text: `${r.code} - ${r.desc}`}));
+    // Transforming data to handle formatting requirements: CODE (Bold/Upper), Desc (Sentence)
+    const tsOptions = reasons.map(r => ({
+        value: r.code,
+        code: r.code.toUpperCase(),
+        desc: r.desc.charAt(0).toUpperCase() + r.desc.slice(1).toLowerCase()
+    }));
     
     window.tomInstances.holdReason = new TomSelect("#modalHoldReason",{
         create: false,
         dropdownParent: 'body',
         options: tsOptions,
         items: [],
+        valueField: 'value',
+        labelField: 'code',
+        searchField: ['code', 'desc'],
         render: {
             option: function(data, escape) {
-                const parts = data.text.split(' - ');
-                return `<div><span class="fw-bold">${escape(parts[0])}</span> - <span class="text-capitalize">${escape(parts[1]||"")}</span></div>`;
+                return `<div><span class="fw-bold">${escape(data.code)}</span> - <span>${escape(data.desc)}</span></div>`;
             },
             item: function(data, escape) {
-                return `<div>${escape(data.text)}</div>`;
+                return `<div><span class="fw-bold">${escape(data.code)}</span> - <span>${escape(data.desc)}</span></div>`;
             }
         }
     });
