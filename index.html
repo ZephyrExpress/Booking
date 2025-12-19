@@ -27,7 +27,7 @@
       --border-color: #e2e8f0;
       --font-main: 'Inter', sans-serif;
     }
-    body { background-color: var(--bg-color); font-family: var(--font-main); color: var(--secondary-color); margin: 0; padding: 0; overflow-x: hidden; }
+    body { background-color: var(--bg-color); font-family: var(--font-main); color: var(--secondary-color); margin: 0; padding: 0; overflow-x: hidden; width: 100%; position: relative; }
 
     /* Login - Centered Card */
     .login-wrapper {
@@ -53,11 +53,13 @@
         .panel-header { padding: 0.75rem 1rem; }
         .fun-header { padding: 1rem; border-radius: 8px 8px 0 0; }
         .fun-section { padding: 1rem; }
-        .main-container { padding: 1rem !important; }
+        .main-container { padding: 0.5rem !important; overflow-x: hidden; }
         .stat-card { padding: 1rem; margin-bottom: 0.5rem; }
         .login-card { width: 95%; padding: 1.5rem; }
         .fun-input, .form-select, .form-control { max-width: 100%; }
         h4, h5 { font-size: 1.1rem; }
+        .row { margin-left: 0; margin-right: 0; } /* Prevent grid overflow */
+        .col-md-3, .col-lg-6, .col-md-4, .col-md-5, .col-md-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
     }
 
     /* Layout */
@@ -925,7 +927,7 @@ async function renderAdminPanel(){
 
        return `<tr>
          <td>${u.user}</td>
-         <td style="cursor:pointer; font-family:monospace;" onclick="togglePass(this, '${u.pass||'***'}')">****</td>
+         <td style="cursor:pointer; font-family:monospace;" onclick="togglePass(this)" data-pass="${u.pass||''}">****</td>
          <td>${u.name}</td>
          <td>${roleActions}</td>
          <td>${permUI}</td>
@@ -1004,12 +1006,10 @@ window.delDd=async function(){ const v=document.getElementById('dd_del').value, 
 window.addUser=async function(){ await callApi({action:"addUser", u:document.getElementById('nu_u').value, p:document.getElementById('nu_p').value, n:document.getElementById('nu_n').value, r:document.getElementById('nu_r').value}); document.getElementById('nu_u').value=''; document.getElementById('nu_p').value=''; document.getElementById('nu_n').value=''; loadUsers(); }
 window.delUser=async function(u){ if(confirm("Del?")) await callApi({action:"deleteUser", username:u}); loadUsers(); }
 window.changePass=async function(u){ const p = prompt("New Password for "+u+":"); if(p) { await callApi({action:"changePassword", username:u, newPass:p}); loadUsers(); alert("Password Changed"); } }
-window.togglePass=function(el, pass){
-    el.onclick = function() { // Ensure onclick is bound effectively
-        el.textContent = el.textContent==='****' ? pass : '****';
-    };
-    // Trigger immediately if called from inline onclick first time
-    el.textContent = el.textContent==='****' ? pass : '****';
+window.togglePass=function(el){
+    const pass = el.getAttribute('data-pass');
+    if(!pass) return toast("Password not available", "warning");
+    el.textContent = el.textContent === '****' ? pass : '****';
 }
 window.decideTr=async function(rid,tid,typ,to,dec){ showSpin(true); await callApi({action:"approveTransfer", reqId:rid, taskId:tid, type:typ, to:to, decision:dec}); renderAdminPanel(); showSpin(false); }
 window.reloadFrame=function(){ document.getElementById('lookerFrame').src += ''; }
