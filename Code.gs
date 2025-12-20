@@ -361,17 +361,8 @@ function addToFMS(d) {
         if(fms) {
             const lr = fms.getLastRow();
             const row = lr + 1;
-            fms.getRange(row, 1).setValue(row-6);
+            // Only populate AWB (Col 2) to maintain link. Do NOT populate other columns (A:I, N, Q) at creation.
             fms.getRange(row, 2).setValue("'"+d.awb);
-            fms.getRange(row, 3).setValue(d.date);
-            fms.getRange(row, 4).setValue(d.type);
-            fms.getRange(row, 5).setValue(d.net);
-            fms.getRange(row, 6).setValue(d.client);
-            fms.getRange(row, 7).setValue(d.dest);
-            fms.getRange(row, 8).setValue(d.boxes);
-            fms.getRange(row, 9).setValue(d.wgt);
-            // Removed: fms.getRange(row, 14).setValue(d.user);  -- Do not populate automation doer here!
-            fms.getRange(row, 17).setValue("PENDING");
         }
     } catch(e) { console.error("FMS Add Error", e); }
 }
@@ -416,7 +407,8 @@ function handleDirectTransfer(b) {
   const oldLog = ss.getRange(row, 20).getValue();
   ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Direct Transfer by ${b.by} to ${b.to}]`);
   ss.getRange(row, 18).setValue(b.to);
-  syncFMS(b.taskId, { assignee: b.to });
+  // Add assigner: b.by to fix missing T column update
+  syncFMS(b.taskId, { assignee: b.to, assigner: b.by });
   return jsonResponse("success", "Transferred");
 }
 
