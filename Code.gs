@@ -104,6 +104,7 @@ function getAllData(username) {
 
   // 4. SYNC AUTOMATION
   let updates = [];
+  let fmsUpdates = []; // Collect FMS updates
   try {
       const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
       const brSheet = remoteSS.getSheetByName("Booking_Report");
@@ -127,17 +128,36 @@ function getAllData(username) {
                       r[14] = "Done"; r[15] = user; r[20] = netNo;
                       updates.push({ row: i+2, vals: [["Done", user]] });
                       updates.push({ row: i+2, col: 21, val: [[netNo]] });
+                      // FMS Update Logic: Automation Doer to FMS!N (Col 14)
+                      fmsUpdates.push({ awb: awb, autoDoer: user });
                   }
               });
           }
       }
   } catch(e) {}
 
+  // Apply Local Updates
   if(updates.length > 0) {
       updates.forEach(u => {
           if(u.col) sh.getRange(u.row, u.col, 1, 1).setValues(u.val);
           else sh.getRange(u.row, 15, 1, 2).setValues(u.vals);
       });
+  }
+
+  // Apply FMS Updates (if any)
+  if(fmsUpdates.length > 0) {
+      try {
+          const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
+          if(fms && fms.getLastRow() >= 7) {
+              const ids = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
+              fmsUpdates.forEach(u => {
+                  const idx = ids.indexOf(u.awb);
+                  if(idx > -1) {
+                      fms.getRange(idx+7, 14).setValue(u.autoDoer); // FMS!N = 14
+                  }
+              });
+          }
+      } catch(e) { console.error("FMS Sync Error", e); }
   }
 
   // 5. PROCESS LISTS
@@ -168,8 +188,7 @@ function getAllData(username) {
     if (item.holdStatus === "On Hold") {
         holdings.push(item);
     } else if (item.holdStatus === "RTO") {
-        // Skip from lists? Or show in history?
-        // Usually RTO is end state. Skip from active lists.
+        // Skip from active lists
     } else {
         const paperStatus = r[16];
         const autoStatus = r[14];
@@ -263,10 +282,7 @@ function handleUpdateUserPerms(b) {
 
     for(let i=1; i<d.length; i++) {
         if(d[i][0] === b.targetUser) {
-            // Check if trying to edit Owner/Admin? Admin shouldn't demote owner permissions but generally permissions are for staff.
-            // Admin cannot edit Owner.
             if(d[i][3] === "Owner" && requesterRole !== "Owner") return jsonResponse("error", "Cannot edit Owner");
-
             uSheet.getRange(i+1, 5).setValue(b.perms);
             return jsonResponse("success", "Permissions Updated");
         }
@@ -293,6 +309,7 @@ function handleManifestBatch(b) {
               const r = idx + 7;
               const net = b.network.toLowerCase();
               const doer = b.user;
+              // FMS!Y (25), FMS!AD (30), FMS!AI (35)
               if(net.includes("dhl")) { fms.getRange(r, 23).setValue("DONE"); fms.getRange(r, 25).setValue(doer); }
               else if(net.includes("aramex")) { fms.getRange(r, 28).setValue("DONE"); fms.getRange(r, 30).setValue(doer); }
               else if(net.includes("fedex")) { fms.getRange(r, 33).setValue("DONE"); fms.getRange(r, 35).setValue(doer); }
@@ -353,7 +370,7 @@ function addToFMS(d) {
             fms.getRange(row, 7).setValue(d.dest);
             fms.getRange(row, 8).setValue(d.boxes);
             fms.getRange(row, 9).setValue(d.wgt);
-            fms.getRange(row, 14).setValue(d.user);
+            // Removed: fms.getRange(row, 14).setValue(d.user);  -- Do not populate automation doer here!
             fms.getRange(row, 17).setValue("PENDING");
         }
     } catch(e) { console.error("FMS Add Error", e); }
@@ -373,9 +390,10 @@ function syncFMS(id, data) {
         const idx = ids.findIndex(x => String(x).replace(/'/g,"").trim().toLowerCase() === String(id).replace(/'/g,"").trim().toLowerCase());
         if(idx > -1) {
             const row = idx + 7;
-            if(data.assignee) fms.getRange(row, 19).setValue(data.assignee);
-            if(data.assigner) fms.getRange(row, 20).setValue(data.assigner);
+            if(data.assignee) fms.getRange(row, 19).setValue(data.assignee); // FMS!S
+            if(data.assigner) fms.getRange(row, 20).setValue(data.assigner); // FMS!T
             if(data.status) fms.getRange(row, 17).setValue(data.status);
+            if(data.autoDoer) fms.getRange(row, 14).setValue(data.autoDoer); // FMS!N
         }
     } catch(e){}
 }
