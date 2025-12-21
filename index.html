@@ -157,6 +157,7 @@
     .btn-primary { background-color: var(--brand-blue) !important; border-color: var(--brand-blue) !important; color: white !important; }
     .btn-danger { background-color: var(--brand-red) !important; border-color: var(--brand-red) !important; color: white !important; }
     .btn-warning { background-color: var(--brand-yellow) !important; border-color: var(--brand-yellow) !important; color: black !important; }
+    .btn-success { background-color: #198754 !important; border-color: #198754 !important; color: white !important; }
 
     /* Stacked List Item Style for Overview */
     .list-item-stacked { border-bottom: 1px solid #e2e8f0; padding: 1rem; transition: background 0.2s; }
@@ -771,7 +772,7 @@ function renderTaskHub(){
       document.getElementById('adminTaskView').style.display = 'none'; document.getElementById('staffTaskView').style.display = 'block';
       const wf=window.APP_DATA.workflow; const ca=document.getElementById('contAssign');
       if(!wf.toAssign.length) ca.innerHTML='<div class="col-12 text-center text-muted small py-4">No shipments automated by you</div>';
-      else { let opts=`<option value="">Transfer To...</option>`; if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`); ca.innerHTML = wf.toAssign.map(x => `<div class="col-12"><div class="panel-card p-3 border-info border-start border-4"><div class="fw-bold">${x.id}</div><div class="small text-muted mb-2">${x.client} • ${x.net}</div><div class="input-group input-group-sm"><select id="direct_tr_${x.id}" class="form-select">${opts}</select><button class="btn btn-outline-primary" onclick="actDirectTransfer('${x.id}')">Transfer</button></div></div></div>`).join(''); }
+      else { let opts=`<option value="">Transfer To...</option>`; if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`); ca.innerHTML = wf.toAssign.map(x => `<div class="col-12"><div class="panel-card p-3 border-info border-start border-4"><div class="fw-bold">${x.id}</div><div class="small text-muted mb-2">${x.client} • ${x.net}</div><div class="input-group input-group-sm"><select id="direct_tr_${x.id}" class="form-select">${opts}</select><button class="btn btn-primary" onclick="actDirectTransfer('${x.id}')">Transfer</button></div></div></div>`).join(''); }
       const ct=document.getElementById('contTodo');
       if(!wf.toDo.length) ct.innerHTML='<div class="col-12 text-center text-muted small py-4">No tasks assigned to you</div>';
       else { ct.innerHTML = wf.toDo.map(x => `<div class="col-12"><div class="panel-card p-3 border-warning border-start border-4"><div class="d-flex justify-content-between"><div><div class="fw-bold">${x.id}</div><div class="small text-muted">${x.subtitle}</div></div><button class="btn btn-sm btn-light" onclick="openReassign('${x.id}','Paperwork')"><i class="bi bi-arrow-left-right"></i></button></div><div class="small text-primary my-2">${x.details}</div><button class="btn btn-success w-100 btn-sm rounded-pill" onclick="actComplete('${x.id}')">Mark Complete</button></div></div>`).join(''); }
