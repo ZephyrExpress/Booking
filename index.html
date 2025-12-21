@@ -138,6 +138,21 @@
     /* Fix TomSelect Dropdown Z-Index inside Modals */
     .ts-dropdown, .ts-wrapper.single.input-active .ts-control { z-index: 10000 !important; }
 
+    /* Print Styles for Receivers Copy */
+    @media print {
+        @page { size: landscape; margin: 0; }
+        body * { visibility: hidden; }
+        #printArea, #printArea * { visibility: visible; }
+        #printArea { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; flex-wrap: wrap; align-content: flex-start; }
+        .rc-copy { width: 48%; height: 95vh; border: 2px solid #000; margin: 1%; padding: 20px; box-sizing: border-box; page-break-inside: avoid; display: flex; flex-direction: column; }
+        .rc-header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .rc-body { flex: 1; }
+        .rc-footer { border-top: 1px solid #ccc; padding-top: 10px; margin-top: auto; font-size: 0.8rem; text-align: center; }
+        .rc-row { display: flex; border-bottom: 1px solid #eee; padding: 8px 0; }
+        .rc-label { font-weight: bold; width: 120px; }
+        .rc-val { flex: 1; }
+    }
+
     /* Brand Button Overrides */
     .btn-primary { background-color: var(--brand-blue) !important; border-color: var(--brand-blue) !important; color: white !important; }
     .btn-danger { background-color: var(--brand-red) !important; border-color: var(--brand-red) !important; color: white !important; }
@@ -164,7 +179,6 @@
   <div class="login-overlay"></div>
   <div class="login-card">
     <div class="text-center mb-4"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="60" class="d-block mx-auto"></div>
-    <h4 class="text-center fw-bold mb-1">ZEPHYR EXPRESS</h4>
     <p class="text-center text-muted small mb-4">PORTAL LOGIN v5.2</p>
     <form onsubmit="event.preventDefault(); doLogin();">
       <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required>
@@ -190,6 +204,7 @@
       <a class="nav-item-custom" id="nav-holdings" onclick="switchTab('holdings')" style="display:none"><i class="bi bi-pause-circle me-2"></i> Holdings</a>
       <a class="nav-item-custom" id="nav-taskhub" onclick="switchTab('taskhub')" style="display:none"><i class="bi bi-check-circle me-2"></i> <span id="taskLabel">My Tasks</span></a>
       <a class="nav-item-custom" id="nav-manifest" onclick="switchTab('manifest')" style="display:none"><i class="bi bi-file-earmark-spreadsheet me-2"></i> Manifest</a>
+      <a class="nav-item-custom" id="nav-receivers" onclick="switchTab('receivers')" style="display:none"><i class="bi bi-printer me-2"></i> Receivers Copy</a>
       
       <div id="adminNavGroup" style="display:none;">
         <div class="nav-label">Administration</div>
@@ -236,6 +251,7 @@
                     <label class="fun-label">Airway Bill Number *</label>
                     <div class="input-group">
                         <input id="f_awb" class="form-control fun-input font-monospace" required placeholder="000-00000000">
+                        <button class="btn btn-warning" type="button" onclick="generateAwb()" title="Auto Generate"><i class="bi bi-magic"></i></button>
                         <button class="btn btn-dark" type="button" onclick="startScanner('f_awb')" title="Scan Barcode"><i class="bi bi-qr-code-scan"></i></button>
                     </div>
                  </div>
@@ -458,6 +474,22 @@
         </div>
       </div>
 
+      <!-- RECEIVERS COPY TAB -->
+      <div id="receivers-tab" class="tab-view" style="display:none;">
+         <div class="panel-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+               <h5 class="m-0 fw-bold text-primary"><i class="bi bi-printer me-2"></i>Receivers Copy Manager</h5>
+               <button class="btn btn-primary rounded-pill shadow-sm" onclick="printReceivers()"><i class="bi bi-printer-fill me-2"></i>Print Selected</button>
+            </div>
+            <div class="table-responsive border rounded" style="max-height: 600px; overflow-y: auto;">
+                <table class="table table-hover align-middle mb-0 small">
+                    <thead class="bg-light sticky-top"><tr><th style="width:40px"><input type="checkbox" onchange="toggleRc(this)"></th><th>AWB</th><th>Date</th><th>Client</th><th>Dest</th><th>Wgt</th><th>Status</th></tr></thead>
+                    <tbody id="rcList"></tbody>
+                </table>
+            </div>
+         </div>
+      </div>
+
       <!-- ADMIN TAB (UPDATED) -->
       <div id="admin-tab" class="tab-view" style="display:none;">
          <div class="row g-4">
@@ -598,6 +630,7 @@ window.doLogin=async function(){
      document.getElementById('loginSection').style.display='none';
      document.getElementById('appSection').style.display='flex';
      syncData(true);
+     if (curRole.toLowerCase() === 'staff') { switchTab('inbound'); }
   } else { showSpin(false); document.getElementById('loginError').textContent=r.message; document.getElementById('loginError').style.display='block'; }
 }
 window.logout=function(){location.reload();}
@@ -642,6 +675,9 @@ function updateNavVisibility() {
     show('nav-holdings', 'holdings');
     show('nav-taskhub', 'taskhub');
     show('nav-manifest', 'manifest');
+    show('nav-receivers', 'manifest'); // Using manifest permission for now or public? Usually staff needs it. Let's assume overview/inbound perm?
+    // Actually, let's make Receivers available to all authenticated if not restricted.
+    document.getElementById('nav-receivers').style.display = 'flex';
 
     // Admin/Owner check - Normalized to lowercase for safety
     if(role.includes('owner') || role.includes('admin')) {
@@ -712,6 +748,7 @@ function renderUI(){
   renderTaskHub();
   if(document.getElementById('manifest-tab').style.display==='block') renderManifest();
   if(document.getElementById('holdings-tab').style.display==='block') renderHoldings();
+  if(document.getElementById('receivers-tab').style.display==='block') renderReceivers();
   if(document.getElementById('admin-tab').style.display==='block') renderAdminPanel();
 }
 
@@ -757,23 +794,38 @@ window.renderHoldings = function() {
 
 window.searchHoldings = function() {
     const awb = document.getElementById('holdSearchAwb').value.toLowerCase().trim();
-    const net = document.getElementById('holdSearchNet').value.toLowerCase().trim();
+    const netSearch = document.getElementById('holdSearchNet').value.toLowerCase().trim();
     const resPanel = document.getElementById('holdResultPanel');
 
-    if(!awb && !net) { resPanel.style.display='none'; return; }
+    if(!awb && !netSearch) { resPanel.style.display='none'; return; }
 
     const all = [...window.APP_DATA.overview.auto, ...window.APP_DATA.overview.paper, ...window.APP_DATA.holdings, ...window.APP_DATA.manifest];
-    const match = all.find(x => (awb && x.id.toLowerCase().includes(awb)) || (net && x.netNo && x.netNo.toLowerCase().includes(net)));
+    const match = all.find(x => (awb && x.id.toLowerCase().includes(awb)) || (netSearch && x.netNo && x.netNo.toLowerCase().includes(netSearch)));
 
     if(match) {
         const isOnHold = match.holdStatus === "On Hold";
+        const isNA = (match.net === "NA" || match.net === "N/A" || match.dest === "NA" || match.dest === "N/A");
+
         let actionBtn = "";
 
         if(isOnHold) {
-            actionBtn = `
-                <button class="btn btn-success btn-lg w-100 mb-2" onclick="actClearHold('${match.id}')">Clear Hold</button>
-                <button class="btn btn-dark btn-lg w-100" onclick="actRTO('${match.id}')">Mark RTO</button>
-            `;
+            if (isNA) {
+                // Generate Options from Dropdowns
+                const nets = window.APP_DATA.static.dropdowns.networks.map(n => `<option value="${n}">${n}</option>`).join('');
+                const dests = window.APP_DATA.static.dropdowns.destinations.map(d => `<option value="${d}">${d}</option>`).join('');
+
+                actionBtn = `
+                    <div class="alert alert-warning small p-2 mb-2">Update Details to Clear Hold</div>
+                    <select id="fix_net" class="form-select mb-2"><option value="" disabled selected>Select Network</option>${nets}</select>
+                    <select id="fix_dest" class="form-select mb-2"><option value="" disabled selected>Select Destination</option>${dests}</select>
+                    <button class="btn btn-warning w-100 mb-2 fw-bold" onclick="submitCorrection('${match.id}')">Update & Save</button>
+                `;
+            } else {
+                actionBtn = `
+                    <button class="btn btn-success btn-lg w-100 mb-2" onclick="actClearHold('${match.id}')">Clear Hold</button>
+                    <button class="btn btn-dark btn-lg w-100" onclick="actRTO('${match.id}')">Mark RTO</button>
+                `;
+            }
         } else {
             actionBtn = `<button class="btn btn-danger btn-lg w-100" onclick="openHoldModal('${match.id}', '${match.netNo||'-'}')">Put On Hold</button>`;
         }
@@ -789,7 +841,8 @@ window.searchHoldings = function() {
                         <div class="row g-3 small text-muted">
                             <div class="col-auto"><strong class="text-dark">Net No:</strong> ${match.netNo||'-'}</div>
                             <div class="col-auto"><strong class="text-dark">Client:</strong> ${match.client}</div>
-                            <div class="col-auto"><strong class="text-dark">Network:</strong> ${match.net}</div>
+                            <div class="col-auto"><strong class="text-dark">Network:</strong> <span class="${(match.net==='NA'||match.net==='N/A')?'text-danger fw-bold':''}">${match.net}</span></div>
+                            <div class="col-auto"><strong class="text-dark">Dest:</strong> <span class="${(match.dest==='NA'||match.dest==='N/A')?'text-danger fw-bold':''}">${match.dest}</span></div>
                             <div class="col-auto"><strong class="text-dark">Weight:</strong> ${match.chgWgt}</div>
                         </div>
                     </div>
@@ -800,6 +853,14 @@ window.searchHoldings = function() {
             </div>
         `;
         resPanel.style.display='block';
+
+        // Pre-select current values if in correction mode
+        if(isNA && isOnHold) {
+             const fn = document.getElementById('fix_net');
+             const fd = document.getElementById('fix_dest');
+             if(fn && match.net !== "NA" && match.net !== "N/A") fn.value = match.net;
+             if(fd && match.dest !== "NA" && match.dest !== "N/A") fd.value = match.dest;
+        }
     } else {
         resPanel.innerHTML = `<div class="alert alert-secondary text-center py-4">No shipment found matching your search.</div>`;
         resPanel.style.display='block';
@@ -1093,6 +1154,112 @@ window.toggleAllMan = function(el) { document.querySelectorAll('.batch-check').f
 window.createBatch = async function() { const net = document.getElementById('man_net').value; if(!net) return alert("Select Network"); const chks = document.querySelectorAll('.batch-check:checked'); if(chks.length === 0) return alert("Select at least one item"); const ids = Array.from(chks).map(c => c.value); const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`; const manifestDate = new Date().toLocaleDateString(); if(!confirm(`Generate Manifest Batch "${batchId}" for ${ids.length} items?`)) return; window.APP_DATA.manifest.forEach(x => { if(ids.includes(x.id)) { x.batchNo = batchId; x.manifestDate = manifestDate; } }); exportBatch(batchId); renderManifest(); await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser }); toast("Batch Created & Exported"); };
 window.renderManifestHistory = function() { const con = document.getElementById('batchContainer'); const all = window.APP_DATA.manifest || []; const batches = {}; all.forEach(x => { if(x.batchNo) { if(!batches[x.batchNo]) batches[x.batchNo] = []; batches[x.batchNo].push(x); } }); const keys = Object.keys(batches).sort().reverse(); if(keys.length === 0) { con.innerHTML = ''; document.getElementById('batchEmptyState').style.display = 'block'; return; } document.getElementById('batchEmptyState').style.display = 'none'; con.innerHTML = keys.map(k => { const group = batches[k]; const net = group[0].net; const date = group[0].manifestDate || "N/A"; const count = group.length; const rows = group.map(g => `<tr><td>${g.id}</td><td>${g.dest}</td><td>${g.chgWgt}</td></tr>`).join(''); return `<div class="col-md-6 col-xl-4"><div class="panel-card h-100"><div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light"><div><div class="fw-bold text-primary">${k}</div><div class="small text-muted">${date} • ${net}</div></div><span class="badge bg-primary rounded-pill">${count} Items</span></div><div class="p-3"><div class="d-flex gap-2 mb-3"><button class="btn btn-sm btn-outline-primary flex-fill" onclick="exportBatch('${k}')"><i class="bi bi-download me-1"></i> Re-Export</button><button class="btn btn-sm btn-outline-secondary flex-fill" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_${k}">View Items</button></div><div class="collapse" id="collapse_${k}"><div class="table-responsive border rounded" style="max-height:200px; overflow-y:auto;"><table class="table table-sm table-striped mb-0 small"><thead><tr><th>AWB</th><th>Destination</th><th>Weight</th></tr></thead><tbody>${rows}</tbody></table></div></div></div></div></div>`; }).join(''); }
 window.exportBatch = function(batchId) { const items = window.APP_DATA.manifest.filter(x => x.batchNo === batchId); if(!items.length) return alert("Empty Batch"); const data = items.map(x => ({ "AWB": x.id, "Date": x.date, "Network": x.net, "Network No": x.netNo, "Client": x.client.slice(-4), "Destination": x.dest, "Pieces": x.boxes, "Weight": x.chgWgt, "Type": x.type, "Batch": x.batchNo })); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), batchId); XLSX.writeFile(wb, `Manifest_${batchId}.xlsx`); };
+
+// NEW FUNCTIONS
+window.generateAwb = async function() {
+    showSpin(true);
+    const r = await callApi({action:"generateAwb"});
+    showSpin(false);
+    if(r.result === "success") { document.getElementById('f_awb').value = r.awb; }
+    else alert(r.message);
+}
+
+window.submitCorrection = async function(awb) {
+    const net = document.getElementById('fix_net').value;
+    const dest = document.getElementById('fix_dest').value;
+    if(!net || !dest || net==="NA" || dest==="NA") return alert("Please select valid Network and Destination");
+    showSpin(true);
+    const r = await callApi({action:"updateShipmentDetails", awb: awb, network: net, destination: dest});
+    if(r.result === "success") {
+        await syncData(false);
+        // Auto clear hold? User said "can only be cleared if... in the process of clearing it".
+        // Let's assume after update, user still needs to click Clear Hold, OR we do it now.
+        // User said "can only be cleared if ... selected ... in the process".
+        // I'll re-render search, now they can see Clear Hold button because NA check passes.
+        toast("Details Updated. You can now Clear Hold.");
+        searchHoldings(); // Re-render to show Clear button
+    } else { alert(r.message); }
+    showSpin(false);
+}
+
+window.renderReceivers = async function() {
+    const t = document.getElementById('rcList');
+    t.innerHTML = '<tr><td colspan="7" class="text-center p-4">Loading...</td></tr>';
+    const r = await fetchGet('getRecent');
+    if(r.result === "success" && r.shipments) {
+        window.APP_DATA.recent = r.shipments; // Cache for printing
+        t.innerHTML = r.shipments.map(x => `
+            <tr>
+                <td><input type="checkbox" class="form-check-input rc-chk" value="${x.id}"></td>
+                <td class="font-monospace fw-bold">${x.id}</td>
+                <td>${new Date(x.date).toLocaleDateString()}</td>
+                <td>${(x.client||'').slice(-4)}</td>
+                <td>${x.dest}</td>
+                <td>${x.wgt}</td>
+                <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${x.status}</span></td>
+            </tr>
+        `).join('');
+    } else {
+        t.innerHTML = '<tr><td colspan="7" class="text-center p-4">No Data</td></tr>';
+    }
+}
+
+window.toggleRc = function(el) { document.querySelectorAll('.rc-chk').forEach(c => c.checked = el.checked); }
+
+window.printReceivers = function() {
+    const chks = document.querySelectorAll('.rc-chk:checked');
+    if(chks.length === 0) return alert("Select shipments to print");
+
+    const ids = Array.from(chks).map(c => c.value);
+    const items = window.APP_DATA.recent.filter(x => ids.includes(x.id));
+
+    const area = document.getElementById('printArea');
+    area.innerHTML = ''; // Clear previous
+    area.style.display = 'flex';
+
+    items.forEach(x => {
+        // Create 2 horizontal copies per item per page? No, user said "2 recivers copy horizontaly in 1 page".
+        // Assuming 1 page = 2 copies of the SAME shipment? Or 2 different shipments?
+        // Usually Receiver Copy implies 1 copy for receiver.
+        // "2 copies horizontally" usually means "Copy 1 (Left) | Copy 2 (Right)" on same landscape page for the SAME shipment.
+        // Let's implement that.
+
+        const tmpl = (title) => `
+            <div class="rc-copy">
+                <div class="rc-header">
+                    <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="40">
+                    <div class="text-end">
+                        <h5 class="fw-bold m-0">RECEIVER COPY</h5>
+                        <div class="small">${title}</div>
+                    </div>
+                </div>
+                <div class="rc-body">
+                    <div class="rc-row"><div class="rc-label">AWB NO:</div><div class="rc-val font-monospace fw-bold fs-4">${x.id}</div></div>
+                    <div class="rc-row"><div class="rc-label">DATE:</div><div class="rc-val">${new Date(x.date).toLocaleDateString()}</div></div>
+                    <div class="rc-row"><div class="rc-label">DESTINATION:</div><div class="rc-val fw-bold">${x.dest}</div></div>
+                    <div class="rc-row"><div class="rc-label">NETWORK:</div><div class="rc-val">${x.net}</div></div>
+                    <div class="rc-row"><div class="rc-label">PIECES:</div><div class="rc-val">${x.boxes}</div></div>
+                    <div class="rc-row"><div class="rc-label">WEIGHT:</div><div class="rc-val fw-bold">${x.wgt} KG</div></div>
+                    <div class="rc-row"><div class="rc-label">CONTENTS:</div><div class="rc-val">${x.type}</div></div>
+                </div>
+                <div class="rc-footer">
+                    Authorized Signatory<br>Zephyr Express
+                </div>
+            </div>
+        `;
+
+        // Wrap in a page container if needed, or rely on flex wrap
+        const page = document.createElement('div');
+        page.style.cssText = "width: 100%; height: 100vh; display: flex; page-break-after: always;";
+        page.innerHTML = tmpl("CONSIGNEE COPY") + tmpl("POD COPY"); // 2 copies side by side
+        area.appendChild(page);
+    });
+
+    window.print();
+
+    // Cleanup after print dialog closes (or timeout)
+    setTimeout(() => { area.style.display = 'none'; area.innerHTML = ''; }, 1000);
+}
 </script>
 </body>
 </html>
