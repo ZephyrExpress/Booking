@@ -483,7 +483,7 @@
             </div>
             <div class="table-responsive border rounded" style="max-height: 600px; overflow-y: auto;">
                 <table class="table table-hover align-middle mb-0 small">
-                    <thead class="bg-light sticky-top"><tr><th style="width:40px"><input type="checkbox" onchange="toggleRc(this)"></th><th>AWB</th><th>Date</th><th>Client</th><th>Dest</th><th>Wgt</th><th>Status</th></tr></thead>
+                    <thead class="bg-light sticky-top"><tr><th style="width:40px"><input type="checkbox" onchange="toggleRc(this)"></th><th>AWB</th><th>Date</th><th>Client</th><th>Dest</th><th>Wgt</th><th>Status</th><th class="text-end">Action</th></tr></thead>
                     <tbody id="rcList"></tbody>
                 </table>
             </div>
@@ -574,6 +574,15 @@
          <div class="mb-4"><label class="form-label small fw-bold text-muted">Remarks *</label><textarea id="actionModalRem" class="form-control" rows="3" required></textarea></div>
          <button class="btn btn-dark w-100 btn-lg fw-bold" onclick="submitActionFromModal()">Confirm Action</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="viewRcModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold" id="vRc_title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body p-4" id="vRc_content"></div>
     </div>
   </div>
 </div>
@@ -1094,7 +1103,7 @@ window.switchTab=function(t){
 }
 function initForms(){
    const dd=window.APP_DATA.static.dropdowns;
-   if(dd) { fillSel('f_net', dd.networks); window.tomInstances.client = new TomSelect("#f_client",{create:false, dropdownParent:'body', placeholder:"Select Client..."}); window.tomInstances.dest = new TomSelect("#f_dest",{create:false, dropdownParent:'body', placeholder:"Select Destination..."}); updDd(); }
+   if(dd) { fillSel('f_net', dd.networks); window.tomInstances.client = new TomSelect("#f_client",{create:false, maxOptions: null, dropdownParent:'body', placeholder:"Select Client..."}); window.tomInstances.dest = new TomSelect("#f_dest",{create:false, maxOptions: null, dropdownParent:'body', placeholder:"Select Destination..."}); updDd(); }
 }
 function updDd(){
    if(!window.APP_DATA.static) return;
@@ -1184,7 +1193,7 @@ window.submitCorrection = async function(awb) {
 
 window.renderReceivers = async function() {
     const t = document.getElementById('rcList');
-    t.innerHTML = '<tr><td colspan="7" class="text-center p-4">Loading...</td></tr>';
+    t.innerHTML = '<tr><td colspan="8" class="text-center p-4">Loading...</td></tr>';
     const r = await fetchGet('getRecent');
     if(r.result === "success" && r.shipments) {
         window.APP_DATA.recent = r.shipments; // Cache for printing
@@ -1197,33 +1206,35 @@ window.renderReceivers = async function() {
                 <td>${x.dest}</td>
                 <td>${x.wgt}</td>
                 <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${x.status}</span></td>
+                <td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="viewRc('${x.id}')">View</button></td>
             </tr>
         `).join('');
     } else {
-        t.innerHTML = '<tr><td colspan="7" class="text-center p-4">No Data</td></tr>';
+        t.innerHTML = '<tr><td colspan="8" class="text-center p-4">No Data</td></tr>';
     }
 }
 
 window.toggleRc = function(el) { document.querySelectorAll('.rc-chk').forEach(c => c.checked = el.checked); }
 
-window.printReceivers = function() {
-    const chks = document.querySelectorAll('.rc-chk:checked');
-    if(chks.length === 0) return alert("Select shipments to print");
+window.printReceivers = function(singleId=null) {
+    const items = [];
+    if(singleId) {
+        const item = window.APP_DATA.recent.find(x => x.id === singleId);
+        if(item) items.push(item);
+    } else {
+        const chks = document.querySelectorAll('.rc-chk:checked');
+        if(chks.length === 0) return alert("Select shipments to print");
+        const ids = Array.from(chks).map(c => c.value);
+        items.push(...window.APP_DATA.recent.filter(x => ids.includes(x.id)));
+    }
 
-    const ids = Array.from(chks).map(c => c.value);
-    const items = window.APP_DATA.recent.filter(x => ids.includes(x.id));
+    if(items.length===0) return;
 
     const area = document.getElementById('printArea');
     area.innerHTML = ''; // Clear previous
     area.style.display = 'flex';
 
     items.forEach(x => {
-        // Create 2 horizontal copies per item per page? No, user said "2 recivers copy horizontaly in 1 page".
-        // Assuming 1 page = 2 copies of the SAME shipment? Or 2 different shipments?
-        // Usually Receiver Copy implies 1 copy for receiver.
-        // "2 copies horizontally" usually means "Copy 1 (Left) | Copy 2 (Right)" on same landscape page for the SAME shipment.
-        // Let's implement that.
-
         const tmpl = (title) => `
             <div class="rc-copy">
                 <div class="rc-header">
@@ -1248,17 +1259,34 @@ window.printReceivers = function() {
             </div>
         `;
 
-        // Wrap in a page container if needed, or rely on flex wrap
         const page = document.createElement('div');
         page.style.cssText = "width: 100%; height: 100vh; display: flex; page-break-after: always;";
-        page.innerHTML = tmpl("CONSIGNEE COPY") + tmpl("POD COPY"); // 2 copies side by side
+        page.innerHTML = tmpl("CONSIGNEE COPY") + tmpl("POD COPY");
         area.appendChild(page);
     });
 
     window.print();
-
-    // Cleanup after print dialog closes (or timeout)
     setTimeout(() => { area.style.display = 'none'; area.innerHTML = ''; }, 1000);
+}
+
+window.viewRc = function(id) {
+    const item = window.APP_DATA.recent.find(x => x.id === id);
+    if(!item) return;
+
+    document.getElementById('vRc_title').textContent = `Shipment Details - ${id}`;
+    const c = document.getElementById('vRc_content');
+    c.innerHTML = `
+        <div class="row g-3 mb-3">
+            <div class="col-6"><small class="text-muted">Status</small><div class="fw-bold">${item.status}</div></div>
+            <div class="col-6"><small class="text-muted">Date</small><div>${new Date(item.date).toLocaleDateString()}</div></div>
+            <div class="col-6"><small class="text-muted">Client</small><div>${item.client}</div></div>
+            <div class="col-6"><small class="text-muted">Network</small><div>${item.net} (${item.netNo||'-'})</div></div>
+            <div class="col-6"><small class="text-muted">Destination</small><div>${item.dest}</div></div>
+            <div class="col-6"><small class="text-muted">Weight</small><div>${item.wgt} Kg</div></div>
+        </div>
+        <div class="d-grid"><button class="btn btn-primary" onclick="printReceivers('${id}')"><i class="bi bi-printer me-2"></i>Print Receiver Copy</button></div>
+    `;
+    new bootstrap.Modal(document.getElementById('viewRcModal')).show();
 }
 </script>
 </body>
