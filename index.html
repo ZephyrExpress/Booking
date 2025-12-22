@@ -812,8 +812,13 @@ window.searchHoldings = function() {
 
     if(!awb && !netSearch) { resPanel.style.display='none'; return; }
 
-    const all = [...window.APP_DATA.overview.auto, ...window.APP_DATA.overview.paper, ...window.APP_DATA.holdings, ...window.APP_DATA.manifest];
-    const match = all.find(x => (awb && x.id.toLowerCase().includes(awb)) || (netSearch && x.netNo && x.netNo.toLowerCase().includes(netSearch)));
+    let match = null;
+    const sources = [window.APP_DATA.overview.auto, window.APP_DATA.overview.paper, window.APP_DATA.holdings, window.APP_DATA.manifest];
+    for(const source of sources) {
+        if(!source) continue;
+        match = source.find(x => (awb && x.id.toLowerCase().includes(awb)) || (netSearch && x.netNo && x.netNo.toLowerCase().includes(netSearch)));
+        if(match) break;
+    }
 
     if(match) {
         const isOnHold = match.holdStatus === "On Hold";
