@@ -442,8 +442,11 @@ function addToFMS(d) {
 }
 
 function findRow(sheet, id) {
-  const ids = sheet.getRange(2, 1, sheet.getLastRow()-1, 1).getValues().flat();
-  const idx = ids.findIndex(x => String(x).replace(/'/g,"").trim().toLowerCase() === String(id).replace(/'/g,"").trim().toLowerCase());
+  const lr = sheet.getLastRow();
+  if (lr < 2) return -1;
+  const ids = sheet.getRange(2, 1, lr-1, 1).getValues().flat();
+  const target = String(id).replace(/'/g,"").trim().toLowerCase();
+  const idx = ids.findIndex(x => String(x).replace(/'/g,"").trim().toLowerCase() === target);
   return idx > -1 ? idx + 2 : -1;
 }
 
