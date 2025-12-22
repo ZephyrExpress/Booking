@@ -480,7 +480,10 @@
          <div class="panel-card p-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
                <h5 class="m-0 fw-bold text-primary"><i class="bi bi-printer me-2"></i>Receivers Copy Manager</h5>
-               <button class="btn btn-primary rounded-pill shadow-sm" onclick="printReceivers()"><i class="bi bi-printer-fill me-2"></i>Print Selected</button>
+               <div class="d-flex gap-2">
+                   <button class="btn btn-outline-secondary rounded-pill shadow-sm" onclick="renderReceivers()"><i class="bi bi-arrow-clockwise me-2"></i>Refresh List</button>
+                   <button class="btn btn-primary rounded-pill shadow-sm" onclick="printReceivers()"><i class="bi bi-printer-fill me-2"></i>Print Selected</button>
+               </div>
             </div>
             <div class="table-responsive border rounded" style="max-height: 600px; overflow-y: auto;">
                 <table class="table table-hover align-middle mb-0 small">
@@ -767,7 +770,7 @@ function renderTaskHub(){
    if(role === 'admin' || role === 'owner') {
       document.getElementById('adminTaskView').style.display = 'block'; document.getElementById('staffTaskView').style.display = 'none';
       const pt=document.getElementById('poolBody'); let opts=`<option value="">Select Staff...</option>`; if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`);
-      pt.innerHTML = window.APP_DATA.adminPool.map(x => { let assignVal = x.assignee || ""; return `<tr><td class="fw-bold font-monospace">${x.id}</td><td>${x.netNo||'-'}</td><td>${x.net}</td><td>${x.chgWgt}</td><td><small class="text-muted">${x.details}</small></td><td>${x.client.slice(-4)}</td><td class="text-center">${assignVal}</td><td><div class="input-group input-group-sm" style="width:160px"><select id="adm_as_${x.id}" class="form-select">${opts}</select><button class="btn btn-outline-secondary" onclick="actAssign('${x.id}','adm_as_')"><i class="bi bi-check"></i></button></div></td></tr>`; }).join('');
+      pt.innerHTML = window.APP_DATA.adminPool.map(x => { let assignVal = x.assignee || ""; return `<tr><td class="fw-bold font-monospace">${x.id}</td><td>${x.netNo||'-'}</td><td>${x.net}</td><td>${x.chgWgt}</td><td><small class="text-muted">${x.details}</small></td><td>${x.client.slice(-4)}</td><td class="text-center">${assignVal}</td><td><div class="d-flex gap-2 align-items-center"><select id="adm_as_${x.id}" class="form-select form-select-sm" style="width:120px">${opts}</select><button class="btn btn-primary btn-sm fw-bold" onclick="actAssign('${x.id}','adm_as_')">Assign</button></div></td></tr>`; }).join('');
    } else {
       document.getElementById('adminTaskView').style.display = 'none'; document.getElementById('staffTaskView').style.display = 'block';
       const wf=window.APP_DATA.workflow; const ca=document.getElementById('contAssign');
@@ -1096,7 +1099,12 @@ window.switchTab=function(t){
    document.getElementById('nav-'+t).classList.add('active');
    document.querySelectorAll('.tab-view').forEach(e=>e.style.display='none');
    document.getElementById(t+'-tab').style.display='block';
-   document.getElementById('pageTitle').textContent = t==='taskhub' ? (curRole==='admin'?'Task Manager':'My Tasks') : (t.charAt(0).toUpperCase() + t.slice(1));
+   let title = t.charAt(0).toUpperCase() + t.slice(1);
+   if(t==='taskhub') {
+       const r = curRole.toLowerCase();
+       title = (r==='admin' || r==='owner') ? 'Task Manager' : 'My Tasks';
+   }
+   document.getElementById('pageTitle').textContent = title;
    if(document.getElementById('sidebar').classList.contains('show')) toggleSidebar();
    if(t==='manifest') renderManifest();
    if(t==='admin') renderAdminPanel();
@@ -1267,7 +1275,13 @@ window.printReceivers = function(singleId=null) {
     });
 
     window.print();
-    setTimeout(() => { area.style.display = 'none'; area.innerHTML = ''; }, 1000);
+
+    // Use onafterprint if available, else fallback timeout
+    if ("onafterprint" in window) {
+        window.onafterprint = function() { area.style.display = 'none'; area.innerHTML = ''; window.onafterprint = null; };
+    } else {
+        setTimeout(() => { area.style.display = 'none'; area.innerHTML = ''; }, 5000);
+    }
 }
 
 window.viewRc = function(id) {
