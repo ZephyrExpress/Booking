@@ -371,18 +371,19 @@ function handleSubmit(body){
   // NA Logic Check
   let holdStatus = "Pending";
   let holdReason = "";
-  if(String(body.network).toUpperCase() === "NA" || String(body.destination).toUpperCase() === "NA") {
+  if(String(body.network).toUpperCase() === "NA" || String(body.destination).toUpperCase() === "NA" || String(body.network).toUpperCase() === "N/A" || String(body.destination).toUpperCase() === "N/A") {
       holdStatus = "On Hold";
-      holdReason = "Invalid Data"; // Or a specific reason for NA
+      holdReason = "Invalid Data";
   }
 
+  // FIX: removed extra "" before holdStatus. Correct Index: 27=holdStatus, 28=holdReason
   sh.appendRow([
       "'"+body.awb, body.date, body.type, body.network, body.client, body.destination,
       body.totalBoxes, body.extraCharges, body.username, new Date(),
       tA.toFixed(2), tV.toFixed(2), tC.toFixed(2), body.extraRemarks,
       "Pending", "", "", "", "", "", "",
       body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
-      "", holdStatus, holdReason, ""
+      holdStatus, holdReason, ""
   ]);
 
   if(br.length) bx.getRange(bx.getLastRow()+1,1,br.length,8).setValues(br);
