@@ -282,7 +282,7 @@ function handleManageHold(b) {
         ss.getRange(row, 28, 1, 3).setValues([["RTO", "RTO", b.remarks || "Returned to Origin"]]);
         const oldLog = ss.getRange(row, 20).getValue();
         ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Marked RTO: ${b.remarks}]`);
-        syncFMS(b.awb, { status: "RTO" });
+        // syncFMS(b.awb, { status: "RTO" }); // REMOVED Q sync
     }
     return jsonResponse("success", "Updated");
 }
@@ -343,9 +343,11 @@ function handleManifestBatch(b) {
               const r = idx + 7;
               const net = b.network.toLowerCase();
               const doer = b.user;
-              if(net.includes("dhl")) { fms.getRange(r, 23).setValue("DONE"); fms.getRange(r, 25).setValue(doer); }
-              else if(net.includes("aramex")) { fms.getRange(r, 28).setValue("DONE"); fms.getRange(r, 30).setValue(doer); }
-              else if(net.includes("fedex")) { fms.getRange(r, 33).setValue("DONE"); fms.getRange(r, 35).setValue(doer); }
+              // Updates FMS! Y (25), AD (30), AI (35)
+              if(net.includes("dhl")) { fms.getRange(r, 25).setValue(doer); }
+              else if(net.includes("aramex")) { fms.getRange(r, 30).setValue(doer); }
+              else if(net.includes("fedex")) { fms.getRange(r, 35).setValue(doer); }
+              // REMOVED 'DONE' status updates to W, AB, AG etc.
           }
       }
   });
@@ -376,14 +378,14 @@ function handleSubmit(body){
       holdReason = "Invalid Data";
   }
 
-  // FIX: removed extra "" before holdStatus. Correct Index: 27=holdStatus, 28=holdReason
+  // Adjusted array length to align columns correctly
   sh.appendRow([
       "'"+body.awb, body.date, body.type, body.network, body.client, body.destination,
       body.totalBoxes, body.extraCharges, body.username, new Date(),
       tA.toFixed(2), tV.toFixed(2), tC.toFixed(2), body.extraRemarks,
       "Pending", "", "", "", "", "", "",
       body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
-      holdStatus, holdReason, ""
+      holdStatus, holdReason, "" // Correct alignment (27, 28, 29 for AB, AC, AD)
   ]);
 
   if(br.length) bx.getRange(bx.getLastRow()+1,1,br.length,8).setValues(br);
@@ -403,6 +405,7 @@ function addToFMS(d) {
         if(fms) {
             const lr = fms.getLastRow();
             const row = lr + 1;
+            // Only populate AWB (Col 2). Skip A:I, N, Q.
             fms.getRange(row, 2).setValue("'"+d.awb);
         }
     } catch(e) { console.error("FMS Add Error", e); }
@@ -422,10 +425,10 @@ function syncFMS(id, data) {
         const idx = ids.findIndex(x => String(x).replace(/'/g,"").trim().toLowerCase() === String(id).replace(/'/g,"").trim().toLowerCase());
         if(idx > -1) {
             const row = idx + 7;
-            if(data.assignee) fms.getRange(row, 19).setValue(data.assignee);
-            if(data.assigner) fms.getRange(row, 20).setValue(data.assigner);
-            if(data.status) fms.getRange(row, 17).setValue(data.status);
-            if(data.autoDoer) fms.getRange(row, 14).setValue(data.autoDoer);
+            if(data.assignee) fms.getRange(row, 19).setValue(data.assignee); // S
+            if(data.assigner) fms.getRange(row, 20).setValue(data.assigner); // T
+            if(data.autoDoer) fms.getRange(row, 14).setValue(data.autoDoer); // N
+            // REMOVED Q update
         }
     } catch(e){}
 }
@@ -459,7 +462,7 @@ function handlePaperDone(b) {
   const holdStatus = ss.getRange(row, 28).getValue();
   if(holdStatus === "On Hold") return jsonResponse("error", "Shipment is On Hold");
   ss.getRange(row, 17).setValue("Completed");
-  syncFMS(b.id, { status: "COMPLETED" });
+  // REMOVED syncFMS status Q update
   return jsonResponse("success", "Completed");
 }
 
