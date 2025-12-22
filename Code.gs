@@ -232,6 +232,36 @@ function getRecentShipments() {
     return jsonResponse("success", "OK", { shipments: list });
 }
 
+function getShipmentDetails(id) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sh = ss.getSheetByName("Shipments");
+    const idx = findRow(sh, id);
+    if(idx === -1) return jsonResponse("error", "Not Found");
+    const r = sh.getRange(idx, 1, 1, 30).getDisplayValues()[0];
+    const ship = {
+      id: r[0], date: r[1], type: r[2], net: r[3], client: r[4], dest: r[5],
+      boxes: r[6], extra: r[7], user: r[8],
+      actWgt: r[10], volWgt: r[11], chgWgt: r[12], rem: r[13],
+      netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23]
+    };
+
+    // Get Boxes
+    let boxList = [];
+    try {
+        const bx = ss.getSheetByName("BoxDetails");
+        if(bx && bx.getLastRow() > 1) {
+            const allBx = bx.getRange(2, 1, bx.getLastRow()-1, 8).getDisplayValues();
+            // Filter by AWB (Col 1). Note: AWB usually stored as '123 so check substring or loose match
+            const target = String(id).replace(/'/g,"").trim().toLowerCase();
+            boxList = allBx.filter(b => String(b[0]).replace(/'/g,"").trim().toLowerCase() === target).map(b => ({
+                no: b[1], wgt: b[2], l: b[3], b: b[4], h: b[5], vol: b[6], chg: b[7]
+            }));
+        }
+    } catch(e) { console.error(e); }
+
+    return jsonResponse("success", "OK", { shipment: ship, boxes: boxList });
+}
+
 function handleGenerateAwb() {
     const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
     const data = ss.getRange(2, 1, ss.getLastRow()-1, 1).getValues().flat();
