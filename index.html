@@ -9,8 +9,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js" defer></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer></script>
 
   <style>
     :root {
@@ -137,21 +137,6 @@
 
     /* Fix TomSelect Dropdown Z-Index inside Modals */
     .ts-dropdown, .ts-wrapper.single.input-active .ts-control { z-index: 10000 !important; }
-
-    /* Print Styles for Receivers Copy */
-    @media print {
-        @page { size: landscape; margin: 0; }
-        body * { visibility: hidden; }
-        #printArea, #printArea * { visibility: visible; }
-        #printArea { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; flex-wrap: wrap; align-content: flex-start; }
-        .rc-copy { width: 48%; height: 95vh; border: 2px solid #000; margin: 1%; padding: 20px; box-sizing: border-box; page-break-inside: avoid; display: flex; flex-direction: column; }
-        .rc-header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .rc-body { flex: 1; }
-        .rc-footer { border-top: 1px solid #ccc; padding-top: 10px; margin-top: auto; font-size: 0.8rem; text-align: center; }
-        .rc-row { display: flex; border-bottom: 1px solid #eee; padding: 8px 0; }
-        .rc-label { font-weight: bold; width: 120px; }
-        .rc-val { flex: 1; }
-    }
 
     /* Brand Button Overrides */
     .btn-primary { background-color: var(--brand-blue) !important; border-color: var(--brand-blue) !important; color: white !important; }
@@ -482,7 +467,7 @@
                <h5 class="m-0 fw-bold text-primary"><i class="bi bi-printer me-2"></i>Receivers Copy Manager</h5>
                <div class="d-flex gap-2">
                    <button class="btn btn-outline-secondary rounded-pill shadow-sm" onclick="renderReceivers()"><i class="bi bi-arrow-clockwise me-2"></i>Refresh List</button>
-                   <button class="btn btn-primary rounded-pill shadow-sm" onclick="printReceivers()"><i class="bi bi-printer-fill me-2"></i>Print Selected</button>
+                   <button class="btn btn-success rounded-pill shadow-sm" onclick="exportReceiverExcel()"><i class="bi bi-file-earmark-excel me-2"></i>Export Excel</button>
                </div>
             </div>
             <div class="table-responsive border rounded" style="max-height: 600px; overflow-y: auto;">
@@ -602,8 +587,8 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js" defer></script>
 
 <script>
 const API_URL="https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
@@ -691,6 +676,13 @@ function updateNavVisibility() {
     show('nav-receivers', 'manifest'); // Using manifest permission for now or public? Usually staff needs it. Let's assume overview/inbound perm?
     // Actually, let's make Receivers available to all authenticated if not restricted.
     document.getElementById('nav-receivers').style.display = 'flex';
+
+    // Sidebar Title Logic
+    const taskLabel = document.getElementById('taskLabel');
+    if (taskLabel) {
+        if (role.includes('admin') || role.includes('owner')) taskLabel.textContent = "Task Manager";
+        else taskLabel.textContent = "My Tasks";
+    }
 
     // Admin/Owner check - Normalized to lowercase for safety
     if(role.includes('owner') || role.includes('admin')) {
@@ -1109,6 +1101,7 @@ window.switchTab=function(t){
    if(t==='manifest') renderManifest();
    if(t==='admin') renderAdminPanel();
    if(t==='holdings') renderHoldings();
+   if(t==='receivers') renderReceivers();
 }
 function initForms(){
    const dd=window.APP_DATA.static.dropdowns;
@@ -1225,63 +1218,64 @@ window.renderReceivers = async function() {
 
 window.toggleRc = function(el) { document.querySelectorAll('.rc-chk').forEach(c => c.checked = el.checked); }
 
-window.printReceivers = function(singleId=null) {
+window.exportReceiverExcel = function(singleId=null) {
     const items = [];
     if(singleId) {
         const item = window.APP_DATA.recent.find(x => x.id === singleId);
         if(item) items.push(item);
     } else {
         const chks = document.querySelectorAll('.rc-chk:checked');
-        if(chks.length === 0) return alert("Select shipments to print");
+        if(chks.length === 0) return alert("Select shipments to export");
         const ids = Array.from(chks).map(c => c.value);
         items.push(...window.APP_DATA.recent.filter(x => ids.includes(x.id)));
     }
-
     if(items.length===0) return;
 
-    const area = document.getElementById('printArea');
-    area.innerHTML = ''; // Clear previous
-    area.style.display = 'flex';
+    const wb = XLSX.utils.book_new();
+    const ws_data = [];
 
     items.forEach(x => {
-        const tmpl = (title) => `
-            <div class="rc-copy">
-                <div class="rc-header">
-                    <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="40">
-                    <div class="text-end">
-                        <h5 class="fw-bold m-0">RECEIVER COPY</h5>
-                        <div class="small">${title}</div>
-                    </div>
-                </div>
-                <div class="rc-body">
-                    <div class="rc-row"><div class="rc-label">AWB NO:</div><div class="rc-val font-monospace fw-bold fs-4">${x.id}</div></div>
-                    <div class="rc-row"><div class="rc-label">DATE:</div><div class="rc-val">${new Date(x.date).toLocaleDateString()}</div></div>
-                    <div class="rc-row"><div class="rc-label">DESTINATION:</div><div class="rc-val fw-bold">${x.dest}</div></div>
-                    <div class="rc-row"><div class="rc-label">NETWORK:</div><div class="rc-val">${x.net}</div></div>
-                    <div class="rc-row"><div class="rc-label">PIECES:</div><div class="rc-val">${x.boxes}</div></div>
-                    <div class="rc-row"><div class="rc-label">WEIGHT:</div><div class="rc-val fw-bold">${x.wgt} KG</div></div>
-                    <div class="rc-row"><div class="rc-label">CONTENTS:</div><div class="rc-val">${x.type}</div></div>
-                </div>
-                <div class="rc-footer">
-                    Authorized Signatory<br>Zephyr Express
-                </div>
-            </div>
-        `;
+        // Build "Bill-like" structure for one item (2 horizontal copies)
+        // Copy 1 (Cols A-C) | Separator (Col D) | Copy 2 (Cols E-G)
 
-        const page = document.createElement('div');
-        page.style.cssText = "width: 100%; height: 100vh; display: flex; page-break-after: always;";
-        page.innerHTML = tmpl("CONSIGNEE COPY") + tmpl("POD COPY");
-        area.appendChild(page);
+        const date = new Date(x.date).toLocaleDateString();
+        const client = x.client;
+
+        // Header
+        ws_data.push(["ZEPHYR EXPRESS", "", "", "", "ZEPHYR EXPRESS", "", ""]);
+        ws_data.push(["RECEIVER COPY (CONSIGNEE)", "", "", "", "RECEIVER COPY (POD)", "", ""]);
+        ws_data.push(["", "", "", "", "", "", ""]); // Spacer
+
+        // Details
+        ws_data.push(["AWB NO:", x.id, "", "", "AWB NO:", x.id, ""]);
+        ws_data.push(["DATE:", date, "", "", "DATE:", date, ""]);
+        ws_data.push(["DESTINATION:", x.dest, "", "", "DESTINATION:", x.dest, ""]);
+        ws_data.push(["NETWORK:", x.net, "", "", "NETWORK:", x.net, ""]);
+        ws_data.push(["CLIENT:", client, "", "", "CLIENT:", client, ""]);
+        ws_data.push(["PIECES:", x.boxes, "", "", "PIECES:", x.boxes, ""]);
+        ws_data.push(["WEIGHT:", x.wgt + " KG", "", "", "WEIGHT:", x.wgt + " KG", ""]);
+        ws_data.push(["CONTENTS:", x.type, "", "", "CONTENTS:", x.type, ""]);
+
+        // Footer
+        ws_data.push(["", "", "", "", "", "", ""]);
+        ws_data.push(["Authorized Signatory", "", "", "", "Authorized Signatory", "", ""]);
+        ws_data.push(["Zephyr Express", "", "", "", "Zephyr Express", "", ""]);
+
+        // Page Break / Separator
+        ws_data.push(["", "", "", "", "", "", ""]);
+        ws_data.push(["-------------------", "-------------------", "-------------------", "", "-------------------", "-------------------", "-------------------"]);
+        ws_data.push(["", "", "", "", "", "", ""]);
     });
 
-    window.print();
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
 
-    // Use onafterprint if available, else fallback timeout
-    if ("onafterprint" in window) {
-        window.onafterprint = function() { area.style.display = 'none'; area.innerHTML = ''; window.onafterprint = null; };
-    } else {
-        setTimeout(() => { area.style.display = 'none'; area.innerHTML = ''; }, 5000);
-    }
+    // Merge Header Cells (A1:C1, E1:G1, etc for each block) - Complex logic for variable rows.
+    // Instead, we just rely on column width.
+    const w = {wch:20};
+    ws['!cols'] = [w, w, w, {wch:5}, w, w, w]; // Spacer D
+
+    XLSX.utils.book_append_sheet(wb, ws, "Receivers");
+    XLSX.writeFile(wb, "Receivers_Copies.xlsx");
 }
 
 window.viewRc = function(id) {
@@ -1299,7 +1293,7 @@ window.viewRc = function(id) {
             <div class="col-6"><small class="text-muted">Destination</small><div>${item.dest}</div></div>
             <div class="col-6"><small class="text-muted">Weight</small><div>${item.wgt} Kg</div></div>
         </div>
-        <div class="d-grid"><button class="btn btn-primary" onclick="printReceivers('${id}')"><i class="bi bi-printer me-2"></i>Print Receiver Copy</button></div>
+        <div class="d-grid"><button class="btn btn-success" onclick="exportReceiverExcel('${id}')"><i class="bi bi-file-earmark-excel me-2"></i>Export Excel Copy</button></div>
     `;
     new bootstrap.Modal(document.getElementById('viewRcModal')).show();
 }
