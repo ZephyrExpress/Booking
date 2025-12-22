@@ -11,6 +11,7 @@ function doGet(e) {
   if (act === 'getAdminRequests') return getAdminRequests();
   if (act === 'getUsers') return getUsersJson(user);
   if (act === 'getRecent') return getRecentShipments();
+  if (act === 'getShipmentDetails') return getShipmentDetails(e.parameter.awb);
   return HtmlService.createTemplateFromFile('Index').evaluate()
       .setTitle('Zephyr Express Portal').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL).addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
