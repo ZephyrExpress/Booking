@@ -1281,7 +1281,7 @@ window.exportReceiverExcel = function(singleId=null) {
 
 window.viewRc = async function(id) {
     showSpin(true);
-    const r = await fetchGet('getShipmentDetails&awb=' + id);
+    const r = await fetchGet('getShipmentDetails&awb=' + encodeURIComponent(id));
     showSpin(false);
     if(r.result !== "success") return alert("Details not found");
     const d = r.shipment;
