@@ -39,6 +39,7 @@ function doPost(e) {
     if (act === "updateUserPerms") return handleUpdateUserPerms(body);
     if (act === "generateAwb") return handleGenerateAwb();
     if (act === "updateShipmentDetails") return handleUpdateShipmentDetails(body);
+    if (act === 'setConfig') return handleSetConfig(body);
 
     return jsonResponse("error", "Unknown Action");
   } catch (err) { return jsonResponse("error", err.toString()); }
@@ -54,6 +55,10 @@ function getAllData(username) {
   const cache = CacheService.getScriptCache();
   let staticDataStr = cache.get('static_data');
   let staticData = null;
+
+  // Fetch Config
+  const props = PropertiesService.getScriptProperties();
+  const autoAwbEnabled = props.getProperty('AUTO_AWB') !== 'false'; // Default true
 
   if (!staticDataStr) {
     try {
@@ -80,6 +85,8 @@ function getAllData(username) {
       }
     } catch(e) { staticData = { staff: [], dropdowns: {} }; }
   } else { staticData = JSON.parse(staticDataStr); }
+
+  staticData.config = { autoAwb: autoAwbEnabled };
 
   let role = "Staff";
   let perms = [];
@@ -264,6 +271,9 @@ function getShipmentDetails(id) {
 }
 
 function handleGenerateAwb() {
+    const props = PropertiesService.getScriptProperties();
+    if (props.getProperty('AUTO_AWB') === 'false') return jsonResponse("error", "Auto Generation Disabled");
+
     const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
     const data = ss.getRange(2, 1, ss.getLastRow()-1, 1).getValues().flat();
     let max = 300000000;
@@ -299,10 +309,10 @@ function handleManageHold(b) {
         ss.getRange(row, 28, 1, 3).setValues([["On Hold", b.reason, b.remarks]]);
     } else if(b.subAction === "clear") {
         // Validation: Check if Network/Dest is valid
-        const net = ss.getRange(row, 4).getValue();
-        const dest = ss.getRange(row, 6).getValue();
+        const net = String(ss.getRange(row, 4).getValue()).toUpperCase();
+        const dest = String(ss.getRange(row, 6).getValue()).toUpperCase();
 
-        if(String(net).toUpperCase() === "NA" || String(dest).toUpperCase() === "NA") {
+        if(net.startsWith("NA") || dest.startsWith("NA")) {
             return jsonResponse("error", "Update Network/Dest before clearing hold");
         }
 
@@ -404,7 +414,9 @@ function handleSubmit(body){
   // NA Logic Check
   let holdStatus = "Pending";
   let holdReason = "";
-  if(String(body.network).toUpperCase() === "NA" || String(body.destination).toUpperCase() === "NA" || String(body.network).toUpperCase() === "N/A" || String(body.destination).toUpperCase() === "N/A") {
+  const net = String(body.network).toUpperCase();
+  const dest = String(body.destination).toUpperCase();
+  if(net.startsWith("NA") || dest.startsWith("NA")) {
       holdStatus = "On Hold";
       holdReason = "Invalid Data";
   }
@@ -544,4 +556,5 @@ function getUsersJson(requestingUser) {
 function getAdminRequests() { const d = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Requests").getDataRange().getValues(); const p = []; for(let i=1;i<d.length;i++) if(d[i][5]==="Pending") p.push({reqId:d[i][0], taskId:d[i][1], type:d[i][2], by:d[i][3], to:d[i][4], date:d[i][6]}); return jsonResponse("success", "OK", { requests: p }); }
 function handleAddUser(b){SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").appendRow([b.u,b.p,b.n,b.r]);return jsonResponse("success","Added");}
 function handleDeleteUser(u){const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users"),d=s.getDataRange().getValues();for(let i=1;i<d.length;i++)if(String(d[i][0]).toLowerCase()==String(u).toLowerCase()){s.deleteRow(i+1);return jsonResponse("success","Deleted");}return jsonResponse("error","Not Found");}
+function handleSetConfig(b) { PropertiesService.getScriptProperties().setProperty(b.key, b.value); return jsonResponse("success", "Config Saved"); }
 function jsonResponse(s,m,d){return ContentService.createTextOutput(JSON.stringify({result:s,message:m,...d})).setMimeType(ContentService.MimeType.JSON);}
