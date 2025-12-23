@@ -276,10 +276,10 @@ function handleGenerateAwb() {
 
     const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
     const data = ss.getRange(2, 1, ss.getLastRow()-1, 1).getValues().flat();
-    let max = 300000000;
+    let max = 300100000;
     data.forEach(x => {
         const s = String(x).replace(/'/g,"").trim();
-        if(s.startsWith("300") && s.length === 9) {
+        if(s.startsWith("3001") && s.length === 9) {
             const n = parseInt(s);
             if(!isNaN(n) && n > max) max = n;
         }
