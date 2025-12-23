@@ -110,7 +110,7 @@ function getAllData(username) {
   const lastRow = sh.getLastRow();
   const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 30).getDisplayValues() : [];
 
-  let updates = [];
+  let hasUpdates = false;
   let fmsUpdates = [];
   try {
       const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
@@ -133,8 +133,7 @@ function getAllData(username) {
                       const user = match.user || "System";
                       const netNo = match.netNo || "";
                       r[14] = "Done"; r[15] = user; r[20] = netNo;
-                      updates.push({ row: i+2, vals: [["Done", user]] });
-                      updates.push({ row: i+2, col: 21, val: [[netNo]] });
+                      hasUpdates = true;
                       fmsUpdates.push({ awb: awb, autoDoer: user });
                   }
               });
@@ -142,11 +141,13 @@ function getAllData(username) {
       }
   } catch(e) {}
 
-  if(updates.length > 0) {
-      updates.forEach(u => {
-          if(u.col) sh.getRange(u.row, u.col, 1, 1).setValues(u.val);
-          else sh.getRange(u.row, 15, 1, 2).setValues(u.vals);
-      });
+  if(hasUpdates) {
+      // Bolt Optimization: Batch write columns O (15), P (16), and U (21)
+      const colOP = data.map(r => [r[14], r[15]]);
+      sh.getRange(2, 15, colOP.length, 2).setValues(colOP);
+
+      const colU = data.map(r => [r[20]]);
+      sh.getRange(2, 21, colU.length, 1).setValues(colU);
   }
 
   if(fmsUpdates.length > 0) {
@@ -154,12 +155,18 @@ function getAllData(username) {
           const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
           if(fms && fms.getLastRow() >= 7) {
               const ids = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
+              // Bolt Optimization: Batch write FMS column N (14)
+              const doerRange = fms.getRange(7, 14, ids.length, 1);
+              const doers = doerRange.getValues();
+              let fmsDirty = false;
               fmsUpdates.forEach(u => {
                   const idx = ids.indexOf(u.awb);
                   if(idx > -1) {
-                      fms.getRange(idx+7, 14).setValue(u.autoDoer);
+                      doers[idx][0] = u.autoDoer;
+                      fmsDirty = true;
                   }
               });
+              if(fmsDirty) doerRange.setValues(doers);
           }
       } catch(e) { console.error("FMS Sync Error", e); }
   }
