@@ -594,17 +594,25 @@
       <div class="modal-header bg-warning text-dark border-0"><h5 class="modal-title fw-bold">Manage Holding</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body p-4">
          <div class="d-flex align-items-center mb-3"><h4 class="fw-bold m-0 me-2" id="ham_awb"></h4><span class="badge bg-light text-dark border" id="ham_net"></span></div>
-         <div class="alert alert-info small"><i class="bi bi-info-circle me-1"></i> Update Network or Destination to clear this hold.</div>
 
-         <div class="mb-3">
-             <label class="fun-label">Update Network</label>
-             <select id="ham_sel_net" class="form-select"></select>
+         <div id="ham_na_section" style="display:none;">
+             <div class="alert alert-info small"><i class="bi bi-info-circle me-1"></i> Update Network or Destination to clear this hold.</div>
+             <div class="mb-3">
+                 <label class="fun-label">Update Network</label>
+                 <select id="ham_sel_net" class="form-select"></select>
+             </div>
+             <div class="mb-4">
+                 <label class="fun-label">Update Destination</label>
+                 <select id="ham_sel_dest" class="form-select"></select>
+             </div>
+             <button class="btn btn-success w-100 btn-lg fw-bold mb-2" onclick="hamSubmit()">Update & Release</button>
          </div>
-         <div class="mb-4">
-             <label class="fun-label">Update Destination</label>
-             <select id="ham_sel_dest" class="form-select"></select>
+
+         <div id="ham_norm_section" style="display:none;">
+             <div class="alert alert-secondary small mb-3">Clear this holding manually.</div>
+             <button class="btn btn-success w-100 btn-lg fw-bold mb-2" onclick="hamClear()">Clear Hold</button>
          </div>
-         <button class="btn btn-success w-100 btn-lg fw-bold mb-2" onclick="hamSubmit()">Update & Release</button>
+
          <button class="btn btn-dark w-100" onclick="hamRTO()">Mark RTO</button>
       </div>
     </div>
@@ -696,7 +704,7 @@ async function syncData(init=false){
         if(init) initForms(); else updDd();
         renderUI();
 
-        // Update Auto AWB Switch
+        // Update Auto AWB Switch & Button
         if(window.APP_DATA.static && window.APP_DATA.static.config) {
             const enabled = window.APP_DATA.static.config.autoAwb;
             const sw = document.getElementById('autoAwbSwitch');
@@ -704,6 +712,8 @@ async function syncData(init=false){
                 sw.checked = enabled;
                 document.getElementById('autoAwbLabel').textContent = enabled ? "Enabled" : "Disabled";
             }
+            const btn = document.getElementById('btnAutoAwb');
+            if(btn) btn.style.display = enabled ? 'block' : 'none';
         }
      } else {
         console.error("Sync Error:", r.message);
@@ -1356,27 +1366,47 @@ window.openHoldAction = function(id) {
     if(!item) return;
 
     document.getElementById('ham_awb').textContent = id;
-    document.getElementById('ham_net').textContent = item.netNo || '-';
+    const netNo = item.netNo || '-';
+    document.getElementById('ham_net').textContent = netNo;
 
-    // Fill Dropdowns
-    if(window.APP_DATA.static && window.APP_DATA.static.dropdowns) {
-        const dd = window.APP_DATA.static.dropdowns;
-        let nOpts = '<option value="">Select Network...</option>';
-        dd.networks.forEach(x => {
-             const val = x==="NA" ? "NA - Not Known" : x; // Map NA if old data
-             nOpts += `<option value="${val}">${val}</option>`;
-        });
-        document.getElementById('ham_sel_net').innerHTML = nOpts;
+    const net = (item.net || '').toUpperCase();
+    const dest = (item.dest || '').toUpperCase();
+    const isNA = net.startsWith('NA') || dest.startsWith('NA');
 
-        let dOpts = '<option value="">Select Destination...</option>';
-        dd.destinations.forEach(x => {
-             const val = x==="NA" ? "NA - Not Known" : x;
-             dOpts += `<option value="${val}">${val}</option>`;
-        });
-        document.getElementById('ham_sel_dest').innerHTML = dOpts;
+    if(isNA) {
+        document.getElementById('ham_na_section').style.display = 'block';
+        document.getElementById('ham_norm_section').style.display = 'none';
+
+        // Fill Dropdowns only if needed
+        if(window.APP_DATA.static && window.APP_DATA.static.dropdowns) {
+            const dd = window.APP_DATA.static.dropdowns;
+            let nOpts = '<option value="">Select Network...</option>';
+            dd.networks.forEach(x => {
+                 const val = x==="NA" ? "NA - Not Known" : x;
+                 nOpts += `<option value="${val}">${val}</option>`;
+            });
+            document.getElementById('ham_sel_net').innerHTML = nOpts;
+
+            let dOpts = '<option value="">Select Destination...</option>';
+            dd.destinations.forEach(x => {
+                 const val = x==="NA" ? "NA - Not Known" : x;
+                 dOpts += `<option value="${val}">${val}</option>`;
+            });
+            document.getElementById('ham_sel_dest').innerHTML = dOpts;
+        }
+    } else {
+        document.getElementById('ham_na_section').style.display = 'none';
+        document.getElementById('ham_norm_section').style.display = 'block';
     }
 
     new bootstrap.Modal(document.getElementById('holdActionModal')).show();
+}
+
+window.hamClear = async function() {
+    await callApi({action:"manageHold", subAction: "clear", awb: window.selectedHoldAwb, remarks: "Cleared via Manager"});
+    bootstrap.Modal.getInstance(document.getElementById('holdActionModal')).hide();
+    syncData(false);
+    toast("Hold Cleared");
 }
 
 window.hamSubmit = async function() {
@@ -1469,13 +1499,18 @@ window.openPrintReceipt = function(id) {
     const renderCopy = (title) => `
         <div class="receipt-copy">
          <div class="header">
-            <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" class="logo">
-            <div><strong>ZEPHYR EXPRESS</strong></div>
-            <div style="font-size:0.8rem">CB-385B, Ring Road Nariana, New Delhi-110028</div>
-            <div style="font-size:0.8rem">Ph: 9873127666 | www.zephyrexpress.in</div>
-            <div class="title">${title}</div>
+            <div class="header-content">
+                <div><strong>ZEPHYR EXPRESS</strong></div>
+                <div style="font-size:0.8rem">CB-385B, Ring Road Nariana, New Delhi-110028</div>
+                <div style="font-size:0.8rem">Ph: 9873127666 | www.zephyrexpress.in</div>
+                <div class="title">${title}</div>
+            </div>
+            <div class="logo-container">
+                <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" class="logo">
+                <svg class="barcode"></svg>
+            </div>
          </div>
-         <div class="barcode-container"><svg class="barcode"></svg></div>
+
          <div class="grid">
             <div class="box">
                <div class="label">AWB Number</div><div class="val">${s.id}</div>
@@ -1514,18 +1549,23 @@ window.openPrintReceipt = function(id) {
            body { font-family: 'Courier New', Courier, monospace; padding: 20px; max-width: 800px; margin: 0 auto; }
            .receipt-copy { height: 48vh; border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px; position: relative; }
            .receipt-copy:last-child { border-bottom: none; }
-           .header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 5px; }
-           .logo { max-height: 40px; margin-bottom: 5px; }
-           .title { font-weight: bold; font-size: 1rem; text-decoration: underline; margin: 5px 0; }
+
+           .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 10px; }
+           .header-content { flex: 1; text-align: left; }
+           .logo-container { text-align: right; }
+           .logo { max-height: 35px; display: block; margin-left: auto; margin-bottom: 5px; }
+           .title { font-weight: bold; font-size: 1rem; text-decoration: underline; margin-top: 5px; }
+
            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
            .box { border: 1px solid #000; padding: 5px; }
            .label { font-weight: bold; font-size: 0.7rem; text-transform: uppercase; }
            .val { font-weight: bold; font-size: 0.9rem; margin-bottom: 2px; }
+
            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 0.8rem; }
            th { background: #eee; border: 1px solid #000; padding: 3px; text-transform: uppercase; font-size: 0.7rem; }
            td { padding: 3px; border: 1px solid #000; }
+
            .footer { margin-top: 10px; font-size: 0.6rem; text-align: justify; border-top: 1px solid #000; padding-top: 5px; }
-           .barcode-container { position: absolute; top: 10px; right: 10px; }
            @media print { .no-print { display: none; } body { padding: 0; } }
         </style>
         <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
