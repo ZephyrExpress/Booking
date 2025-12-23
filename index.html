@@ -1179,6 +1179,7 @@ window.switchTab=function(t){
        const r = curRole.toLowerCase();
        title = (r==='admin' || r==='owner') ? 'Task Manager' : 'My Tasks';
    }
+   if(t==='receivers') title = "Receivers Slip";
    document.getElementById('pageTitle').textContent = title;
    if(document.getElementById('sidebar').classList.contains('show')) toggleSidebar();
    if(t==='manifest') renderManifest();
@@ -1262,12 +1263,18 @@ window.renderManifest = function() {
     const list = document.getElementById('manifestList');
     const items = window.APP_DATA.manifest || [];
 
-    // Filter logic: Match Net (if selected), No Batch, and Search Term
+    // Filter logic: Match Net (if selected) and Search Term.
+    // If search term exists, INCLUDE history items (batchNo present). If no search term, show only pending.
     const filtered = items.filter(x => {
         const matchesNet = net ? x.net === net : true;
-        const noBatch = !x.batchNo;
-        const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : true;
-        return matchesNet && noBatch && matchesTerm;
+        const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
+
+        // Show if pending OR (searching AND matches term)
+        // If searching, we ignore "noBatch" rule to allow finding old items
+        const shouldShow = (!x.batchNo) || (term && matchesTerm);
+
+        // But still respect Network filter
+        return matchesNet && shouldShow && (!term || matchesTerm);
     });
 
     if (filtered.length === 0) {
@@ -1277,7 +1284,10 @@ window.renderManifest = function() {
         return;
     }
     document.getElementById('manifestEmptyState').style.display = 'none';
-    list.innerHTML = filtered.map(x => `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end"><span class="badge bg-success">Ready</span></td></tr>`).join('');
+    list.innerHTML = filtered.map(x => {
+        const badge = x.batchNo ? `<span class="badge bg-secondary" title="In Batch: ${x.batchNo}">History</span>` : `<span class="badge bg-success">Ready</span>`;
+        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${badge}</td></tr>`;
+    }).join('');
 };
 
 window.openAddHistoryModal = function() { new bootstrap.Modal(document.getElementById('addHistoryModal')).show(); }
