@@ -279,14 +279,18 @@ function handleGenerateAwb() {
     const data = lastRow > 1 ? ss.getRange(2, 1, lastRow-1, 1).getValues().flat() : [];
 
     let max = 300100000;
+    // Start from 300100000. If DB has higher, use that.
     data.forEach(x => {
         const s = String(x).replace(/'/g,"").trim();
-        if(s.startsWith("3001") && s.length === 9) {
-            const n = parseInt(s);
-            if(!isNaN(n) && n > max) max = n;
+        const n = parseInt(s);
+        if(!isNaN(n) && s.length === 9 && s.startsWith("3001")) {
+            if(n >= max) max = n + 1; // Increment found max
         }
     });
-    return jsonResponse("success", "Generated", { awb: String(max + 1) });
+    // If no 3001 exists, max remains 300100000. If exists, max is next.
+    // Wait, logic: if max found is 300100000, next is 300100001.
+
+    return jsonResponse("success", "Generated", { awb: String(max) });
 }
 
 function handleUpdateShipmentDetails(b) {
@@ -318,11 +322,13 @@ function handleManageHold(b) {
             return jsonResponse("error", "Update Network/Dest before clearing hold");
         }
 
+        if(!b.remarks || !b.remarks.trim()) return jsonResponse("error", "Remarks are mandatory");
         ss.getRange(row, 28, 1, 3).setValues([["", "", ""]]);
         const oldLog = ss.getRange(row, 20).getValue();
         ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Hold Cleared: ${b.remarks}]`);
     } else if(b.subAction === "rto") {
-        ss.getRange(row, 28, 1, 3).setValues([["RTO", "RTO", b.remarks || "Returned to Origin"]]);
+        if(!b.remarks || !b.remarks.trim()) return jsonResponse("error", "Remarks are mandatory");
+        ss.getRange(row, 28, 1, 3).setValues([["RTO", "RTO", b.remarks]]);
         const oldLog = ss.getRange(row, 20).getValue();
         ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Marked RTO: ${b.remarks}]`);
         // syncFMS(b.awb, { status: "RTO" }); // REMOVED Q sync

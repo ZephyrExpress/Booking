@@ -435,41 +435,39 @@
            <li class="nav-item ms-2"><button class="nav-link rounded-pill px-4" onclick="switchManifestView('history')">Manifest History</button></li>
         </ul>
         <div id="man-pending-view">
-          <div class="panel-card">
-             <div class="panel-header">
+          <div class="panel-card p-3">
+             <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-3">
                 <div class="d-flex align-items-center gap-3">
                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px"><i class="bi bi-file-earmark-spreadsheet"></i></div>
                    <div><div class="fw-bold">Ready to Manifest</div><div class="small text-muted fw-normal">Items with Paperwork Completed</div></div>
                 </div>
-                <div class="d-flex gap-2 align-items-center">
-                   <div class="input-group input-group-sm" style="width:250px;">
+                <div class="d-flex gap-2 align-items-center flex-wrap justify-content-end">
+                   <button class="btn btn-sm btn-outline-dark" onclick="openAddHistoryModal()"><i class="bi bi-clock-history me-1"></i> Add from History</button>
+                   <button class="btn btn-sm btn-outline-secondary" onclick="printManifest()"><i class="bi bi-printer me-1"></i> Print View</button>
+                   <select id="man_net" class="form-select form-select-sm" style="width:150px" onchange="renderManifest()"><option value="">Select Network...</option></select>
+                   <div class="input-group input-group-sm" style="width:200px;">
                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                       <input id="man_search" class="form-control" placeholder="Search..." oninput="renderManifest()">
+                       <input id="man_search" class="form-control" placeholder="Search ID/NetNo..." oninput="renderManifest()">
                    </div>
-                   <select id="man_net" class="form-select" onchange="renderManifest()"><option value="">Select Network...</option></select>
-                   <button class="btn btn-primary rounded-pill shadow-sm text-nowrap" onclick="createBatch()"><i class="bi bi-collection me-2"></i>Generate Batch</button>
-                </div>
-                <div class="mt-2 text-end">
-                    <button class="btn btn-sm btn-link text-decoration-none" onclick="openAddHistoryModal()">+ Add from History</button>
+                   <button class="btn btn-primary btn-sm rounded-pill shadow-sm text-nowrap px-3" onclick="createBatch()"><i class="bi bi-collection me-2"></i>Generate Batch</button>
                 </div>
              </div>
-             <div class="panel-body p-0">
-                <div class="table-responsive">
-                   <table class="table table-hover align-middle mb-0">
-                      <thead class="bg-light">
-                         <tr>
-                            <th class="ps-4" style="width:40px"><input type="checkbox" class="form-check-input" id="checkAllMan" onclick="toggleAllMan(this)"></th>
-                            <th>AWB</th><th>Date</th><th>Destination</th><th>Network</th><th>Net No</th><th>Pcs</th><th>Wgt</th><th>Client</th><th class="text-end pe-4">Status</th>
-                         </tr>
-                      </thead>
-                      <tbody id="manifestList"></tbody>
-                   </table>
-                </div>
-                <div id="manifestEmptyState" class="text-center py-5">
-                   <div class="mb-3 text-muted"><i class="bi bi-inbox fs-1"></i></div>
-                   <h6 class="text-muted fw-bold">No Items Ready</h6>
-                   <p class="text-muted small">Select a network to view items.</p>
-                </div>
+
+             <div class="table-responsive border rounded" style="max-height:600px; overflow-y:auto;">
+                <table class="table table-hover align-middle mb-0 small">
+                   <thead class="bg-light sticky-top">
+                      <tr>
+                         <th class="ps-3" style="width:40px"><input type="checkbox" class="form-check-input" id="checkAllMan" onclick="toggleAllMan(this)"></th>
+                         <th>AWB</th><th>Date</th><th>Dest</th><th>Network</th><th>Net No</th><th>Pcs</th><th>Wgt</th><th>Client</th><th class="text-end pe-3">Status</th>
+                      </tr>
+                   </thead>
+                   <tbody id="manifestList"></tbody>
+                </table>
+             </div>
+             <div id="manifestEmptyState" class="text-center py-5">
+                <div class="mb-3 text-muted"><i class="bi bi-inbox fs-1"></i></div>
+                <h6 class="text-muted fw-bold">No Items Found</h6>
+                <p class="text-muted small">Select a network or refine search.</p>
              </div>
           </div>
         </div>
@@ -1295,37 +1293,97 @@ window.ahmAdd = async function() {
     const awb = document.getElementById('ahm_input').value.trim();
     if(!awb) return;
 
-    // Call backend to 'un-manifest' or just find the item and add to local list temporarily?
-    // User wants to "Add more shipments from previous batches". This implies re-opening them.
-    // Ideally we update their batchNo to empty in backend.
-
     showSpin(true);
-    // Reuse updateShipmentDetails or a new action? Let's use updateManifestBatch with empty batchNo logic or specific action.
-    // For simplicity/speed, let's treat it as a "Force Add to Pending".
-    // Since we don't have a direct "Un-Batch" API, we will locally mock it if it exists in history, or fetch it.
-    // Actually, safest is to fetch details and if found, push to window.APP_DATA.manifest.
-
     const r = await fetchGet('getShipmentDetails&awb=' + encodeURIComponent(awb));
+
     if(r.result === "success") {
         const s = r.shipment;
-        // Check if already in pending list
-        if(window.APP_DATA.manifest.find(x => x.id === s.id)) {
-             alert("Already in list");
+
+        // Find if exists in local manifest data (Pending or History)
+        const existingIdx = window.APP_DATA.manifest.findIndex(x => x.id === s.id);
+
+        // Define clean item
+        const item = {
+             id: s.id, date: s.date, net: s.net, client: s.client, dest: s.dest,
+             details: `${s.boxes} Boxes | ${s.chgWgt} Kg`,
+             chgWgt: s.chgWgt, boxes: s.boxes, netNo: s.netNo,
+             batchNo: "" // Force clear batchNo to make it pending
+        };
+
+        if(existingIdx > -1) {
+            // It exists locally. If it has a batchNo, we clear it. If it doesn't, it's already pending.
+            const existing = window.APP_DATA.manifest[existingIdx];
+            if(!existing.batchNo) {
+                alert("Shipment is already in the Pending List.");
+            } else {
+                // It was history, now force to pending locally
+                window.APP_DATA.manifest[existingIdx] = item;
+                toast("Moved from History to Pending List");
+                renderManifest();
+                bootstrap.Modal.getInstance(document.getElementById('addHistoryModal')).hide();
+            }
         } else {
-             // Adapt schema
-             const item = {
-                 id: s.id, date: s.date, net: s.net, client: s.client, dest: s.dest,
-                 details: `${s.boxes} Boxes | ${s.chgWgt} Kg`,
-                 chgWgt: s.chgWgt, boxes: s.boxes, netNo: s.netNo,
-                 batchNo: "" // Clear batch locally so it shows up
-             };
+             // New to local list (maybe fresh fetch)
              window.APP_DATA.manifest.push(item);
              renderManifest();
-             toast("Added to list. Please Generate Batch to save.");
+             toast("Added to Pending List");
              bootstrap.Modal.getInstance(document.getElementById('addHistoryModal')).hide();
         }
-    } else { alert("Not Found"); }
+    } else { alert("AWB Not Found"); }
     showSpin(false);
+}
+
+window.printManifest = function() {
+    const net = document.getElementById('man_net').value || "ALL";
+    const items = [];
+    document.querySelectorAll('.batch-check:checked').forEach(c => {
+        const item = window.APP_DATA.manifest.find(x => x.id === c.value);
+        if(item) items.push(item);
+    });
+
+    if(items.length === 0) return alert("Select items to print");
+
+    const rows = items.map((x, i) => `
+        <tr>
+            <td>${i+1}</td>
+            <td>${x.id}</td>
+            <td>${new Date(x.date).toLocaleDateString()}</td>
+            <td>${x.dest}</td>
+            <td>${x.net}</td>
+            <td>${x.netNo||'-'}</td>
+            <td>${x.boxes}</td>
+            <td>${x.chgWgt}</td>
+            <td>${(x.client||'')}</td>
+            <td>${(x.user||'')}</td>
+        </tr>
+    `).join('');
+
+    const w = window.open('', '_blank');
+    w.document.write(`
+        <html><head><title>Manifest Print</title>
+        <style>
+            body { font-family: sans-serif; padding: 20px; font-size: 12px; }
+            h2 { text-align: center; margin-bottom: 5px; }
+            .meta { text-align: center; margin-bottom: 20px; font-size: 0.9rem; color: #555; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
+            th { background: #eee; font-weight: bold; }
+            .footer { margin-top: 30px; display: flex; justify-content: space-between; padding-top: 20px; border-top: 1px solid #000; }
+        </style></head><body>
+        <h2>MANIFEST REPORT</h2>
+        <div class="meta">Network: ${net} | Date: ${new Date().toLocaleDateString()} | Items: ${items.length}</div>
+        <table>
+            <thead><tr><th>#</th><th>AWB</th><th>Date</th><th>Dest</th><th>Network</th><th>Net No</th><th>Pcs</th><th>Wgt</th><th>Client</th><th>Sender</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+        <div class="footer">
+            <div>Authorized Signatory</div>
+            <div>Handover By</div>
+        </div>
+        <script>window.print();<\/script>
+        </body></html>
+    `);
+    w.document.close();
 }
 window.toggleAllMan = function(el) { document.querySelectorAll('.batch-check').forEach(c => c.checked = el.checked); }
 window.createBatch = async function() { const net = document.getElementById('man_net').value; if(!net) return alert("Select Network"); const chks = document.querySelectorAll('.batch-check:checked'); if(chks.length === 0) return alert("Select at least one item"); const ids = Array.from(chks).map(c => c.value); const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`; const manifestDate = new Date().toLocaleDateString(); if(!confirm(`Generate Manifest Batch "${batchId}" for ${ids.length} items?`)) return; window.APP_DATA.manifest.forEach(x => { if(ids.includes(x.id)) { x.batchNo = batchId; x.manifestDate = manifestDate; } }); exportBatch(batchId); renderManifest(); await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser }); toast("Batch Created & Exported"); };
@@ -1505,7 +1563,9 @@ window.openHoldAction = function(id) {
 }
 
 window.hamClear = async function() {
-    await callApi({action:"manageHold", subAction: "clear", awb: window.selectedHoldAwb, remarks: "Cleared via Manager"});
+    const rem = prompt("Enter Remarks for Clearing Hold:");
+    if(!rem) return;
+    await callApi({action:"manageHold", subAction: "clear", awb: window.selectedHoldAwb, remarks: rem});
     bootstrap.Modal.getInstance(document.getElementById('holdActionModal')).hide();
     syncData(false);
     toast("Hold Cleared");
