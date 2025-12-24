@@ -728,6 +728,10 @@ async function syncData(init=false){
         }
         updateNavVisibility();
         if(init) initForms(); else updDd();
+
+        // OPTIMIZATION: Pre-format dates to avoid expensive parsing in render loops
+        if(window.APP_DATA.manifest) window.APP_DATA.manifest.forEach(x => x.fmtDate = new Date(x.date).toLocaleDateString());
+
         renderUI();
 
         // Update Auto AWB Switch & Button
@@ -1294,7 +1298,7 @@ window.renderManifest = function() {
     document.getElementById('manifestEmptyState').style.display = 'none';
     list.innerHTML = filtered.map(x => {
         const badge = x.batchNo ? `<span class="badge bg-secondary" title="In Batch: ${x.batchNo}">History</span>` : `<span class="badge bg-success">Ready</span>`;
-        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${badge}</td></tr>`;
+        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${x.fmtDate}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${badge}</td></tr>`;
     }).join('');
 };
 
@@ -1317,7 +1321,8 @@ window.ahmAdd = async function() {
              id: s.id, date: s.date, net: s.net, client: s.client, dest: s.dest,
              details: `${s.boxes} Boxes | ${s.chgWgt} Kg`,
              chgWgt: s.chgWgt, boxes: s.boxes, netNo: s.netNo,
-             batchNo: "" // Force clear batchNo to make it pending
+             batchNo: "", // Force clear batchNo to make it pending
+             fmtDate: new Date(s.date).toLocaleDateString()
         };
 
         if(existingIdx > -1) {
@@ -1452,6 +1457,8 @@ window.renderReceivers = async function(fetch=false) {
         const r = await fetchGet('getRecent');
         if(r.result === "success" && r.shipments) {
             window.APP_DATA.recent = r.shipments;
+            // Pre-format dates
+            window.APP_DATA.recent.forEach(x => x.fmtDate = new Date(x.date).toLocaleDateString());
         }
     }
 
@@ -1464,7 +1471,7 @@ window.renderReceivers = async function(fetch=false) {
             <tr>
                 <td><input type="checkbox" class="form-check-input rc-chk" value="${x.id}"></td>
                 <td class="font-monospace fw-bold">${x.id}</td>
-                <td>${new Date(x.date).toLocaleDateString()}</td>
+                <td>${x.fmtDate}</td>
                 <td>${(x.client||'').slice(-4)}</td>
                 <td>${x.dest}</td>
                 <td>${x.wgt}</td>
