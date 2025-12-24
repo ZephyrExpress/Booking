@@ -33,24 +33,25 @@
     /* Login - Centered Card */
     .login-wrapper {
         min-height: 100vh; display: flex; align-items: center; justify-content: center;
-        background-color: #f0f4f8;
-        /* Custom SVG Pattern: Planes and Boxes */
-        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23003399' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3Cpath d='M28.5 18L24 24h9l-4.5-6zm-17 30l-4.5 6h9l-4.5-6zm34 0l-4.5 6h9l-4.5-6z' fill='%23d40511' fill-opacity='0.05'/%3E%3C/g%3E%3C/svg%3E");
+        background: linear-gradient(135deg, #003399 0%, #001a4d 100%);
         position: fixed; top: 0; left: 0; width: 100%; z-index: 2000;
-        display: flex; align-items: center; justify-content: center;
+        overflow: hidden;
     }
-    .login-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0, 51, 153, 0.7); z-index: 1; }
+    /* Abstract Pattern Overlay */
+    .login-wrapper::before {
+        content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+        background-size: 30px 30px; transform: rotate(15deg); pointer-events: none;
+    }
+    .login-overlay { display: none; } /* Removed old overlay */
     /* Global Mobile Fixes */
     img { max-width: 100%; height: auto; }
     .login-card {
-        width: 90%; max-width: 400px; padding: 2.5rem;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.2) inset;
+        width: 90%; max-width: 420px; padding: 3rem 2rem;
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
         z-index: 2; position: relative; text-align: center;
-        border: 1px solid rgba(255,255,255,0.3);
-        background: linear-gradient(145deg, #ffffff, #f0f0f0);
     }
     .login-card img { max-width: 80%; height: auto; display: inline-block; }
 
@@ -1740,27 +1741,40 @@ window.openPrintReceipt = function(id) {
       <head>
         <title>Receiver Slip - ${s.id}</title>
         <style>
-           body { font-family: 'Courier New', Courier, monospace; padding: 20px; max-width: 800px; margin: 0 auto; }
-           .receipt-copy { height: 48vh; border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px; position: relative; }
+           /* Force full height and column flex for A4 split */
+           html, body { height: 100%; margin: 0; padding: 0; }
+           body { font-family: 'Courier New', Courier, monospace; display: flex; flex-direction: column; }
+
+           .receipt-copy {
+               flex: 1; /* Take exactly 50% height */
+               overflow: hidden; /* Hide overflow to prevent overlapping */
+               border-bottom: 2px dashed #000;
+               padding: 10px 20px;
+               box-sizing: border-box;
+               display: flex; flex-direction: column;
+           }
            .receipt-copy:last-child { border-bottom: none; }
 
-           .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 10px; }
+           .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 5px; flex-shrink: 0; }
            .header-content { flex: 1; text-align: left; }
            .logo-container { text-align: right; }
-           .logo { max-height: 35px; display: block; margin-left: auto; margin-bottom: 5px; }
-           .title { font-weight: bold; font-size: 1rem; text-decoration: underline; margin-top: 5px; }
+           .logo { max-height: 35px; display: block; margin-left: auto; margin-bottom: 2px; }
+           .title { font-weight: bold; font-size: 1rem; text-decoration: underline; margin-top: 2px; }
 
-           .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-           .box { border: 1px solid #000; padding: 5px; }
+           .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 5px; flex-shrink: 0; }
+           .box { border: 1px solid #000; padding: 4px; }
            .label { font-weight: bold; font-size: 0.7rem; text-transform: uppercase; }
-           .val { font-weight: bold; font-size: 0.9rem; margin-bottom: 2px; }
+           .val { font-weight: bold; font-size: 0.85rem; margin-bottom: 1px; }
 
-           table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 0.8rem; }
-           th { background: #eee; border: 1px solid #000; padding: 3px; text-transform: uppercase; font-size: 0.7rem; }
-           td { padding: 3px; border: 1px solid #000; }
+           /* Content Table - Allow it to shrink if needed, but try to fit */
+           .table-container { flex: 1; overflow: hidden; min-height: 0; }
+           table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
+           th { background: #eee; border: 1px solid #000; padding: 2px; text-transform: uppercase; }
+           td { padding: 2px; border: 1px solid #000; }
 
-           .footer { margin-top: 10px; font-size: 0.6rem; text-align: justify; border-top: 1px solid #000; padding-top: 5px; }
-           @media print { .no-print { display: none; } body { padding: 0; } }
+           .footer { margin-top: 5px; font-size: 0.6rem; text-align: justify; border-top: 1px solid #000; padding-top: 5px; flex-shrink: 0; }
+
+           @media print { .no-print { display: none; } }
         </style>
         <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
       </head>

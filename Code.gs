@@ -281,9 +281,10 @@ function handleGenerateAwb() {
     let currentMax = 0;
     data.forEach(x => {
         const s = String(x).replace(/'/g,"").trim();
-        // Strict check: 9 digits, starts with 3001
-        if (/^3001\d{5}$/.test(s)) {
-            const n = parseInt(s, 10);
+        // Match 3001 followed by 5 digits, capturing the number part even if followed by suffixes like -FRT
+        const match = s.match(/^(3001\d{5})/);
+        if (match) {
+            const n = parseInt(match[1], 10);
             if (n > currentMax) currentMax = n;
         }
     });
