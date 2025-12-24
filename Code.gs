@@ -275,7 +275,9 @@ function handleGenerateAwb() {
     if (props.getProperty('AUTO_AWB') === 'false') return jsonResponse("error", "Auto Generation Disabled");
 
     const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
-    const data = ss.getRange(2, 1, ss.getLastRow()-1, 1).getValues().flat();
+    const lastRow = ss.getLastRow();
+    const data = lastRow > 1 ? ss.getRange(2, 1, lastRow-1, 1).getValues().flat() : [];
+
     let max = 300100000;
     data.forEach(x => {
         const s = String(x).replace(/'/g,"").trim();
