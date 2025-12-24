@@ -43,9 +43,14 @@
     /* Global Mobile Fixes */
     img { max-width: 100%; height: auto; }
     .login-card {
-        width: 90%; max-width: 400px; padding: 2.5rem; background: #ffffff; border-radius: 20px;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.5); z-index: 2; position: relative; text-align: center;
-        border: 1px solid rgba(0,0,0,0.1);
+        width: 90%; max-width: 400px; padding: 2.5rem;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.2) inset;
+        z-index: 2; position: relative; text-align: center;
+        border: 1px solid rgba(255,255,255,0.3);
+        background: linear-gradient(145deg, #ffffff, #f0f0f0);
     }
     .login-card img { max-width: 80%; height: auto; display: inline-block; }
 
@@ -168,7 +173,7 @@
   <div class="login-overlay"></div>
   <div class="login-card">
     <div class="text-center mb-4"><img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="60" class="d-block mx-auto"></div>
-    <p class="text-center text-muted small mb-4">PORTAL LOGIN v5.2</p>
+    <p class="text-center text-muted small mb-4">PORTAL LOGIN v6.0</p>
     <form onsubmit="event.preventDefault(); doLogin();">
       <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required>
       <input type="text" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required>
@@ -1020,10 +1025,10 @@ window.submitHoldFromModal = async function() {
     const r = document.getElementById('modalHoldReason').value;
     const rem = document.getElementById('modalHoldRem').value;
     if(!r) return alert("Select Reason");
-    
+
     bootstrap.Modal.getInstance(document.getElementById('holdModal')).hide();
     document.getElementById('holdResultPanel').style.display='none';
-    
+
     await callApi({action:"manageHold", subAction:"set", awb:selectedHoldAwb, reason:r, remarks:rem});
     syncData(false); toast("Shipment put on Hold");
     clearHoldSearch();
@@ -1358,8 +1363,7 @@ window.printManifest = function() {
             <td>${x.netNo||'-'}</td>
             <td>${x.boxes}</td>
             <td>${x.chgWgt}</td>
-            <td>${(x.client||'')}</td>
-            <td>${(x.user||'')}</td>
+            <td>${(x.client||'').slice(-4)}</td>
         </tr>
     `).join('');
 
@@ -1368,19 +1372,38 @@ window.printManifest = function() {
         <html><head><title>Manifest Print</title>
         <style>
             body { font-family: sans-serif; padding: 20px; font-size: 12px; }
-            h2 { text-align: center; margin-bottom: 5px; }
-            .meta { text-align: center; margin-bottom: 20px; font-size: 0.9rem; color: #555; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+            .header-left { text-align: left; }
+            .header-right { text-align: right; }
+            .logo { max-height: 40px; margin-bottom: 5px; }
+            h2 { margin: 0; font-size: 1.5rem; text-decoration: underline; }
+            .meta { margin-bottom: 20px; font-size: 0.9rem; }
             table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
-            th { background: #eee; font-weight: bold; }
-            .footer { margin-top: 30px; display: flex; justify-content: space-between; padding-top: 20px; border-top: 1px solid #000; }
+            th { background: #eee; font-weight: bold; text-transform: uppercase; }
+            .footer { margin-top: 40px; display: flex; justify-content: space-between; padding-top: 20px; border-top: 1px solid #000; }
+            @media print { .no-print { display: none; } }
         </style></head><body>
-        <h2>MANIFEST REPORT</h2>
-        <div class="meta">Network: ${net} | Date: ${new Date().toLocaleDateString()} | Items: ${items.length}</div>
+
+        <div class="header">
+            <div class="header-left">
+                <div><strong>ZEPHYR EXPRESS</strong></div>
+                <div>CB-385B, Ring Road Nariana, New Delhi-110028</div>
+                <div>Ph: 9873127666 | www.zephyrexpress.in</div>
+                <div style="margin-top:10px;"><strong>MANIFEST REPORT</strong></div>
+            </div>
+            <div class="header-right">
+                <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" class="logo">
+                <div>Date: ${new Date().toLocaleDateString()}</div>
+                <div>Network: ${net}</div>
+            </div>
+        </div>
+
         <table>
-            <thead><tr><th>#</th><th>AWB</th><th>Date</th><th>Dest</th><th>Network</th><th>Net No</th><th>Pcs</th><th>Wgt</th><th>Client</th><th>Sender</th></tr></thead>
+            <thead><tr><th>#</th><th>AWB</th><th>Date</th><th>Dest</th><th>Network</th><th>Net No</th><th>Pcs</th><th>Wgt</th><th>Client</th></tr></thead>
             <tbody>${rows}</tbody>
         </table>
+
         <div class="footer">
             <div>Authorized Signatory</div>
             <div>Handover By</div>

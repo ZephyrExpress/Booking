@@ -278,19 +278,20 @@ function handleGenerateAwb() {
     const lastRow = ss.getLastRow();
     const data = lastRow > 1 ? ss.getRange(2, 1, lastRow-1, 1).getValues().flat() : [];
 
-    let max = 300100000;
-    // Start from 300100000. If DB has higher, use that.
+    let currentMax = 0;
     data.forEach(x => {
         const s = String(x).replace(/'/g,"").trim();
-        const n = parseInt(s);
-        if(!isNaN(n) && s.length === 9 && s.startsWith("3001")) {
-            if(n >= max) max = n + 1; // Increment found max
+        // Strict check: 9 digits, starts with 3001
+        if (/^3001\d{5}$/.test(s)) {
+            const n = parseInt(s, 10);
+            if (n > currentMax) currentMax = n;
         }
     });
-    // If no 3001 exists, max remains 300100000. If exists, max is next.
-    // Wait, logic: if max found is 300100000, next is 300100001.
 
-    return jsonResponse("success", "Generated", { awb: String(max) });
+    // If no match found, start at 300100000. Else next.
+    const nextAwb = currentMax > 0 ? currentMax + 1 : 300100000;
+
+    return jsonResponse("success", "Generated", { awb: String(nextAwb) });
 }
 
 function handleUpdateShipmentDetails(b) {
