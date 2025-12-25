@@ -9,9 +9,363 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js" defer></script>
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js" defer></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js" defer>
+window.downloadManifestPdf = function(items, network) {
+    if(!items || !items.length) return;
+
+    const doc = new jspdf.jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // -- HEADER --
+    const dateStr = new Date().toLocaleDateString();
+
+    // Logo (Centered)
+    if(LOGO_BASE64) {
+        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth/2) - 20, 10, 40, 15);
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("MANIFEST", 10, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Network: ${network}`, 10, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
+
+    // -- TABLE --
+    // Columns: S.No, AWB, Date, Dest, Pcs, Wgt, Client
+    // Data Preparation
+    const tableBody = items.map((x, i) => [
+        i + 1,
+        x.id,
+        new Date(x.date).toLocaleDateString(),
+        x.dest,
+        x.boxes,
+        x.chgWgt,
+        (x.client || '').slice(-4)
+    ]);
+
+    doc.autoTable({
+        startY: 48,
+        head: [['#', 'AWB', 'Date', 'Dest', 'Pcs', 'Wgt', 'Client']],
+        body: tableBody,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 10 }, // #
+            4: { cellWidth: 15 }, // Pcs
+            5: { cellWidth: 20 }, // Wgt
+        }
+    });
+
+    // -- FOOTER / TOTALS --
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Calculate Totals
+    const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
+    const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
+    const totalCount = items.length;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("SUMMARY", 10, finalY);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Shipments: ${totalCount}`, 10, finalY + 6);
+    doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
+    doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
+
+    // Signatures
+    doc.line(10, finalY + 25, 60, finalY + 25);
+    doc.text("Authorized Signatory", 10, finalY + 30);
+
+    doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25);
+    doc.text("Handover By", pageWidth - 60, finalY + 30);
+
+    doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
+}
+
+window.createBatch = async function() {
+    const net = document.getElementById('man_net').value;
+    if(!net) return alert("Select Network");
+
+    const chks = document.querySelectorAll('.batch-check:checked');
+    if(chks.length === 0) return alert("Select at least one item");
+
+    const ids = Array.from(chks).map(c => c.value);
+    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
+    const manifestDate = new Date().toLocaleDateString();
+
+    if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
+
+    // Collect items for PDF before clearing local state or logic
+    const selectedItems = [];
+    window.APP_DATA.manifest.forEach(x => {
+        if(ids.includes(x.id)) {
+            x.batchNo = batchId;
+            x.manifestDate = manifestDate;
+            selectedItems.push(x);
+        }
+    });
+
+    // Auto Generate PDF
+    downloadManifestPdf(selectedItems, net);
+
+    // Update Backend
+    exportBatch(batchId); // Keep Excel export? User didn't say remove it, but "Create manifest button will auto generate PDF". I will keep Excel as backup unless it conflicts. User said "Create manifest button will auto generate PDF", didn't explicitly say "Stop Excel". I'll keep it.
+    renderManifest();
+    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    toast("Manifest Created & PDF Generated");
+};
+
+</script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript" defer>
+window.downloadManifestPdf = function(items, network) {
+    if(!items || !items.length) return;
+
+    const doc = new jspdf.jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // -- HEADER --
+    const dateStr = new Date().toLocaleDateString();
+
+    // Logo (Centered)
+    if(LOGO_BASE64) {
+        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth/2) - 20, 10, 40, 15);
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("MANIFEST", 10, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Network: ${network}`, 10, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
+
+    // -- TABLE --
+    // Columns: S.No, AWB, Date, Dest, Pcs, Wgt, Client
+    // Data Preparation
+    const tableBody = items.map((x, i) => [
+        i + 1,
+        x.id,
+        new Date(x.date).toLocaleDateString(),
+        x.dest,
+        x.boxes,
+        x.chgWgt,
+        (x.client || '').slice(-4)
+    ]);
+
+    doc.autoTable({
+        startY: 48,
+        head: [['#', 'AWB', 'Date', 'Dest', 'Pcs', 'Wgt', 'Client']],
+        body: tableBody,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 10 }, // #
+            4: { cellWidth: 15 }, // Pcs
+            5: { cellWidth: 20 }, // Wgt
+        }
+    });
+
+    // -- FOOTER / TOTALS --
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Calculate Totals
+    const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
+    const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
+    const totalCount = items.length;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("SUMMARY", 10, finalY);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Shipments: ${totalCount}`, 10, finalY + 6);
+    doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
+    doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
+
+    // Signatures
+    doc.line(10, finalY + 25, 60, finalY + 25);
+    doc.text("Authorized Signatory", 10, finalY + 30);
+
+    doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25);
+    doc.text("Handover By", pageWidth - 60, finalY + 30);
+
+    doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
+}
+
+window.createBatch = async function() {
+    const net = document.getElementById('man_net').value;
+    if(!net) return alert("Select Network");
+
+    const chks = document.querySelectorAll('.batch-check:checked');
+    if(chks.length === 0) return alert("Select at least one item");
+
+    const ids = Array.from(chks).map(c => c.value);
+    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
+    const manifestDate = new Date().toLocaleDateString();
+
+    if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
+
+    // Collect items for PDF before clearing local state or logic
+    const selectedItems = [];
+    window.APP_DATA.manifest.forEach(x => {
+        if(ids.includes(x.id)) {
+            x.batchNo = batchId;
+            x.manifestDate = manifestDate;
+            selectedItems.push(x);
+        }
+    });
+
+    // Auto Generate PDF
+    downloadManifestPdf(selectedItems, net);
+
+    // Update Backend
+    exportBatch(batchId); // Keep Excel export? User didn't say remove it, but "Create manifest button will auto generate PDF". I will keep Excel as backup unless it conflicts. User said "Create manifest button will auto generate PDF", didn't explicitly say "Stop Excel". I'll keep it.
+    renderManifest();
+    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    toast("Manifest Created & PDF Generated");
+};
+
+</script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js" defer>
+window.downloadManifestPdf = function(items, network) {
+    if(!items || !items.length) return;
+
+    const doc = new jspdf.jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // -- HEADER --
+    const dateStr = new Date().toLocaleDateString();
+
+    // Logo (Centered)
+    if(LOGO_BASE64) {
+        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth/2) - 20, 10, 40, 15);
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("MANIFEST", 10, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Network: ${network}`, 10, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
+
+    // -- TABLE --
+    // Columns: S.No, AWB, Date, Dest, Pcs, Wgt, Client
+    // Data Preparation
+    const tableBody = items.map((x, i) => [
+        i + 1,
+        x.id,
+        new Date(x.date).toLocaleDateString(),
+        x.dest,
+        x.boxes,
+        x.chgWgt,
+        (x.client || '').slice(-4)
+    ]);
+
+    doc.autoTable({
+        startY: 48,
+        head: [['#', 'AWB', 'Date', 'Dest', 'Pcs', 'Wgt', 'Client']],
+        body: tableBody,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 10 }, // #
+            4: { cellWidth: 15 }, // Pcs
+            5: { cellWidth: 20 }, // Wgt
+        }
+    });
+
+    // -- FOOTER / TOTALS --
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Calculate Totals
+    const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
+    const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
+    const totalCount = items.length;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("SUMMARY", 10, finalY);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Shipments: ${totalCount}`, 10, finalY + 6);
+    doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
+    doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
+
+    // Signatures
+    doc.line(10, finalY + 25, 60, finalY + 25);
+    doc.text("Authorized Signatory", 10, finalY + 30);
+
+    doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25);
+    doc.text("Handover By", pageWidth - 60, finalY + 30);
+
+    doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
+}
+
+window.createBatch = async function() {
+    const net = document.getElementById('man_net').value;
+    if(!net) return alert("Select Network");
+
+    const chks = document.querySelectorAll('.batch-check:checked');
+    if(chks.length === 0) return alert("Select at least one item");
+
+    const ids = Array.from(chks).map(c => c.value);
+    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
+    const manifestDate = new Date().toLocaleDateString();
+
+    if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
+
+    // Collect items for PDF before clearing local state or logic
+    const selectedItems = [];
+    window.APP_DATA.manifest.forEach(x => {
+        if(ids.includes(x.id)) {
+            x.batchNo = batchId;
+            x.manifestDate = manifestDate;
+            selectedItems.push(x);
+        }
+    });
+
+    // Auto Generate PDF
+    downloadManifestPdf(selectedItems, net);
+
+    // Update Backend
+    exportBatch(batchId); // Keep Excel export? User didn't say remove it, but "Create manifest button will auto generate PDF". I will keep Excel as backup unless it conflicts. User said "Create manifest button will auto generate PDF", didn't explicitly say "Stop Excel". I'll keep it.
+    renderManifest();
+    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    toast("Manifest Created & PDF Generated");
+};
+
+</script>
 
   <style>
     :root {
@@ -104,12 +458,12 @@
     .sidebar-nav { flex: 1; padding: 1.5rem 1rem; overflow-y: auto; }
     .content-area { flex: 1; transition: margin 0.3s; min-height: 100vh; display:flex; flex-direction: column; }
     .topbar { height: var(--header-height); background: white; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; position: sticky; top: 0; z-index: 990; }
-    
+
     .nav-item-custom { display: flex; align-items: center; padding: 0.75rem 1rem; border-radius: 8px; color: rgba(255,255,255,0.7); text-decoration: none; margin-bottom: 4px; cursor:pointer; font-weight: 500; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; transition: all 0.2s; }
     .nav-item-custom:hover { background: rgba(255,255,255,0.1); color: white; }
     .nav-item-custom.active { background: var(--brand-red); color: white; box-shadow: 0 4px 12px rgba(212, 5, 17, 0.3); }
     .nav-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; margin: 1.5rem 0 0.5rem 0.75rem; color: var(--brand-yellow); letter-spacing: 1px; opacity: 0.8; }
-    
+
     .panel-card { background: white; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 1px 2px rgba(0,0,0,0.05); height: 100%; overflow: hidden; }
     /* Global Uppercase for Headings */
     h1, h2, h3, h4, h5, h6, .panel-header, .modal-title, .fun-header, .stat-label, .nav-label, th { text-transform: uppercase !important; letter-spacing: 0.5px; }
@@ -132,7 +486,7 @@
     .fun-label { color: #475569; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.5px; }
     .fun-section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
     .fun-section-green { background: #f0fdf4; border-color: #bbf7d0; }
-    
+
     /* Dark Checkboxes */
     .form-check-input { border-color: #64748b; border-width: 2px; }
     .form-check-input:checked { background-color: var(--brand-blue); border-color: var(--brand-blue); }
@@ -164,8 +518,244 @@
     .list-val-bold { font-weight: 700; color: var(--brand-blue); font-family: monospace; font-size: 1rem; }
   </style>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+window.downloadManifestPdf = function(items, network) {
+    if(!items || !items.length) return;
+
+    const doc = new jspdf.jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // -- HEADER --
+    const dateStr = new Date().toLocaleDateString();
+
+    // Logo (Centered)
+    if(LOGO_BASE64) {
+        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth/2) - 20, 10, 40, 15);
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("MANIFEST", 10, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Network: ${network}`, 10, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
+
+    // -- TABLE --
+    // Columns: S.No, AWB, Date, Dest, Pcs, Wgt, Client
+    // Data Preparation
+    const tableBody = items.map((x, i) => [
+        i + 1,
+        x.id,
+        new Date(x.date).toLocaleDateString(),
+        x.dest,
+        x.boxes,
+        x.chgWgt,
+        (x.client || '').slice(-4)
+    ]);
+
+    doc.autoTable({
+        startY: 48,
+        head: [['#', 'AWB', 'Date', 'Dest', 'Pcs', 'Wgt', 'Client']],
+        body: tableBody,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 10 }, // #
+            4: { cellWidth: 15 }, // Pcs
+            5: { cellWidth: 20 }, // Wgt
+        }
+    });
+
+    // -- FOOTER / TOTALS --
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Calculate Totals
+    const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
+    const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
+    const totalCount = items.length;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("SUMMARY", 10, finalY);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Shipments: ${totalCount}`, 10, finalY + 6);
+    doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
+    doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
+
+    // Signatures
+    doc.line(10, finalY + 25, 60, finalY + 25);
+    doc.text("Authorized Signatory", 10, finalY + 30);
+
+    doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25);
+    doc.text("Handover By", pageWidth - 60, finalY + 30);
+
+    doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
+}
+
+window.createBatch = async function() {
+    const net = document.getElementById('man_net').value;
+    if(!net) return alert("Select Network");
+
+    const chks = document.querySelectorAll('.batch-check:checked');
+    if(chks.length === 0) return alert("Select at least one item");
+
+    const ids = Array.from(chks).map(c => c.value);
+    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
+    const manifestDate = new Date().toLocaleDateString();
+
+    if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
+
+    // Collect items for PDF before clearing local state or logic
+    const selectedItems = [];
+    window.APP_DATA.manifest.forEach(x => {
+        if(ids.includes(x.id)) {
+            x.batchNo = batchId;
+            x.manifestDate = manifestDate;
+            selectedItems.push(x);
+        }
+    });
+
+    // Auto Generate PDF
+    downloadManifestPdf(selectedItems, net);
+
+    // Update Backend
+    exportBatch(batchId); // Keep Excel export? User didn't say remove it, but "Create manifest button will auto generate PDF". I will keep Excel as backup unless it conflicts. User said "Create manifest button will auto generate PDF", didn't explicitly say "Stop Excel". I'll keep it.
+    renderManifest();
+    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    toast("Manifest Created & PDF Generated");
+};
+
+</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js">
+window.downloadManifestPdf = function(items, network) {
+    if(!items || !items.length) return;
+
+    const doc = new jspdf.jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // -- HEADER --
+    const dateStr = new Date().toLocaleDateString();
+
+    // Logo (Centered)
+    if(LOGO_BASE64) {
+        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth/2) - 20, 10, 40, 15);
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("MANIFEST", 10, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Network: ${network}`, 10, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
+
+    // -- TABLE --
+    // Columns: S.No, AWB, Date, Dest, Pcs, Wgt, Client
+    // Data Preparation
+    const tableBody = items.map((x, i) => [
+        i + 1,
+        x.id,
+        new Date(x.date).toLocaleDateString(),
+        x.dest,
+        x.boxes,
+        x.chgWgt,
+        (x.client || '').slice(-4)
+    ]);
+
+    doc.autoTable({
+        startY: 48,
+        head: [['#', 'AWB', 'Date', 'Dest', 'Pcs', 'Wgt', 'Client']],
+        body: tableBody,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 10 }, // #
+            4: { cellWidth: 15 }, // Pcs
+            5: { cellWidth: 20 }, // Wgt
+        }
+    });
+
+    // -- FOOTER / TOTALS --
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Calculate Totals
+    const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
+    const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
+    const totalCount = items.length;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("SUMMARY", 10, finalY);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Shipments: ${totalCount}`, 10, finalY + 6);
+    doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
+    doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
+
+    // Signatures
+    doc.line(10, finalY + 25, 60, finalY + 25);
+    doc.text("Authorized Signatory", 10, finalY + 30);
+
+    doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25);
+    doc.text("Handover By", pageWidth - 60, finalY + 30);
+
+    doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
+}
+
+window.createBatch = async function() {
+    const net = document.getElementById('man_net').value;
+    if(!net) return alert("Select Network");
+
+    const chks = document.querySelectorAll('.batch-check:checked');
+    if(chks.length === 0) return alert("Select at least one item");
+
+    const ids = Array.from(chks).map(c => c.value);
+    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
+    const manifestDate = new Date().toLocaleDateString();
+
+    if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
+
+    // Collect items for PDF before clearing local state or logic
+    const selectedItems = [];
+    window.APP_DATA.manifest.forEach(x => {
+        if(ids.includes(x.id)) {
+            x.batchNo = batchId;
+            x.manifestDate = manifestDate;
+            selectedItems.push(x);
+        }
+    });
+
+    // Auto Generate PDF
+    downloadManifestPdf(selectedItems, net);
+
+    // Update Backend
+    exportBatch(batchId); // Keep Excel export? User didn't say remove it, but "Create manifest button will auto generate PDF". I will keep Excel as backup unless it conflicts. User said "Create manifest button will auto generate PDF", didn't explicitly say "Stop Excel". I'll keep it.
+    renderManifest();
+    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    toast("Manifest Created & PDF Generated");
+};
+
+</script>
 
 </head>
 <body>
@@ -459,7 +1049,7 @@
                        <span class="input-group-text"><i class="bi bi-search"></i></span>
                        <input id="man_search" class="form-control" placeholder="Search ID/NetNo..." oninput="renderManifest()">
                    </div>
-                   <button class="btn btn-primary btn-sm rounded-pill shadow-sm text-nowrap px-3" onclick="createBatch()"><i class="bi bi-collection me-2"></i>Generate Batch</button>
+                   <button class="btn btn-primary btn-sm rounded-pill shadow-sm text-nowrap px-3" onclick="createBatch()"><i class="bi bi-file-text me-2"></i>Create Manifest</button>
                 </div>
              </div>
 
@@ -670,8 +1260,244 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer>
+window.downloadManifestPdf = function(items, network) {
+    if(!items || !items.length) return;
+
+    const doc = new jspdf.jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // -- HEADER --
+    const dateStr = new Date().toLocaleDateString();
+
+    // Logo (Centered)
+    if(LOGO_BASE64) {
+        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth/2) - 20, 10, 40, 15);
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("MANIFEST", 10, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Network: ${network}`, 10, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
+
+    // -- TABLE --
+    // Columns: S.No, AWB, Date, Dest, Pcs, Wgt, Client
+    // Data Preparation
+    const tableBody = items.map((x, i) => [
+        i + 1,
+        x.id,
+        new Date(x.date).toLocaleDateString(),
+        x.dest,
+        x.boxes,
+        x.chgWgt,
+        (x.client || '').slice(-4)
+    ]);
+
+    doc.autoTable({
+        startY: 48,
+        head: [['#', 'AWB', 'Date', 'Dest', 'Pcs', 'Wgt', 'Client']],
+        body: tableBody,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 10 }, // #
+            4: { cellWidth: 15 }, // Pcs
+            5: { cellWidth: 20 }, // Wgt
+        }
+    });
+
+    // -- FOOTER / TOTALS --
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Calculate Totals
+    const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
+    const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
+    const totalCount = items.length;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("SUMMARY", 10, finalY);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Shipments: ${totalCount}`, 10, finalY + 6);
+    doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
+    doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
+
+    // Signatures
+    doc.line(10, finalY + 25, 60, finalY + 25);
+    doc.text("Authorized Signatory", 10, finalY + 30);
+
+    doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25);
+    doc.text("Handover By", pageWidth - 60, finalY + 30);
+
+    doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
+}
+
+window.createBatch = async function() {
+    const net = document.getElementById('man_net').value;
+    if(!net) return alert("Select Network");
+
+    const chks = document.querySelectorAll('.batch-check:checked');
+    if(chks.length === 0) return alert("Select at least one item");
+
+    const ids = Array.from(chks).map(c => c.value);
+    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
+    const manifestDate = new Date().toLocaleDateString();
+
+    if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
+
+    // Collect items for PDF before clearing local state or logic
+    const selectedItems = [];
+    window.APP_DATA.manifest.forEach(x => {
+        if(ids.includes(x.id)) {
+            x.batchNo = batchId;
+            x.manifestDate = manifestDate;
+            selectedItems.push(x);
+        }
+    });
+
+    // Auto Generate PDF
+    downloadManifestPdf(selectedItems, net);
+
+    // Update Backend
+    exportBatch(batchId); // Keep Excel export? User didn't say remove it, but "Create manifest button will auto generate PDF". I will keep Excel as backup unless it conflicts. User said "Create manifest button will auto generate PDF", didn't explicitly say "Stop Excel". I'll keep it.
+    renderManifest();
+    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    toast("Manifest Created & PDF Generated");
+};
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js" defer>
+window.downloadManifestPdf = function(items, network) {
+    if(!items || !items.length) return;
+
+    const doc = new jspdf.jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // -- HEADER --
+    const dateStr = new Date().toLocaleDateString();
+
+    // Logo (Centered)
+    if(LOGO_BASE64) {
+        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth/2) - 20, 10, 40, 15);
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("MANIFEST", 10, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Network: ${network}`, 10, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
+
+    // -- TABLE --
+    // Columns: S.No, AWB, Date, Dest, Pcs, Wgt, Client
+    // Data Preparation
+    const tableBody = items.map((x, i) => [
+        i + 1,
+        x.id,
+        new Date(x.date).toLocaleDateString(),
+        x.dest,
+        x.boxes,
+        x.chgWgt,
+        (x.client || '').slice(-4)
+    ]);
+
+    doc.autoTable({
+        startY: 48,
+        head: [['#', 'AWB', 'Date', 'Dest', 'Pcs', 'Wgt', 'Client']],
+        body: tableBody,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 10 }, // #
+            4: { cellWidth: 15 }, // Pcs
+            5: { cellWidth: 20 }, // Wgt
+        }
+    });
+
+    // -- FOOTER / TOTALS --
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Calculate Totals
+    const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
+    const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
+    const totalCount = items.length;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("SUMMARY", 10, finalY);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Shipments: ${totalCount}`, 10, finalY + 6);
+    doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
+    doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
+
+    // Signatures
+    doc.line(10, finalY + 25, 60, finalY + 25);
+    doc.text("Authorized Signatory", 10, finalY + 30);
+
+    doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25);
+    doc.text("Handover By", pageWidth - 60, finalY + 30);
+
+    doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
+}
+
+window.createBatch = async function() {
+    const net = document.getElementById('man_net').value;
+    if(!net) return alert("Select Network");
+
+    const chks = document.querySelectorAll('.batch-check:checked');
+    if(chks.length === 0) return alert("Select at least one item");
+
+    const ids = Array.from(chks).map(c => c.value);
+    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
+    const manifestDate = new Date().toLocaleDateString();
+
+    if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
+
+    // Collect items for PDF before clearing local state or logic
+    const selectedItems = [];
+    window.APP_DATA.manifest.forEach(x => {
+        if(ids.includes(x.id)) {
+            x.batchNo = batchId;
+            x.manifestDate = manifestDate;
+            selectedItems.push(x);
+        }
+    });
+
+    // Auto Generate PDF
+    downloadManifestPdf(selectedItems, net);
+
+    // Update Backend
+    exportBatch(batchId); // Keep Excel export? User didn't say remove it, but "Create manifest button will auto generate PDF". I will keep Excel as backup unless it conflicts. User said "Create manifest button will auto generate PDF", didn't explicitly say "Stop Excel". I'll keep it.
+    renderManifest();
+    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    toast("Manifest Created & PDF Generated");
+};
+
+</script>
 
 <script>
 const API_URL="https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
@@ -1421,8 +2247,244 @@ window.printManifest = function() {
             .footer { margin-top: 40px; display: flex; justify-content: space-between; padding-top: 20px; border-top: 1px solid #000; }
             @media print { .no-print { display: none; } }
         </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+window.downloadManifestPdf = function(items, network) {
+    if(!items || !items.length) return;
+
+    const doc = new jspdf.jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // -- HEADER --
+    const dateStr = new Date().toLocaleDateString();
+
+    // Logo (Centered)
+    if(LOGO_BASE64) {
+        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth/2) - 20, 10, 40, 15);
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("MANIFEST", 10, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Network: ${network}`, 10, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
+
+    // -- TABLE --
+    // Columns: S.No, AWB, Date, Dest, Pcs, Wgt, Client
+    // Data Preparation
+    const tableBody = items.map((x, i) => [
+        i + 1,
+        x.id,
+        new Date(x.date).toLocaleDateString(),
+        x.dest,
+        x.boxes,
+        x.chgWgt,
+        (x.client || '').slice(-4)
+    ]);
+
+    doc.autoTable({
+        startY: 48,
+        head: [['#', 'AWB', 'Date', 'Dest', 'Pcs', 'Wgt', 'Client']],
+        body: tableBody,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 10 }, // #
+            4: { cellWidth: 15 }, // Pcs
+            5: { cellWidth: 20 }, // Wgt
+        }
+    });
+
+    // -- FOOTER / TOTALS --
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Calculate Totals
+    const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
+    const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
+    const totalCount = items.length;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("SUMMARY", 10, finalY);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Shipments: ${totalCount}`, 10, finalY + 6);
+    doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
+    doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
+
+    // Signatures
+    doc.line(10, finalY + 25, 60, finalY + 25);
+    doc.text("Authorized Signatory", 10, finalY + 30);
+
+    doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25);
+    doc.text("Handover By", pageWidth - 60, finalY + 30);
+
+    doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
+}
+
+window.createBatch = async function() {
+    const net = document.getElementById('man_net').value;
+    if(!net) return alert("Select Network");
+
+    const chks = document.querySelectorAll('.batch-check:checked');
+    if(chks.length === 0) return alert("Select at least one item");
+
+    const ids = Array.from(chks).map(c => c.value);
+    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
+    const manifestDate = new Date().toLocaleDateString();
+
+    if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
+
+    // Collect items for PDF before clearing local state or logic
+    const selectedItems = [];
+    window.APP_DATA.manifest.forEach(x => {
+        if(ids.includes(x.id)) {
+            x.batchNo = batchId;
+            x.manifestDate = manifestDate;
+            selectedItems.push(x);
+        }
+    });
+
+    // Auto Generate PDF
+    downloadManifestPdf(selectedItems, net);
+
+    // Update Backend
+    exportBatch(batchId); // Keep Excel export? User didn't say remove it, but "Create manifest button will auto generate PDF". I will keep Excel as backup unless it conflicts. User said "Create manifest button will auto generate PDF", didn't explicitly say "Stop Excel". I'll keep it.
+    renderManifest();
+    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    toast("Manifest Created & PDF Generated");
+};
+
+</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js">
+window.downloadManifestPdf = function(items, network) {
+    if(!items || !items.length) return;
+
+    const doc = new jspdf.jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // -- HEADER --
+    const dateStr = new Date().toLocaleDateString();
+
+    // Logo (Centered)
+    if(LOGO_BASE64) {
+        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth/2) - 20, 10, 40, 15);
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("MANIFEST", 10, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Network: ${network}`, 10, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
+
+    // -- TABLE --
+    // Columns: S.No, AWB, Date, Dest, Pcs, Wgt, Client
+    // Data Preparation
+    const tableBody = items.map((x, i) => [
+        i + 1,
+        x.id,
+        new Date(x.date).toLocaleDateString(),
+        x.dest,
+        x.boxes,
+        x.chgWgt,
+        (x.client || '').slice(-4)
+    ]);
+
+    doc.autoTable({
+        startY: 48,
+        head: [['#', 'AWB', 'Date', 'Dest', 'Pcs', 'Wgt', 'Client']],
+        body: tableBody,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 10 }, // #
+            4: { cellWidth: 15 }, // Pcs
+            5: { cellWidth: 20 }, // Wgt
+        }
+    });
+
+    // -- FOOTER / TOTALS --
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Calculate Totals
+    const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
+    const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
+    const totalCount = items.length;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("SUMMARY", 10, finalY);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Shipments: ${totalCount}`, 10, finalY + 6);
+    doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
+    doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
+
+    // Signatures
+    doc.line(10, finalY + 25, 60, finalY + 25);
+    doc.text("Authorized Signatory", 10, finalY + 30);
+
+    doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25);
+    doc.text("Handover By", pageWidth - 60, finalY + 30);
+
+    doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
+}
+
+window.createBatch = async function() {
+    const net = document.getElementById('man_net').value;
+    if(!net) return alert("Select Network");
+
+    const chks = document.querySelectorAll('.batch-check:checked');
+    if(chks.length === 0) return alert("Select at least one item");
+
+    const ids = Array.from(chks).map(c => c.value);
+    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
+    const manifestDate = new Date().toLocaleDateString();
+
+    if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
+
+    // Collect items for PDF before clearing local state or logic
+    const selectedItems = [];
+    window.APP_DATA.manifest.forEach(x => {
+        if(ids.includes(x.id)) {
+            x.batchNo = batchId;
+            x.manifestDate = manifestDate;
+            selectedItems.push(x);
+        }
+    });
+
+    // Auto Generate PDF
+    downloadManifestPdf(selectedItems, net);
+
+    // Update Backend
+    exportBatch(batchId); // Keep Excel export? User didn't say remove it, but "Create manifest button will auto generate PDF". I will keep Excel as backup unless it conflicts. User said "Create manifest button will auto generate PDF", didn't explicitly say "Stop Excel". I'll keep it.
+    renderManifest();
+    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    toast("Manifest Created & PDF Generated");
+};
+
+</script>
 
 </head><body>
 
@@ -1455,7 +2517,7 @@ window.printManifest = function() {
     w.document.close();
 }
 window.toggleAllMan = function(el) { document.querySelectorAll('.batch-check').forEach(c => c.checked = el.checked); }
-window.createBatch = async function() { const net = document.getElementById('man_net').value; if(!net) return alert("Select Network"); const chks = document.querySelectorAll('.batch-check:checked'); if(chks.length === 0) return alert("Select at least one item"); const ids = Array.from(chks).map(c => c.value); const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`; const manifestDate = new Date().toLocaleDateString(); if(!confirm(`Generate Manifest Batch "${batchId}" for ${ids.length} items?`)) return; window.APP_DATA.manifest.forEach(x => { if(ids.includes(x.id)) { x.batchNo = batchId; x.manifestDate = manifestDate; } }); exportBatch(batchId); renderManifest(); await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser }); toast("Batch Created & Exported"); };
+
 window.renderManifestHistory = function() { const con = document.getElementById('batchContainer'); const all = window.APP_DATA.manifest || []; const batches = {}; all.forEach(x => { if(x.batchNo) { if(!batches[x.batchNo]) batches[x.batchNo] = []; batches[x.batchNo].push(x); } }); const keys = Object.keys(batches).sort().reverse(); if(keys.length === 0) { con.innerHTML = ''; document.getElementById('batchEmptyState').style.display = 'block'; return; } document.getElementById('batchEmptyState').style.display = 'none'; con.innerHTML = keys.map(k => { const group = batches[k]; const net = group[0].net; const date = group[0].manifestDate || "N/A"; const count = group.length; const rows = group.map(g => `<tr><td>${g.id}</td><td>${g.dest}</td><td>${g.chgWgt}</td></tr>`).join(''); return `<div class="col-md-6 col-xl-4"><div class="panel-card h-100"><div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light"><div><div class="fw-bold text-primary">${k}</div><div class="small text-muted">${date} • ${net}</div></div><span class="badge bg-primary rounded-pill">${count} Items</span></div><div class="p-3"><div class="d-flex gap-2 mb-3"><button class="btn btn-sm btn-outline-primary flex-fill" onclick="exportBatch('${k}')"><i class="bi bi-download me-1"></i> Re-Export</button><button class="btn btn-sm btn-outline-secondary flex-fill" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_${k}">View Items</button></div><div class="collapse" id="collapse_${k}"><div class="table-responsive border rounded" style="max-height:200px; overflow-y:auto;"><table class="table table-sm table-striped mb-0 small"><thead><tr><th>AWB</th><th>Destination</th><th>Weight</th></tr></thead><tbody>${rows}</tbody></table></div></div></div></div></div>`; }).join(''); }
 window.exportBatch = function(batchId) { const items = window.APP_DATA.manifest.filter(x => x.batchNo === batchId); if(!items.length) return alert("Empty Batch"); const data = items.map(x => ({ "AWB": x.id, "Date": x.date, "Network": x.net, "Network No": x.netNo, "Client": x.client.slice(-4), "Destination": x.dest, "Pieces": x.boxes, "Weight": x.chgWgt, "Type": x.type, "Batch": x.batchNo })); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), batchId); XLSX.writeFile(wb, `Manifest_${batchId}.xlsx`); };
 
@@ -1818,8 +2880,244 @@ window.openPrintReceipt = function(id) {
         </style>
         <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+window.downloadManifestPdf = function(items, network) {
+    if(!items || !items.length) return;
+
+    const doc = new jspdf.jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // -- HEADER --
+    const dateStr = new Date().toLocaleDateString();
+
+    // Logo (Centered)
+    if(LOGO_BASE64) {
+        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth/2) - 20, 10, 40, 15);
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("MANIFEST", 10, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Network: ${network}`, 10, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
+
+    // -- TABLE --
+    // Columns: S.No, AWB, Date, Dest, Pcs, Wgt, Client
+    // Data Preparation
+    const tableBody = items.map((x, i) => [
+        i + 1,
+        x.id,
+        new Date(x.date).toLocaleDateString(),
+        x.dest,
+        x.boxes,
+        x.chgWgt,
+        (x.client || '').slice(-4)
+    ]);
+
+    doc.autoTable({
+        startY: 48,
+        head: [['#', 'AWB', 'Date', 'Dest', 'Pcs', 'Wgt', 'Client']],
+        body: tableBody,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 10 }, // #
+            4: { cellWidth: 15 }, // Pcs
+            5: { cellWidth: 20 }, // Wgt
+        }
+    });
+
+    // -- FOOTER / TOTALS --
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Calculate Totals
+    const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
+    const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
+    const totalCount = items.length;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("SUMMARY", 10, finalY);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Shipments: ${totalCount}`, 10, finalY + 6);
+    doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
+    doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
+
+    // Signatures
+    doc.line(10, finalY + 25, 60, finalY + 25);
+    doc.text("Authorized Signatory", 10, finalY + 30);
+
+    doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25);
+    doc.text("Handover By", pageWidth - 60, finalY + 30);
+
+    doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
+}
+
+window.createBatch = async function() {
+    const net = document.getElementById('man_net').value;
+    if(!net) return alert("Select Network");
+
+    const chks = document.querySelectorAll('.batch-check:checked');
+    if(chks.length === 0) return alert("Select at least one item");
+
+    const ids = Array.from(chks).map(c => c.value);
+    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
+    const manifestDate = new Date().toLocaleDateString();
+
+    if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
+
+    // Collect items for PDF before clearing local state or logic
+    const selectedItems = [];
+    window.APP_DATA.manifest.forEach(x => {
+        if(ids.includes(x.id)) {
+            x.batchNo = batchId;
+            x.manifestDate = manifestDate;
+            selectedItems.push(x);
+        }
+    });
+
+    // Auto Generate PDF
+    downloadManifestPdf(selectedItems, net);
+
+    // Update Backend
+    exportBatch(batchId); // Keep Excel export? User didn't say remove it, but "Create manifest button will auto generate PDF". I will keep Excel as backup unless it conflicts. User said "Create manifest button will auto generate PDF", didn't explicitly say "Stop Excel". I'll keep it.
+    renderManifest();
+    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    toast("Manifest Created & PDF Generated");
+};
+
+</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js">
+window.downloadManifestPdf = function(items, network) {
+    if(!items || !items.length) return;
+
+    const doc = new jspdf.jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // -- HEADER --
+    const dateStr = new Date().toLocaleDateString();
+
+    // Logo (Centered)
+    if(LOGO_BASE64) {
+        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth/2) - 20, 10, 40, 15);
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("MANIFEST", 10, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Network: ${network}`, 10, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
+
+    // -- TABLE --
+    // Columns: S.No, AWB, Date, Dest, Pcs, Wgt, Client
+    // Data Preparation
+    const tableBody = items.map((x, i) => [
+        i + 1,
+        x.id,
+        new Date(x.date).toLocaleDateString(),
+        x.dest,
+        x.boxes,
+        x.chgWgt,
+        (x.client || '').slice(-4)
+    ]);
+
+    doc.autoTable({
+        startY: 48,
+        head: [['#', 'AWB', 'Date', 'Dest', 'Pcs', 'Wgt', 'Client']],
+        body: tableBody,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 10 }, // #
+            4: { cellWidth: 15 }, // Pcs
+            5: { cellWidth: 20 }, // Wgt
+        }
+    });
+
+    // -- FOOTER / TOTALS --
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Calculate Totals
+    const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
+    const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
+    const totalCount = items.length;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("SUMMARY", 10, finalY);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Shipments: ${totalCount}`, 10, finalY + 6);
+    doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
+    doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
+
+    // Signatures
+    doc.line(10, finalY + 25, 60, finalY + 25);
+    doc.text("Authorized Signatory", 10, finalY + 30);
+
+    doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25);
+    doc.text("Handover By", pageWidth - 60, finalY + 30);
+
+    doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
+}
+
+window.createBatch = async function() {
+    const net = document.getElementById('man_net').value;
+    if(!net) return alert("Select Network");
+
+    const chks = document.querySelectorAll('.batch-check:checked');
+    if(chks.length === 0) return alert("Select at least one item");
+
+    const ids = Array.from(chks).map(c => c.value);
+    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
+    const manifestDate = new Date().toLocaleDateString();
+
+    if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
+
+    // Collect items for PDF before clearing local state or logic
+    const selectedItems = [];
+    window.APP_DATA.manifest.forEach(x => {
+        if(ids.includes(x.id)) {
+            x.batchNo = batchId;
+            x.manifestDate = manifestDate;
+            selectedItems.push(x);
+        }
+    });
+
+    // Auto Generate PDF
+    downloadManifestPdf(selectedItems, net);
+
+    // Update Backend
+    exportBatch(batchId); // Keep Excel export? User didn't say remove it, but "Create manifest button will auto generate PDF". I will keep Excel as backup unless it conflicts. User said "Create manifest button will auto generate PDF", didn't explicitly say "Stop Excel". I'll keep it.
+    renderManifest();
+    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    toast("Manifest Created & PDF Generated");
+};
+
+</script>
 
 </head>
       <body>
@@ -1927,35 +3225,36 @@ window.downloadReceiverPdf = function(id) {
         doc.setFont("helvetica", "bold"); doc.text("CONTENT:", col2, startY + 15);
         doc.setFont("helvetica", "normal"); doc.text(s.type, col2 + 25, startY + 15);
 
-        // -- TABLE --
-        // Use autoTable
-        const tableBody = data.boxes.map(x => [
-            x.no,
-            x.l + 'x' + x.b + 'x' + x.h,
-            x.vol,
-            x.wgt,
-            x.chg
-        ]);
+        // -- SUMMARY TABLE REPLACEMENT --
+        // No detail table. Just Totals.
+        const summaryY = startY + 25;
 
-        // Footer Row for Table
-        const footRow = [['', '', 'TOTAL:', s.actWgt, s.chgWgt]];
+        doc.setLineWidth(0.2);
+        doc.rect(10, summaryY, pageWidth - 20, 25);
+        doc.line(10, summaryY + 8, pageWidth - 20, summaryY + 8); // Header line
 
-        doc.autoTable({
-            startY: startY + 22,
-            head: [['Box #', 'Dim (LxBxH)', 'Vol Wgt', 'Act Wgt', 'Chg Wgt']],
-            body: tableBody,
-            foot: footRow,
-            theme: 'grid',
-            styles: { fontSize: 8, cellPadding: 1 },
-            headStyles: { fillColor: [220, 220, 220], textColor: 0, fontStyle: 'bold' },
-            footStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold' },
-            margin: { left: 10, right: 10 }
-        });
+        // Headers
+        doc.setFont("helvetica", "bold");
+        doc.text("TOTAL BOXES", 15, summaryY + 6);
+        doc.text("ACTUAL WGT", 65, summaryY + 6);
+        doc.text("VOLUME WGT", 115, summaryY + 6);
+        doc.text("CHARGEABLE WGT", 165, summaryY + 6);
 
-        const finalY = doc.lastAutoTable.finalY + 5;
+        // Values
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        doc.text(String(s.boxes), 15, summaryY + 18);
+        doc.text(String(s.actWgt) + " KG", 65, summaryY + 18);
+        doc.text(String(s.volWgt) + " KG", 115, summaryY + 18);
+
+        doc.setFont("helvetica", "bold");
+        doc.text(String(s.chgWgt) + " KG", 165, summaryY + 18);
+
+        const finalY = summaryY + 35;
 
         // Payment Info
         doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
         doc.text(`Payment: Total: ${s.payTotal} | Paid: ${s.payPaid}`, 10, finalY);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(200, 0, 0); // Red
@@ -1991,6 +3290,124 @@ window.downloadReceiverPdf = function(id) {
 
     doc.save(`Slip_${s.id}.pdf`);
 }
+
+
+window.downloadManifestPdf = function(items, network) {
+    if(!items || !items.length) return;
+
+    const doc = new jspdf.jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // -- HEADER --
+    const dateStr = new Date().toLocaleDateString();
+
+    // Logo (Centered)
+    if(LOGO_BASE64) {
+        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth/2) - 20, 10, 40, 15);
+    }
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("MANIFEST", 10, 35);
+
+    doc.setFontSize(10);
+    doc.text(`Network: ${network}`, 10, 42);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
+
+    // -- TABLE --
+    // Columns: S.No, AWB, Date, Dest, Pcs, Wgt, Client
+    // Data Preparation
+    const tableBody = items.map((x, i) => [
+        i + 1,
+        x.id,
+        new Date(x.date).toLocaleDateString(),
+        x.dest,
+        x.boxes,
+        x.chgWgt,
+        (x.client || '').slice(-4)
+    ]);
+
+    doc.autoTable({
+        startY: 48,
+        head: [['#', 'AWB', 'Date', 'Dest', 'Pcs', 'Wgt', 'Client']],
+        body: tableBody,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+        columnStyles: {
+            0: { cellWidth: 10 }, // #
+            4: { cellWidth: 15 }, // Pcs
+            5: { cellWidth: 20 }, // Wgt
+        }
+    });
+
+    // -- FOOTER / TOTALS --
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    // Calculate Totals
+    const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
+    const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
+    const totalCount = items.length;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("SUMMARY", 10, finalY);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Total Shipments: ${totalCount}`, 10, finalY + 6);
+    doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
+    doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
+
+    // Signatures
+    doc.line(10, finalY + 25, 60, finalY + 25);
+    doc.text("Authorized Signatory", 10, finalY + 30);
+
+    doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25);
+    doc.text("Handover By", pageWidth - 60, finalY + 30);
+
+    doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
+}
+
+window.createBatch = async function() {
+    const net = document.getElementById('man_net').value;
+    if(!net) return alert("Select Network");
+
+    const chks = document.querySelectorAll('.batch-check:checked');
+    if(chks.length === 0) return alert("Select at least one item");
+
+    const ids = Array.from(chks).map(c => c.value);
+    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
+    const manifestDate = new Date().toLocaleDateString();
+
+    if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
+
+    // Collect items for PDF before clearing local state or logic
+    const selectedItems = [];
+    window.APP_DATA.manifest.forEach(x => {
+        if(ids.includes(x.id)) {
+            x.batchNo = batchId;
+            x.manifestDate = manifestDate;
+            selectedItems.push(x);
+        }
+    });
+
+    // Auto Generate PDF
+    downloadManifestPdf(selectedItems, net);
+
+    // Update Backend
+    exportBatch(batchId); // Keep Excel export? User didn't say remove it, but "Create manifest button will auto generate PDF". I will keep Excel as backup unless it conflicts. User said "Create manifest button will auto generate PDF", didn't explicitly say "Stop Excel". I'll keep it.
+    renderManifest();
+    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    toast("Manifest Created & PDF Generated");
+};
 
 </script>
 </body>
