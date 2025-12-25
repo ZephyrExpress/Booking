@@ -142,24 +142,48 @@ function getAllData(username) {
       }
   } catch(e) {}
 
+  // ⚡ Bolt Optimization: Batch writes to avoid O(N) API calls
   if(updates.length > 0) {
-      updates.forEach(u => {
-          if(u.col) sh.getRange(u.row, u.col, 1, 1).setValues(u.val);
-          else sh.getRange(u.row, 15, 1, 2).setValues(u.vals);
-      });
+      // Updates are already applied to 'data' in the loop above.
+      // We extract the modified columns and write them back in one go.
+
+      // Update Columns 15 (O) & 16 (P) - Status & Auto Doer
+      // Indexes in 'data' (0-based): 14 -> Col 15, 15 -> Col 16
+      const col15_16 = data.map(r => [r[14], r[15]]);
+      sh.getRange(2, 15, col15_16.length, 2).setValues(col15_16);
+
+      // Update Column 21 (U) - Network No
+      // Index in 'data': 20 -> Col 21
+      const col21 = data.map(r => [r[20]]);
+      sh.getRange(2, 21, col21.length, 1).setValues(col21);
   }
 
   if(fmsUpdates.length > 0) {
       try {
           const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
-          if(fms && fms.getLastRow() >= 7) {
-              const ids = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
+          const fmsLast = fms ? fms.getLastRow() : 0;
+          if(fms && fmsLast >= 7) {
+              const numRows = fmsLast - 6;
+              const ids = fms.getRange(7, 2, numRows, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
+
+              // ⚡ Bolt Optimization: Read-Modify-Write for Column 14 (N) - Auto Doer
+              const range = fms.getRange(7, 14, numRows, 1);
+              const values = range.getValues();
+              let changed = false;
+
               fmsUpdates.forEach(u => {
                   const idx = ids.indexOf(u.awb);
                   if(idx > -1) {
-                      fms.getRange(idx+7, 14).setValue(u.autoDoer);
+                      if (values[idx][0] !== u.autoDoer) {
+                          values[idx][0] = u.autoDoer;
+                          changed = true;
+                      }
                   }
               });
+
+              if (changed) {
+                  range.setValues(values);
+              }
           }
       } catch(e) { console.error("FMS Sync Error", e); }
   }
