@@ -1,5 +1,5 @@
 /* =========================================
-   ZEPHYR PRO API (vFinal - Roles, perms, RTO)
+   ZEPHYR PRO API (vFinal - Roles, perms, RTO, Hashed Passwords)
    ========================================= */
 
 const TASK_SHEET_ID = "1_8VSzZdn8rKrzvXpzIfY_oz3XT9gi30jgzdxzQP4Bac";
@@ -44,6 +44,19 @@ function doPost(e) {
     return jsonResponse("error", "Unknown Action");
   } catch (err) { return jsonResponse("error", err.toString()); }
   finally { lock.releaseLock(); }
+}
+
+// --- UTILS ---
+function hashString(str) {
+  const rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, str);
+  let txtHash = '';
+  for (let i = 0; i < rawHash.length; i++) {
+    let hashVal = rawHash[i];
+    if (hashVal < 0) hashVal += 256;
+    if (hashVal.toString(16).length == 1) txtHash += '0';
+    txtHash += hashVal.toString(16);
+  }
+  return txtHash;
 }
 
 // --- MAIN DATA FETCH ---
@@ -548,7 +561,7 @@ function handleChangePassword(b) {
   const d = uSheet.getDataRange().getValues();
   for(let i=1; i<d.length; i++) {
     if(String(d[i][0]).toLowerCase() === String(b.username).toLowerCase()) {
-      uSheet.getRange(i+1, 2).setValue(b.newPass);
+      uSheet.getRange(i+1, 2).setValue(hashString(b.newPass)); // STORE HASH
       return jsonResponse("success", "Password Updated");
     }
   }
@@ -556,15 +569,46 @@ function handleChangePassword(b) {
 }
 
 function handleTransferRequest(b) { SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Requests").appendRow([new Date().getTime().toString().slice(-6), b.taskId, b.type, b.by, b.to, "Pending", new Date()]); return jsonResponse("success", "Request Sent"); }
-function handleLogin(u,p){ const d=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").getDataRange().getValues(); for(let i=1;i<d.length;i++) if(String(d[i][0]).toLowerCase()==String(u).toLowerCase() && String(d[i][1])==String(p)) return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]}); return jsonResponse("error","Invalid Credentials"); }
+
+function handleLogin(u,p){
+  const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+  const d = s.getDataRange().getValues();
+  const hashedInput = hashString(p);
+
+  for(let i=1;i<d.length;i++) {
+    if(String(d[i][0]).toLowerCase() == String(u).toLowerCase()) {
+        const storedPass = String(d[i][1]);
+
+        // 1. Check Hash Match
+        if (storedPass === hashedInput) {
+             return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
+        }
+
+        // 2. Check Plain Text Match (Migration)
+        if (storedPass === String(p)) {
+            // Update to hash immediately
+            s.getRange(i+1, 2).setValue(hashedInput);
+            return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
+        }
+    }
+  }
+  return jsonResponse("error","Invalid Credentials");
+}
+
 function handleDropdowns(b){ const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet2"); const col = {network:1, client:2, destination:3, extra:4, hold:5}[b.category]; if(b.subAction==="add"){ let r=2; while(s.getRange(r,col).getValue()!=="") r++; s.getRange(r,col).setValue(b.value); if(b.category==="hold") s.getRange(r,6).setValue(b.desc); } else { const v=s.getRange(2,col,s.getLastRow()).getValues().flat(); const i=v.indexOf(b.value); if(i>-1) s.getRange(i+2,col,1,2).deleteCells(SpreadsheetApp.Dimension.ROWS); } return jsonResponse("success","Updated"); }
+
 function getUsersJson(requestingUser) {
     const d = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").getDataRange().getValues();
-    const users = d.slice(1).map(r => ({ user: r[0], pass: r[1], name: r[2], role: r[3], perms: r[4] }));
+    // Return dummy password to avoid leaking hash
+    const users = d.slice(1).map(r => ({ user: r[0], pass: "****", name: r[2], role: r[3], perms: r[4] }));
     return jsonResponse("success", "OK", { users: users });
 }
+
 function getAdminRequests() { const d = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Requests").getDataRange().getValues(); const p = []; for(let i=1;i<d.length;i++) if(d[i][5]==="Pending") p.push({reqId:d[i][0], taskId:d[i][1], type:d[i][2], by:d[i][3], to:d[i][4], date:d[i][6]}); return jsonResponse("success", "OK", { requests: p }); }
-function handleAddUser(b){SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").appendRow([b.u,b.p,b.n,b.r]);return jsonResponse("success","Added");}
+function handleAddUser(b){
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").appendRow([b.u, hashString(b.p), b.n, b.r]); // STORE HASH
+  return jsonResponse("success","Added");
+}
 function handleDeleteUser(u){const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users"),d=s.getDataRange().getValues();for(let i=1;i<d.length;i++)if(String(d[i][0]).toLowerCase()==String(u).toLowerCase()){s.deleteRow(i+1);return jsonResponse("success","Deleted");}return jsonResponse("error","Not Found");}
 function handleSetConfig(b) { PropertiesService.getScriptProperties().setProperty(b.key, b.value); return jsonResponse("success", "Config Saved"); }
 function jsonResponse(s,m,d){return ContentService.createTextOutput(JSON.stringify({result:s,message:m,...d})).setMimeType(ContentService.MimeType.JSON);}
