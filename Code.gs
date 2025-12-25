@@ -1,5 +1,5 @@
 /* =========================================
-   ZEPHYR PRO API (vFinal - Roles, perms, RTO, Hashed Passwords)
+   ZEPHYR PRO API (vFinal - Roles, perms, RTO, Hashed Passwords, Form Support)
    ========================================= */
 
 const TASK_SHEET_ID = "1_8VSzZdn8rKrzvXpzIfY_oz3XT9gi30jgzdxzQP4Bac";
@@ -20,14 +20,46 @@ function doPost(e) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) return jsonResponse("error", "System Busy");
   try {
-    const body = JSON.parse(e.postData.contents);
+    let body = {};
+    // Try parsing as JSON first
+    if (e.postData && e.postData.contents) {
+        try {
+            body = JSON.parse(e.postData.contents);
+        } catch (err) {
+            // If JSON parse fails, assume URL Encoded Form Data
+            // e.parameter is automatically populated by GAS for form-urlencoded
+            // But we should double check e.postData.type?
+            // Usually e.parameter contains all query params AND form body params mixed.
+            body = e.parameter;
+        }
+    } else {
+        body = e.parameter;
+    }
+
+    // Safety check: ensure body is an object
+    if (!body) body = {};
+
     const act = body.action;
     if (act === "login") return handleLogin(body.username, body.password);
-    if (act === "submit") return handleSubmit(body);
+    if (act === "submit") {
+        // Form encoded arrays (like boxes) come as strings or multiple keys.
+        // If coming from JSON it's fine. If from FormData, complex objects need parsing.
+        // For simplicity, submit action from our app sends JSON.
+        // LOGIN is the critical one for external access.
+        // If we switch submit to FormData later, we need to handle box array parsing here.
+        // For now, let's assume 'submit' still sends JSON from our app.
+        if (typeof body.boxes === 'string') {
+             try { body.boxes = JSON.parse(body.boxes); } catch(e){}
+        }
+        return handleSubmit(body);
+    }
     if (act === "assignTask") return handleAssignTask(body);
     if (act === "markPaperworkDone") return handlePaperDone(body);
     if (act === "directTransfer") return handleDirectTransfer(body);
-    if (act === "updateManifestBatch") return handleManifestBatch(body);
+    if (act === "updateManifestBatch") {
+         if (typeof body.ids === 'string') try { body.ids = JSON.parse(body.ids); } catch(e){}
+         return handleManifestBatch(body);
+    }
     if (act === "requestTransfer") return handleTransferRequest(body);
     if (act === "approveTransfer") return handleApproveTransfer(body);
     if (act === "manageData") { CacheService.getScriptCache().remove('static_data'); return handleDropdowns(body); }
@@ -41,7 +73,7 @@ function doPost(e) {
     if (act === "updateShipmentDetails") return handleUpdateShipmentDetails(body);
     if (act === 'setConfig') return handleSetConfig(body);
 
-    return jsonResponse("error", "Unknown Action");
+    return jsonResponse("error", "Unknown Action: " + act);
   } catch (err) { return jsonResponse("error", err.toString()); }
   finally { lock.releaseLock(); }
 }
