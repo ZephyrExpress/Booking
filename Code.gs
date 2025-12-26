@@ -105,6 +105,14 @@ function getAllData(username) {
   const props = PropertiesService.getScriptProperties();
   const autoAwbEnabled = props.getProperty('AUTO_AWB') !== 'false'; // Default true
 
+  // OPTIMIZATION: Re-use Task Spreadsheet instance
+  let taskSS = null;
+  const getTaskSS = () => {
+      if(taskSS) return taskSS;
+      try { taskSS = SpreadsheetApp.openById(TASK_SHEET_ID); } catch(e) { console.error("TaskSS Error",e); }
+      return taskSS;
+  };
+
   if (!staticDataStr) {
     try {
       const ddSheet = ss.getSheetByName("Sheet2");
@@ -119,9 +127,11 @@ function getAllData(username) {
       };
       let staff = [];
       try {
-        const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
-        const stSh = remoteSS.getSheetByName("Subordinate Staff");
-        if(stSh) staff = stSh.getRange(2,1,50).getValues().flat().filter(String);
+        const remoteSS = getTaskSS();
+        if(remoteSS) {
+            const stSh = remoteSS.getSheetByName("Subordinate Staff");
+            if(stSh) staff = stSh.getRange(2,1,50).getValues().flat().filter(String);
+        }
       } catch(e) { console.error(e); }
 
       staticData = { staff: staff, dropdowns: dd };
@@ -158,31 +168,33 @@ function getAllData(username) {
   let updates = [];
   let fmsUpdates = [];
   try {
-      const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
-      const brSheet = remoteSS.getSheetByName("Booking_Report");
-      if(brSheet) {
-          const brLast = brSheet.getLastRow();
-          if(brLast > 1) {
-              const brData = brSheet.getRange(2, 1, brLast-1, 41).getValues();
-              const brMap = {};
-              brData.forEach(r => {
-                 const k = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-                 if(k) brMap[k] = { netNo: r[20], user: r[40] };
-              });
+      const remoteSS = getTaskSS();
+      if(remoteSS) {
+          const brSheet = remoteSS.getSheetByName("Booking_Report");
+          if(brSheet) {
+              const brLast = brSheet.getLastRow();
+              if(brLast > 1) {
+                  const brData = brSheet.getRange(2, 1, brLast-1, 41).getValues();
+                  const brMap = {};
+                  brData.forEach(r => {
+                     const k = String(r[0]).replace(/'/g,"").trim().toLowerCase();
+                     if(k) brMap[k] = { netNo: r[20], user: r[40] };
+                  });
 
-              data.forEach((r, i) => {
-                  const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-                  const autoStatus = r[14];
-                  if((autoStatus === "Pending" || autoStatus === "") && r[27] !== "On Hold" && brMap[awb]) {
-                      const match = brMap[awb];
-                      const user = match.user || "System";
-                      const netNo = match.netNo || "";
-                      r[14] = "Done"; r[15] = user; r[20] = netNo;
-                      updates.push({ row: i+2, vals: [["Done", user]] });
-                      updates.push({ row: i+2, col: 21, val: [[netNo]] });
-                      fmsUpdates.push({ awb: awb, autoDoer: user });
-                  }
-              });
+                  data.forEach((r, i) => {
+                      const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
+                      const autoStatus = r[14];
+                      if((autoStatus === "Pending" || autoStatus === "") && r[27] !== "On Hold" && brMap[awb]) {
+                          const match = brMap[awb];
+                          const user = match.user || "System";
+                          const netNo = match.netNo || "";
+                          r[14] = "Done"; r[15] = user; r[20] = netNo;
+                          updates.push({ row: i+2, vals: [["Done", user]] });
+                          updates.push({ row: i+2, col: 21, val: [[netNo]] });
+                          fmsUpdates.push({ awb: awb, autoDoer: user });
+                      }
+                  });
+              }
           }
       }
   } catch(e) {}
@@ -196,7 +208,8 @@ function getAllData(username) {
 
   if(fmsUpdates.length > 0) {
       try {
-          const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
+          const remoteSS = getTaskSS();
+          const fms = remoteSS ? remoteSS.getSheetByName("FMS") : null;
           if(fms && fms.getLastRow() >= 7) {
               const ids = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
               fmsUpdates.forEach(u => {
