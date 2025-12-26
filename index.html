@@ -1323,6 +1323,7 @@ window.ahmAdd = async function() {
     showSpin(false);
 }
 
+
 window.printManifest = function() {
     const net = document.getElementById('man_net').value || "ALL";
     const items = [];
@@ -1364,41 +1365,29 @@ window.printManifest = function() {
             .footer { margin-top: 40px; display: flex; justify-content: space-between; padding-top: 20px; border-top: 1px solid #000; }
             @media print { .no-print { display: none; } }
         </style>
-
-
-// --- PDF & API LOGIC ---
-
-// Use URLSearchParams for application/x-www-form-urlencoded
-async function callApi(d){
-    try {
-        console.log("Calling API:", d.action);
-        const params = new URLSearchParams();
-        for (const key in d) {
-            if (typeof d[key] === 'object' && d[key] !== null) {
-                params.append(key, JSON.stringify(d[key]));
-            } else {
-                params.append(key, d[key]);
-            }
-        }
-        const r = await fetch(API_URL, {
-            method: "POST",
-            body: params,
-        });
-        const json = await r.json();
-        console.log("API Response:", json);
-        return json;
-    } catch(e) {
-        console.error("API Error:", e);
-        if (d.action === "login") {
-             alert("Login Failed: Network Error.\n\nIf you are running this locally, ensure:\n1. You have deployed the Google Apps Script as a Web App.\n2. You updated the API_URL in index.html to YOUR deployment URL.\n3. The deployment allows 'Anyone' or 'Anyone with Account' access.");
-        }
-        return { result: "error", message: e.toString() };
-    }
-}
-
-
-
-// --- PDF & LOGIC ---
+        </head><body>
+        <div class="header">
+            <div class="header-left">
+                <h2>MANIFEST</h2>
+                <div class="meta">Network: <strong>${net}</strong><br>Date: ${new Date().toLocaleDateString()}</div>
+            </div>
+            <div class="header-right">
+                <div style="font-size:1.2rem; font-weight:bold;">ZEPHYR EXPRESS</div>
+            </div>
+        </div>
+        <table>
+            <thead><tr><th>#</th><th>AWB</th><th>Date</th><th>Dest</th><th>Network</th><th>Net No</th><th>Pcs</th><th>Wgt</th><th>Client</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+        <div class="footer">
+            <div>Authorized Signatory</div>
+            <div>Handover By</div>
+        </div>
+        <script>window.print();</script>
+        </body></html>
+    `);
+    w.document.close();
+};
 
 window.downloadManifestPdf = function(items, network) {
     if(!items || !items.length) return;
@@ -1441,7 +1430,7 @@ window.downloadManifestPdf = function(items, network) {
     doc.line(10, finalY + 25, 60, finalY + 25); doc.text("Authorized Signatory", 10, finalY + 30);
     doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25); doc.text("Handover By", pageWidth - 60, finalY + 30);
     doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
-}
+};
 
 window.createBatch = async function() {
     const net = document.getElementById('man_net').value;
@@ -1458,7 +1447,7 @@ window.createBatch = async function() {
         if(ids.includes(x.id)) { x.batchNo = batchId; x.manifestDate = manifestDate; selectedItems.push(x); }
     });
 
-    downloadManifestPdf(selectedItems, net);
+    window.downloadManifestPdf(selectedItems, net);
     if (typeof exportBatch === "function") exportBatch(batchId);
     renderManifest();
     await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
@@ -1474,7 +1463,8 @@ window.downloadReceiverPdf = function(id) {
     const halfHeight = doc.internal.pageSize.getHeight() / 2;
 
     const drawCopy = (offsetY, title) => {
-        if(typeof LOGO_BASE64 !== 'undefined' && LOGO_BASE64) doc.addImage(LOGO_BASE64, 'PNG', pageWidth - 50, offsetY + 10, 40, 15);
+        // Logo if available
+        // if(typeof LOGO_BASE64 !== 'undefined' && LOGO_BASE64) doc.addImage(LOGO_BASE64, 'PNG', pageWidth - 50, offsetY + 10, 40, 15);
         doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.text("ZEPHYR EXPRESS", 10, offsetY + 15);
         doc.setFontSize(9); doc.setFont("helvetica", "normal");
         doc.text("CB-385B, Ring Road Nariana, New Delhi-110028", 10, offsetY + 20);
@@ -1526,9 +1516,8 @@ window.downloadReceiverPdf = function(id) {
     doc.setLineDash([2, 2], 0); doc.line(0, halfHeight, pageWidth, halfHeight); doc.setLineDash([], 0);
     drawCopy(halfHeight, "ACCOUNTS COPY (POD)");
     doc.save(`Slip_${s.id}.pdf`);
-}
+};
 
 </script>
-
 </body>
 </html>
