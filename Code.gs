@@ -200,10 +200,41 @@ function getAllData(username) {
   } catch(e) {}
 
   if(updates.length > 0) {
-      updates.forEach(u => {
-          if(u.col) sh.getRange(u.row, u.col, 1, 1).setValues(u.val);
-          else sh.getRange(u.row, 15, 1, 2).setValues(u.vals);
-      });
+      // Bolt Optimization: Batch writes to avoid N+1 API calls
+      // Updates are for Col 15-16 (O:P) or Col 21 (U)
+      const updatesOP = updates.filter(u => !u.col);
+      const updatesU = updates.filter(u => u.col === 21);
+
+      if (updatesOP.length > 0) {
+          const rows = updatesOP.map(u => u.row);
+          const minRow = Math.min(...rows);
+          const maxRow = Math.max(...rows);
+          const numRows = maxRow - minRow + 1;
+          const range = sh.getRange(minRow, 15, numRows, 2);
+          const values = range.getValues();
+
+          updatesOP.forEach(u => {
+              const relIndex = u.row - minRow;
+              values[relIndex][0] = u.vals[0][0]; // Col 15
+              values[relIndex][1] = u.vals[0][1]; // Col 16
+          });
+          range.setValues(values);
+      }
+
+      if (updatesU.length > 0) {
+          const rows = updatesU.map(u => u.row);
+          const minRow = Math.min(...rows);
+          const maxRow = Math.max(...rows);
+          const numRows = maxRow - minRow + 1;
+          const range = sh.getRange(minRow, 21, numRows, 1);
+          const values = range.getValues();
+
+          updatesU.forEach(u => {
+              const relIndex = u.row - minRow;
+              values[relIndex][0] = u.val[0][0]; // Col 21
+          });
+          range.setValues(values);
+      }
   }
 
   if(fmsUpdates.length > 0) {
@@ -211,13 +242,26 @@ function getAllData(username) {
           const remoteSS = getTaskSS();
           const fms = remoteSS ? remoteSS.getSheetByName("FMS") : null;
           if(fms && fms.getLastRow() >= 7) {
-              const ids = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
+              const startRow = 7;
+              const numRows = fms.getLastRow() - 6;
+              const ids = fms.getRange(startRow, 2, numRows, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
+
+              // Bolt Optimization: Batch read/write for FMS updates
+              const doerRange = fms.getRange(startRow, 14, numRows, 1);
+              const doerValues = doerRange.getValues();
+              let hasChanges = false;
+
               fmsUpdates.forEach(u => {
                   const idx = ids.indexOf(u.awb);
                   if(idx > -1) {
-                      fms.getRange(idx+7, 14).setValue(u.autoDoer);
+                      if (doerValues[idx][0] !== u.autoDoer) {
+                          doerValues[idx][0] = u.autoDoer;
+                          hasChanges = true;
+                      }
                   }
               });
+
+              if(hasChanges) doerRange.setValues(doerValues);
           }
       } catch(e) { console.error("FMS Sync Error", e); }
   }
