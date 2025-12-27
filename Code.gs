@@ -5,49 +5,51 @@
 const TASK_SHEET_ID = "1_8VSzZdn8rKrzvXpzIfY_oz3XT9gi30jgzdxzQP4Bac";
 
 function doGet(e) {
-  const act = e ? e.parameter.action : 'index';
-  const user = e ? e.parameter.user : '';
-  if (act === 'getAllData') return getAllData(user);
-  if (act === 'getAdminRequests') return getAdminRequests();
-  if (act === 'getUsers') return getUsersJson(user);
-  if (act === 'getRecent') return getRecentShipments();
-  if (act === 'getShipmentDetails') return getShipmentDetails(e.parameter.awb);
-  return HtmlService.createTemplateFromFile('Index').evaluate()
-      .setTitle('Zephyr Express Portal').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL).addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  // Serves the HTML page
+  return HtmlService.createTemplateFromFile('Index')
+      .evaluate()
+      .setTitle('Zephyr Express Portal')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) return jsonResponse("error", "System Busy");
+
   try {
     let body = {};
-    // Try parsing as JSON first
+    // Handle JSON payloads vs Form Data
     if (e.postData && e.postData.contents) {
         try {
-            body = JSON.parse(e.postData.contents);
+            const content = e.postData.contents;
+            if (content.trim().startsWith('{')) {
+                 body = JSON.parse(content);
+            } else {
+                 body = e.parameter;
+            }
         } catch (err) {
-            // If JSON parse fails, assume URL Encoded Form Data
-            // e.parameter is automatically populated by GAS for form-urlencoded
-            // But we should double check e.postData.type?
-            // Usually e.parameter contains all query params AND form body params mixed.
             body = e.parameter;
         }
     } else {
         body = e.parameter;
     }
 
-    // Safety check: ensure body is an object
     if (!body) body = {};
-
     const act = body.action;
+
+    // --- 1. AUTH ---
     if (act === "login") return handleLogin(body.username, body.password);
+
+    // --- 2. DATA RETRIEVAL (FIXED: Added to doPost) ---
+    if (act === 'getAllData') return getAllData(body.user);
+    if (act === 'getAdminRequests') return getAdminRequests();
+    if (act === 'getUsers') return getUsersJson(body.user);
+    if (act === 'getRecent') return getRecentShipments();
+    if (act === 'getShipmentDetails') return getShipmentDetails(body.awb);
+
+    // --- 3. WRITE ACTIONS ---
     if (act === "submit") {
-        // Form encoded arrays (like boxes) come as strings or multiple keys.
-        // If coming from JSON it's fine. If from FormData, complex objects need parsing.
-        // For simplicity, submit action from our app sends JSON.
-        // LOGIN is the critical one for external access.
-        // If we switch submit to FormData later, we need to handle box array parsing here.
-        // For now, let's assume 'submit' still sends JSON from our app.
         if (typeof body.boxes === 'string') {
              try { body.boxes = JSON.parse(body.boxes); } catch(e){}
         }
@@ -56,26 +58,39 @@ function doPost(e) {
     if (act === "assignTask") return handleAssignTask(body);
     if (act === "markPaperworkDone") return handlePaperDone(body);
     if (act === "directTransfer") return handleDirectTransfer(body);
+
     if (act === "updateManifestBatch") {
          if (typeof body.ids === 'string') try { body.ids = JSON.parse(body.ids); } catch(e){}
          return handleManifestBatch(body);
     }
+
     if (act === "requestTransfer") return handleTransferRequest(body);
     if (act === "approveTransfer") return handleApproveTransfer(body);
-    if (act === "manageData") { CacheService.getScriptCache().remove('static_data'); return handleDropdowns(body); }
+
+    if (act === "manageData") {
+        CacheService.getScriptCache().remove('static_data');
+        return handleDropdowns(body);
+    }
+
     if (act === "addUser") return handleAddUser(body);
     if (act === "deleteUser") return handleDeleteUser(body.username);
     if (act === "changePassword") return handleChangePassword(body);
+
     if (act === "manageHold") return handleManageHold(body);
     if (act === "manageUserRole") return handleManageUserRole(body);
     if (act === "updateUserPerms") return handleUpdateUserPerms(body);
+
     if (act === "generateAwb") return handleGenerateAwb();
     if (act === "updateShipmentDetails") return handleUpdateShipmentDetails(body);
     if (act === 'setConfig') return handleSetConfig(body);
 
     return jsonResponse("error", "Unknown Action: " + act);
-  } catch (err) { return jsonResponse("error", err.toString()); }
-  finally { lock.releaseLock(); }
+
+  } catch (err) {
+      return jsonResponse("error", err.toString());
+  } finally {
+      lock.releaseLock();
+  }
 }
 
 // --- UTILS ---
@@ -105,14 +120,6 @@ function getAllData(username) {
   const props = PropertiesService.getScriptProperties();
   const autoAwbEnabled = props.getProperty('AUTO_AWB') !== 'false'; // Default true
 
-  // OPTIMIZATION: Re-use Task Spreadsheet instance
-  let taskSS = null;
-  const getTaskSS = () => {
-      if(taskSS) return taskSS;
-      try { taskSS = SpreadsheetApp.openById(TASK_SHEET_ID); } catch(e) { console.error("TaskSS Error",e); }
-      return taskSS;
-  };
-
   if (!staticDataStr) {
     try {
       const ddSheet = ss.getSheetByName("Sheet2");
@@ -127,11 +134,9 @@ function getAllData(username) {
       };
       let staff = [];
       try {
-        const remoteSS = getTaskSS();
-        if(remoteSS) {
-            const stSh = remoteSS.getSheetByName("Subordinate Staff");
-            if(stSh) staff = stSh.getRange(2,1,50).getValues().flat().filter(String);
-        }
+        const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
+        const stSh = remoteSS.getSheetByName("Subordinate Staff");
+        if(stSh) staff = stSh.getRange(2,1,50).getValues().flat().filter(String);
       } catch(e) { console.error(e); }
 
       staticData = { staff: staff, dropdowns: dd };
@@ -168,33 +173,31 @@ function getAllData(username) {
   let updates = [];
   let fmsUpdates = [];
   try {
-      const remoteSS = getTaskSS();
-      if(remoteSS) {
-          const brSheet = remoteSS.getSheetByName("Booking_Report");
-          if(brSheet) {
-              const brLast = brSheet.getLastRow();
-              if(brLast > 1) {
-                  const brData = brSheet.getRange(2, 1, brLast-1, 41).getValues();
-                  const brMap = {};
-                  brData.forEach(r => {
-                     const k = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-                     if(k) brMap[k] = { netNo: r[20], user: r[40] };
-                  });
+      const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
+      const brSheet = remoteSS.getSheetByName("Booking_Report");
+      if(brSheet) {
+          const brLast = brSheet.getLastRow();
+          if(brLast > 1) {
+              const brData = brSheet.getRange(2, 1, brLast-1, 41).getValues();
+              const brMap = {};
+              brData.forEach(r => {
+                 const k = String(r[0]).replace(/'/g,"").trim().toLowerCase();
+                 if(k) brMap[k] = { netNo: r[20], user: r[40] };
+              });
 
-                  data.forEach((r, i) => {
-                      const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-                      const autoStatus = r[14];
-                      if((autoStatus === "Pending" || autoStatus === "") && r[27] !== "On Hold" && brMap[awb]) {
-                          const match = brMap[awb];
-                          const user = match.user || "System";
-                          const netNo = match.netNo || "";
-                          r[14] = "Done"; r[15] = user; r[20] = netNo;
-                          updates.push({ row: i+2, vals: [["Done", user]] });
-                          updates.push({ row: i+2, col: 21, val: [[netNo]] });
-                          fmsUpdates.push({ awb: awb, autoDoer: user });
-                      }
-                  });
-              }
+              data.forEach((r, i) => {
+                  const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
+                  const autoStatus = r[14];
+                  if((autoStatus === "Pending" || autoStatus === "") && r[27] !== "On Hold" && brMap[awb]) {
+                      const match = brMap[awb];
+                      const user = match.user || "System";
+                      const netNo = match.netNo || "";
+                      r[14] = "Done"; r[15] = user; r[20] = netNo;
+                      updates.push({ row: i+2, vals: [["Done", user]] });
+                      updates.push({ row: i+2, col: 21, val: [[netNo]] });
+                      fmsUpdates.push({ awb: awb, autoDoer: user });
+                  }
+              });
           }
       }
   } catch(e) {}
@@ -208,8 +211,7 @@ function getAllData(username) {
 
   if(fmsUpdates.length > 0) {
       try {
-          const remoteSS = getTaskSS();
-          const fms = remoteSS ? remoteSS.getSheetByName("FMS") : null;
+          const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
           if(fms && fms.getLastRow() >= 7) {
               const ids = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
               fmsUpdates.forEach(u => {
@@ -249,6 +251,7 @@ function getAllData(username) {
     if (item.holdStatus === "On Hold") {
         holdings.push(item);
     } else if (item.holdStatus === "RTO") {
+        // Skip RTO
     } else {
         const paperStatus = r[16];
         const autoStatus = r[14];
@@ -317,7 +320,6 @@ function getShipmentDetails(id) {
         const bx = ss.getSheetByName("BoxDetails");
         if(bx && bx.getLastRow() > 1) {
             const allBx = bx.getRange(2, 1, bx.getLastRow()-1, 8).getDisplayValues();
-            // Filter by AWB (Col 1). Note: AWB usually stored as '123 so check substring or loose match
             const target = String(id).replace(/'/g,"").trim().toLowerCase();
             boxList = allBx.filter(b => String(b[0]).replace(/'/g,"").trim().toLowerCase() === target).map(b => ({
                 no: b[1], wgt: b[2], l: b[3], b: b[4], h: b[5], vol: b[6], chg: b[7]
@@ -339,7 +341,6 @@ function handleGenerateAwb() {
     let currentMax = 0;
     data.forEach(x => {
         const s = String(x).replace(/'/g,"").trim();
-        // Match 3001 followed by 5 digits, capturing the number part even if followed by suffixes like -FRT
         const match = s.match(/^(3001\d{5})/);
         if (match) {
             const n = parseInt(match[1], 10);
@@ -347,9 +348,7 @@ function handleGenerateAwb() {
         }
     });
 
-    // If no match found, start at 300100000. Else next.
     const nextAwb = currentMax > 0 ? currentMax + 1 : 300100000;
-
     return jsonResponse("success", "Generated", { awb: String(nextAwb) });
 }
 
@@ -357,12 +356,8 @@ function handleUpdateShipmentDetails(b) {
     const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
     const row = findRow(ss, b.awb);
     if(row === -1) return jsonResponse("error", "AWB Not Found");
-
-    // Update Network (Col 4 -> D) and Destination (Col 6 -> F)
-    // Indexes: D=4, F=6.
     if(b.network) ss.getRange(row, 4).setValue(b.network);
     if(b.destination) ss.getRange(row, 6).setValue(b.destination);
-
     return jsonResponse("success", "Details Updated");
 }
 
@@ -374,7 +369,6 @@ function handleManageHold(b) {
     if(b.subAction === "set") {
         ss.getRange(row, 28, 1, 3).setValues([["On Hold", b.reason, b.remarks]]);
     } else if(b.subAction === "clear") {
-        // Validation: Check if Network/Dest is valid
         const net = String(ss.getRange(row, 4).getValue()).toUpperCase();
         const dest = String(ss.getRange(row, 6).getValue()).toUpperCase();
 
@@ -391,7 +385,6 @@ function handleManageHold(b) {
         ss.getRange(row, 28, 1, 3).setValues([["RTO", "RTO", b.remarks]]);
         const oldLog = ss.getRange(row, 20).getValue();
         ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Marked RTO: ${b.remarks}]`);
-        // syncFMS(b.awb, { status: "RTO" }); // REMOVED Q sync
     }
     return jsonResponse("success", "Updated");
 }
@@ -452,11 +445,9 @@ function handleManifestBatch(b) {
               const r = idx + 7;
               const net = b.network.toLowerCase();
               const doer = b.user;
-              // Updates FMS! Y (25), AD (30), AI (35)
               if(net.includes("dhl")) { fms.getRange(r, 25).setValue(doer); }
               else if(net.includes("aramex")) { fms.getRange(r, 30).setValue(doer); }
               else if(net.includes("fedex")) { fms.getRange(r, 35).setValue(doer); }
-              // REMOVED 'DONE' status updates to W, AB, AG etc.
           }
       }
   });
@@ -479,7 +470,6 @@ function handleSubmit(body){
     return["'"+body.awb,b.no,w,l,br,h,v.toFixed(2),c.toFixed(2)];
   });
 
-  // NA Logic Check
   let holdStatus = "Pending";
   let holdReason = "";
   const net = String(body.network).toUpperCase();
@@ -489,14 +479,13 @@ function handleSubmit(body){
       holdReason = "Invalid Data";
   }
 
-  // Adjusted array length to align columns correctly
   sh.appendRow([
       "'"+body.awb, body.date, body.type, body.network, body.client, body.destination,
       body.totalBoxes, body.extraCharges, body.username, new Date(),
       tA.toFixed(2), tV.toFixed(2), tC.toFixed(2), body.extraRemarks,
       "Pending", "", "", "", "", "", "",
       body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
-      holdStatus, holdReason, "" // Correct alignment (27, 28, 29 for AB, AC, AD)
+      holdStatus, holdReason, ""
   ]);
 
   if(br.length) bx.getRange(bx.getLastRow()+1,1,br.length,8).setValues(br);
@@ -516,7 +505,6 @@ function addToFMS(d) {
         if(fms) {
             const lr = fms.getLastRow();
             const row = lr + 1;
-            // Only populate AWB (Col 2). Skip A:I, N, Q.
             fms.getRange(row, 2).setValue("'"+d.awb);
         }
     } catch(e) { console.error("FMS Add Error", e); }
@@ -542,7 +530,6 @@ function syncFMS(id, data) {
             if(data.assignee) fms.getRange(row, 19).setValue(data.assignee); // S
             if(data.assigner) fms.getRange(row, 20).setValue(data.assigner); // T
             if(data.autoDoer) fms.getRange(row, 14).setValue(data.autoDoer); // N
-            // REMOVED Q update
         }
     } catch(e){}
 }
@@ -576,7 +563,6 @@ function handlePaperDone(b) {
   const holdStatus = ss.getRange(row, 28).getValue();
   if(holdStatus === "On Hold") return jsonResponse("error", "Shipment is On Hold");
   ss.getRange(row, 17).setValue("Completed");
-  // REMOVED syncFMS status Q update
   return jsonResponse("success", "Completed");
 }
 
@@ -623,15 +609,10 @@ function handleLogin(u,p){
   for(let i=1;i<d.length;i++) {
     if(String(d[i][0]).toLowerCase() == String(u).toLowerCase()) {
         const storedPass = String(d[i][1]);
-
-        // 1. Check Hash Match
         if (storedPass === hashedInput) {
              return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
         }
-
-        // 2. Check Plain Text Match (Migration)
         if (storedPass === String(p)) {
-            // Update to hash immediately
             s.getRange(i+1, 2).setValue(hashedInput);
             return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
         }
@@ -644,14 +625,13 @@ function handleDropdowns(b){ const s=SpreadsheetApp.getActiveSpreadsheet().getSh
 
 function getUsersJson(requestingUser) {
     const d = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").getDataRange().getValues();
-    // Return dummy password to avoid leaking hash
     const users = d.slice(1).map(r => ({ user: r[0], pass: "****", name: r[2], role: r[3], perms: r[4] }));
     return jsonResponse("success", "OK", { users: users });
 }
 
 function getAdminRequests() { const d = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Requests").getDataRange().getValues(); const p = []; for(let i=1;i<d.length;i++) if(d[i][5]==="Pending") p.push({reqId:d[i][0], taskId:d[i][1], type:d[i][2], by:d[i][3], to:d[i][4], date:d[i][6]}); return jsonResponse("success", "OK", { requests: p }); }
 function handleAddUser(b){
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").appendRow([b.u, hashString(b.p), b.n, b.r]); // STORE HASH
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").appendRow([b.u, hashString(b.p), b.n, b.r]);
   return jsonResponse("success","Added");
 }
 function handleDeleteUser(u){const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users"),d=s.getDataRange().getValues();for(let i=1;i<d.length;i++)if(String(d[i][0]).toLowerCase()==String(u).toLowerCase()){s.deleteRow(i+1);return jsonResponse("success","Deleted");}return jsonResponse("error","Not Found");}

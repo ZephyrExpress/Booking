@@ -52,14 +52,14 @@
         left: 0; 
         z-index: 1000; 
         transition: transform 0.3s; 
-        transform: translateX(-100%); /* Hidden by default on mobile */
+        transform: translateX(-100%); /* Hidden by default on mobile and desktop */
         color: white; 
         display:flex; 
         flex-direction:column; 
         box-shadow: 4px 0 24px rgba(0,0,0,0.1); 
     }
     
-    .sidebar.show { transform: translateX(0); } /* Mobile toggle class */
+    .sidebar.show { transform: translateX(0); } /* Mobile/Desktop toggle class */
 
     .content-area { 
         flex: 1; 
@@ -67,15 +67,12 @@
         min-height: 100vh; 
         display:flex; 
         flex-direction: column; 
-        margin-left: 0; 
+        margin-left: 0; /* Always 0 since sidebar is hidden overlay */
+        width: 100%;
     }
 
-    /* Desktop View Fix: Sidebar visible, Content pushed */
-    @media (min-width: 992px) { 
-        .sidebar { transform: translateX(0); } 
-        .content-area { margin-left: var(--sidebar-width); } 
-        .mobile-toggle { display: none !important; }
-    }
+    /* REMOVED Desktop View Fix that forced sidebar visibility */
+    /* Mobile toggle is now always visible */
 
     @media (max-width: 768px) {
         body, html { overflow-x: auto; width: 100%; }
@@ -425,6 +422,7 @@
       <div id="manifest-tab" class="tab-view" style="display:none;">
         <ul class="nav nav-pills mb-3" id="manTabs">
            <li class="nav-item"><button class="nav-link active rounded-pill px-4" onclick="switchManifestView('pending')">Pending Manifest</button></li>
+           <li class="nav-item ms-2"><button class="nav-link rounded-pill px-4" onclick="switchManifestView('daily')">Daily Manifest</button></li>
            <li class="nav-item ms-2"><button class="nav-link rounded-pill px-4" onclick="switchManifestView('history')">Manifest History</button></li>
         </ul>
         <div id="man-pending-view">
@@ -464,6 +462,44 @@
              </div>
           </div>
         </div>
+
+        <!-- DAILY MANIFEST VIEW -->
+        <div id="man-daily-view" style="display:none;">
+          <div class="panel-card p-3">
+             <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-3">
+                <div class="d-flex align-items-center gap-3">
+                   <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px"><i class="bi bi-calendar-check"></i></div>
+                   <div><div class="fw-bold">Daily Manifest</div><div class="small text-muted fw-normal">Items Manifested Today</div></div>
+                </div>
+                <div class="d-flex gap-2 align-items-center flex-wrap justify-content-end">
+                   <button class="btn btn-sm btn-outline-secondary" onclick="printDailyManifest()"><i class="bi bi-printer me-1"></i> Print View</button>
+                   <select id="man_daily_net" class="form-select form-select-sm" style="width:150px" onchange="renderDailyManifest()"><option value="">Select Network...</option></select>
+                   <div class="input-group input-group-sm" style="width:200px;">
+                       <span class="input-group-text"><i class="bi bi-search"></i></span>
+                       <input id="man_daily_search" class="form-control" placeholder="Search ID/NetNo..." oninput="renderDailyManifest()">
+                   </div>
+                </div>
+             </div>
+
+             <div class="table-responsive border rounded" style="max-height:600px; overflow-y:auto;">
+                <table class="table table-hover align-middle mb-0 small">
+                   <thead class="bg-light sticky-top">
+                      <tr>
+                         <th class="ps-3" style="width:40px"><input type="checkbox" class="form-check-input" id="checkAllDaily" onclick="toggleAllDaily(this)"></th>
+                         <th>AWB</th><th>Date</th><th>Dest</th><th>Network</th><th>Net No</th><th>Pcs</th><th>Wgt</th><th>Client</th><th class="text-end pe-3">Batch</th>
+                      </tr>
+                   </thead>
+                   <tbody id="dailyManifestList"></tbody>
+                </table>
+             </div>
+             <div id="dailyManifestEmptyState" class="text-center py-5">
+                <div class="mb-3 text-muted"><i class="bi bi-inbox fs-1"></i></div>
+                <h6 class="text-muted fw-bold">No Items Found</h6>
+                <p class="text-muted small">No manifests generated today.</p>
+             </div>
+          </div>
+        </div>
+
         <div id="man-history-view" style="display:none;">
            <div class="row g-4" id="batchContainer"></div>
            <div id="batchEmptyState" class="text-center py-5" style="display:none"><div class="mb-3 text-muted"><i class="bi bi-clock-history fs-1"></i></div><h6 class="text-muted fw-bold">No History</h6><p class="text-muted small">Generated batches appear here.</p></div>
@@ -856,6 +892,7 @@ function renderUI(){
 
   renderTaskHub();
   if(document.getElementById('manifest-tab').style.display==='block') renderManifest();
+  if(document.getElementById('man-daily-view').style.display==='block') renderDailyManifest();
   if(document.getElementById('holdings-tab').style.display==='block') renderHoldings();
   if(document.getElementById('receivers-tab').style.display==='block') renderReceivers();
   if(document.getElementById('admin-tab').style.display==='block') renderAdminPanel();
@@ -1269,7 +1306,21 @@ window.changePass=async function(u){ const p = prompt("New Password for "+u+":")
 
 window.decideTr=async function(rid,tid,typ,to,dec){ showSpin(true); await callApi({action:"approveTransfer", reqId:rid, taskId:tid, type:typ, to:to, decision:dec}); renderAdminPanel(); showSpin(false); }
 window.exportPool=function(){ const data = window.APP_DATA.adminPool.map(x=>({"AWB":x.id,"Client":x.client,"Net":x.net,"Status":x.assignee?"Assigned":"Unassigned","Assignee":x.assignee||""})); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Pool"); XLSX.writeFile(wb, "Pool.xlsx"); }
-window.switchManifestView = function(view) { document.querySelectorAll('#manTabs .nav-link').forEach(el => el.classList.remove('active')); const idx = view === 'pending' ? 0 : 1; document.querySelectorAll('#manTabs .nav-link')[idx].classList.add('active'); document.getElementById('man-pending-view').style.display = view === 'pending' ? 'block' : 'none'; document.getElementById('man-history-view').style.display = view === 'history' ? 'block' : 'none'; if(view === 'pending') renderManifest(); if(view === 'history') renderManifestHistory(); }
+window.switchManifestView = function(view) {
+   document.querySelectorAll('#manTabs .nav-link').forEach(el => el.classList.remove('active'));
+   // Index mapping: pending=0, daily=1, history=2
+   const idx = view === 'pending' ? 0 : (view === 'daily' ? 1 : 2);
+   document.querySelectorAll('#manTabs .nav-link')[idx].classList.add('active');
+
+   document.getElementById('man-pending-view').style.display = view === 'pending' ? 'block' : 'none';
+   document.getElementById('man-daily-view').style.display = view === 'daily' ? 'block' : 'none';
+   document.getElementById('man-history-view').style.display = view === 'history' ? 'block' : 'none';
+
+   if(view === 'pending') renderManifest();
+   if(view === 'daily') renderDailyManifest();
+   if(view === 'history') renderManifestHistory();
+}
+
 window.renderManifest = function() {
     const net = document.getElementById('man_net').value;
     const term = document.getElementById('man_search').value.toLowerCase();
@@ -1295,6 +1346,115 @@ window.renderManifest = function() {
         return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${badge}</td></tr>`;
     }).join('');
 };
+
+window.renderDailyManifest = function() {
+    const net = document.getElementById('man_daily_net').value;
+    const term = document.getElementById('man_daily_search').value.toLowerCase();
+    const list = document.getElementById('dailyManifestList');
+    const items = window.APP_DATA.manifest || [];
+    const today = new Date().toLocaleDateString();
+
+    const filtered = items.filter(x => {
+        const isToday = x.manifestDate === today;
+        const hasBatch = !!x.batchNo;
+        const matchesNet = net ? x.net === net : true;
+        const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
+        return isToday && hasBatch && matchesNet && (!term || matchesTerm);
+    });
+
+    // Populate dropdown if empty and data exists
+    const mn = document.getElementById('man_daily_net');
+    if(mn && mn.options.length<=1 && window.APP_DATA.static && window.APP_DATA.static.dropdowns && window.APP_DATA.static.dropdowns.networks){
+         let opts='';
+         window.APP_DATA.static.dropdowns.networks.forEach(x=>opts+=`<option value="${x}">${x}</option>`);
+         mn.innerHTML+=opts;
+    }
+
+    if (filtered.length === 0) {
+        list.innerHTML = '';
+        document.getElementById('dailyManifestEmptyState').style.display = 'block';
+        return;
+    }
+    document.getElementById('dailyManifestEmptyState').style.display = 'none';
+
+    list.innerHTML = filtered.map(x => {
+        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input daily-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end"><span class="badge bg-secondary">${x.batchNo}</span></td></tr>`;
+    }).join('');
+};
+
+window.toggleAllDaily = function(el) {
+    document.querySelectorAll('.daily-check').forEach(c => c.checked = el.checked);
+}
+
+window.printDailyManifest = function() {
+    const net = document.getElementById('man_daily_net').value || "ALL";
+    const items = [];
+    const chks = document.querySelectorAll('.daily-check:checked');
+    if(chks.length > 0) {
+        chks.forEach(c => {
+             const item = window.APP_DATA.manifest.find(x => x.id === c.value);
+             if(item) items.push(item);
+        });
+    } else {
+        const term = document.getElementById('man_daily_search').value.toLowerCase();
+        const today = new Date().toLocaleDateString();
+        items.push(...(window.APP_DATA.manifest || []).filter(x => {
+            const isToday = x.manifestDate === today;
+            const hasBatch = !!x.batchNo;
+            const matchesNet = net !== "ALL" && net ? x.net === net : true;
+            const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
+            return isToday && hasBatch && matchesNet && (!term || matchesTerm);
+        }));
+    }
+
+    if(items.length === 0) return alert("No items to print");
+    downloadManifestPdf(items, net + " (Daily)");
+}
+
+window.renderManifestHistory = function() {
+    const list = document.getElementById('batchContainer');
+    const batches = {};
+    (window.APP_DATA.manifest || []).forEach(x => {
+        if(x.batchNo) {
+            if(!batches[x.batchNo]) batches[x.batchNo] = {date: x.manifestDate, count: 0, net: x.net, items: []};
+            batches[x.batchNo].count++;
+            batches[x.batchNo].items.push(x);
+        }
+    });
+
+    if(Object.keys(batches).length === 0) {
+        document.getElementById('batchEmptyState').style.display = 'block';
+        list.innerHTML = '';
+        return;
+    }
+    document.getElementById('batchEmptyState').style.display = 'none';
+
+    list.innerHTML = Object.keys(batches).map(b => {
+         const batch = batches[b];
+         return `
+           <div class="col-md-6 col-lg-4">
+             <div class="panel-card p-3 h-100 border-start border-4 border-primary">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                   <div>
+                      <div class="fw-bold text-dark text-break" style="font-size:0.9rem">${b}</div>
+                      <div class="small text-muted">${batch.date}</div>
+                   </div>
+                   <span class="badge bg-light text-dark border">${batch.count} Items</span>
+                </div>
+                <div class="small text-muted mb-3">${batch.net}</div>
+                <button class="btn btn-sm btn-outline-primary w-100" onclick="downloadHistoryBatch('${b}', '${batch.net}')">
+                   <i class="bi bi-download me-1"></i> Download PDF
+                </button>
+             </div>
+           </div>
+         `;
+    }).join('');
+};
+
+window.downloadHistoryBatch = function(batchId, net) {
+    const items = window.APP_DATA.manifest.filter(i => i.batchNo === batchId);
+    downloadManifestPdf(items, net);
+}
 
 window.openAddHistoryModal = function() { new bootstrap.Modal(document.getElementById('addHistoryModal')).show(); }
 window.ahmAdd = async function() {
