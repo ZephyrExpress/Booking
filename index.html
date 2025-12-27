@@ -8,7 +8,6 @@
   <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Original Icon Restored -->
   <link rel="icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js" defer></script>
@@ -52,14 +51,14 @@
         left: 0; 
         z-index: 1000; 
         transition: transform 0.3s; 
-        transform: translateX(-100%); /* Hidden by default on mobile and desktop */
+        transform: translateX(-100%); /* Hidden by default on all screens */
         color: white; 
         display:flex; 
         flex-direction:column; 
         box-shadow: 4px 0 24px rgba(0,0,0,0.1); 
     }
     
-    .sidebar.show { transform: translateX(0); } /* Mobile/Desktop toggle class */
+    .sidebar.show { transform: translateX(0); } /* Toggle class */
 
     .content-area { 
         flex: 1; 
@@ -67,12 +66,9 @@
         min-height: 100vh; 
         display:flex; 
         flex-direction: column; 
-        margin-left: 0; /* Always 0 since sidebar is hidden overlay */
+        margin-left: 0;
         width: 100%;
     }
-
-    /* REMOVED Desktop View Fix that forced sidebar visibility */
-    /* Mobile toggle is now always visible */
 
     @media (max-width: 768px) {
         body, html { overflow-x: auto; width: 100%; }
@@ -153,11 +149,9 @@
   <div class="login-overlay"></div>
   <div class="login-card">
     <div class="text-center mb-4">
-        <!-- Original Logo Restored -->
         <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="60" class="d-block mx-auto">
     </div>
     <p class="text-center text-muted small mb-4">PORTAL LOGIN v6.0</p>
-    <!-- Removed helper text as requested -->
     <form onsubmit="event.preventDefault(); doLogin();">
       <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required>
       <input type="text" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required>
@@ -173,7 +167,6 @@
 
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <!-- Inverted Logo for Sidebar -->
       <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="30" class="me-2" style="filter: brightness(0) invert(1);"> 
     </div>
     <div class="sidebar-nav">
@@ -472,12 +465,14 @@
                    <div><div class="fw-bold">Daily Manifest</div><div class="small text-muted fw-normal">Items Manifested Today</div></div>
                 </div>
                 <div class="d-flex gap-2 align-items-center flex-wrap justify-content-end">
+                   <button class="btn btn-sm btn-outline-dark" onclick="openAddHistoryModal()"><i class="bi bi-clock-history me-1"></i> Add from History</button>
                    <button class="btn btn-sm btn-outline-secondary" onclick="printDailyManifest()"><i class="bi bi-printer me-1"></i> Print View</button>
                    <select id="man_daily_net" class="form-select form-select-sm" style="width:150px" onchange="renderDailyManifest()"><option value="">Select Network...</option></select>
                    <div class="input-group input-group-sm" style="width:200px;">
                        <span class="input-group-text"><i class="bi bi-search"></i></span>
                        <input id="man_daily_search" class="form-control" placeholder="Search ID/NetNo..." oninput="renderDailyManifest()">
                    </div>
+                   <button class="btn btn-primary btn-sm rounded-pill shadow-sm text-nowrap px-3" onclick="createBatch()"><i class="bi bi-file-text me-2"></i>Create Manifest</button>
                 </div>
              </div>
 
@@ -485,7 +480,7 @@
                 <table class="table table-hover align-middle mb-0 small">
                    <thead class="bg-light sticky-top">
                       <tr>
-                         <th class="ps-3" style="width:40px"><input type="checkbox" class="form-check-input" id="checkAllDaily" onclick="toggleAllDaily(this)"></th>
+                         <th class="ps-3" style="width:40px"><input type="checkbox" class="form-check-input daily-check" onclick="toggleAllDaily(this)"></th>
                          <th>AWB</th><th>Date</th><th>Dest</th><th>Network</th><th>Net No</th><th>Pcs</th><th>Wgt</th><th>Client</th><th class="text-end pe-3">Batch</th>
                       </tr>
                    </thead>
@@ -704,8 +699,24 @@ let curUser="", curRole="", curReassign={}, curPerms=[];
 let lastReqCount = 0;
 let selectedHoldAwb = "";
 let html5QrcodeScanner = null;
+let LOGO_BASE64 = "";
+
 window.APP_DATA={staff:[], dropdowns:{}, overview:{auto:[],paper:[]}, workflow:{toAssign:[],toDo:[]}, manifest:[], holdings:[]};
 window.tomInstances={client:null,dest:null,del:null,holdReason:null};
+
+// Preload Logo
+const toDataURL = url => fetch(url)
+  .then(response => response.blob())
+  .then(blob => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  }));
+
+toDataURL('https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png')
+  .then(dataUrl => { LOGO_BASE64 = dataUrl; })
+  .catch(err => console.log("Logo load failed", err));
 
 // --- INIT ---
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -1238,6 +1249,7 @@ window.switchTab=function(t){
    closeSidebar();
    
    if(t==='manifest') renderManifest();
+   if(t==='manifest') renderDailyManifest(); // Render Daily too just in case
    if(t==='admin') renderAdminPanel();
    if(t==='holdings') renderHoldings();
    if(t==='receivers') renderReceivers();
@@ -1308,14 +1320,11 @@ window.decideTr=async function(rid,tid,typ,to,dec){ showSpin(true); await callAp
 window.exportPool=function(){ const data = window.APP_DATA.adminPool.map(x=>({"AWB":x.id,"Client":x.client,"Net":x.net,"Status":x.assignee?"Assigned":"Unassigned","Assignee":x.assignee||""})); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Pool"); XLSX.writeFile(wb, "Pool.xlsx"); }
 window.switchManifestView = function(view) {
    document.querySelectorAll('#manTabs .nav-link').forEach(el => el.classList.remove('active'));
-   // Index mapping: pending=0, daily=1, history=2
    const idx = view === 'pending' ? 0 : (view === 'daily' ? 1 : 2);
    document.querySelectorAll('#manTabs .nav-link')[idx].classList.add('active');
-
    document.getElementById('man-pending-view').style.display = view === 'pending' ? 'block' : 'none';
    document.getElementById('man-daily-view').style.display = view === 'daily' ? 'block' : 'none';
    document.getElementById('man-history-view').style.display = view === 'history' ? 'block' : 'none';
-
    if(view === 'pending') renderManifest();
    if(view === 'daily') renderDailyManifest();
    if(view === 'history') renderManifestHistory();
@@ -1337,7 +1346,6 @@ window.renderManifest = function() {
     if (filtered.length === 0) {
         list.innerHTML = '';
         document.getElementById('manifestEmptyState').style.display = 'block';
-        document.getElementById('manifestEmptyState').querySelector('h6').textContent = "No Items Found";
         return;
     }
     document.getElementById('manifestEmptyState').style.display = 'none';
@@ -1354,6 +1362,14 @@ window.renderDailyManifest = function() {
     const items = window.APP_DATA.manifest || [];
     const today = new Date().toLocaleDateString();
 
+    // Populate dropdown if empty
+    const mn = document.getElementById('man_daily_net');
+    if(mn && mn.options.length<=1 && window.APP_DATA.static && window.APP_DATA.static.dropdowns && window.APP_DATA.static.dropdowns.networks){
+         let opts='';
+         window.APP_DATA.static.dropdowns.networks.forEach(x=>opts+=`<option value="${x}">${x}</option>`);
+         mn.innerHTML+=opts;
+    }
+
     const filtered = items.filter(x => {
         const isToday = x.manifestDate === today;
         const hasBatch = !!x.batchNo;
@@ -1361,14 +1377,6 @@ window.renderDailyManifest = function() {
         const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
         return isToday && hasBatch && matchesNet && (!term || matchesTerm);
     });
-
-    // Populate dropdown if empty and data exists
-    const mn = document.getElementById('man_daily_net');
-    if(mn && mn.options.length<=1 && window.APP_DATA.static && window.APP_DATA.static.dropdowns && window.APP_DATA.static.dropdowns.networks){
-         let opts='';
-         window.APP_DATA.static.dropdowns.networks.forEach(x=>opts+=`<option value="${x}">${x}</option>`);
-         mn.innerHTML+=opts;
-    }
 
     if (filtered.length === 0) {
         list.innerHTML = '';
@@ -1378,7 +1386,7 @@ window.renderDailyManifest = function() {
     document.getElementById('dailyManifestEmptyState').style.display = 'none';
 
     list.innerHTML = filtered.map(x => {
-        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input daily-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end"><span class="badge bg-secondary">${x.batchNo}</span></td></tr>`;
+        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check daily-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end"><span class="badge bg-secondary">${x.batchNo}</span></td></tr>`;
     }).join('');
 };
 
@@ -1390,6 +1398,8 @@ window.printDailyManifest = function() {
     const net = document.getElementById('man_daily_net').value || "ALL";
     const items = [];
     const chks = document.querySelectorAll('.daily-check:checked');
+
+    // Logic: If user selected checkboxes, print those. Else print visible table items.
     if(chks.length > 0) {
         chks.forEach(c => {
              const item = window.APP_DATA.manifest.find(x => x.id === c.value);
@@ -1398,10 +1408,11 @@ window.printDailyManifest = function() {
     } else {
         const term = document.getElementById('man_daily_search').value.toLowerCase();
         const today = new Date().toLocaleDateString();
+        const manNet = document.getElementById('man_daily_net').value;
         items.push(...(window.APP_DATA.manifest || []).filter(x => {
             const isToday = x.manifestDate === today;
             const hasBatch = !!x.batchNo;
-            const matchesNet = net !== "ALL" && net ? x.net === net : true;
+            const matchesNet = manNet ? x.net === manNet : true;
             const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
             return isToday && hasBatch && matchesNet && (!term || matchesTerm);
         }));
@@ -1462,14 +1473,9 @@ window.ahmAdd = async function() {
     if(!awb) return;
 
     showSpin(true);
-    // Simulate fetch from MOCK DB
     let s = null;
-    if(MOCK_MODE) {
-       // Mock Mode logic removed
-    } else {
-       const r = await fetchGet('getShipmentDetails&awb=' + encodeURIComponent(awb));
-       if(r.result === "success") s = r.shipment;
-    }
+    const r = await fetchGet('getShipmentDetails&awb=' + encodeURIComponent(awb));
+    if(r.result === "success") s = r.shipment;
 
     if(s) {
         const existingIdx = window.APP_DATA.manifest.findIndex(x => x.id === s.id);
@@ -1533,14 +1539,12 @@ window.printManifest = function() {
             .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
             .header-left { text-align: left; }
             .header-right { text-align: right; }
-            .logo { max-height: 40px; margin-bottom: 5px; }
             h2 { margin: 0; font-size: 1.5rem; text-decoration: underline; }
             .meta { margin-bottom: 20px; font-size: 0.9rem; }
             table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
             th { background: #eee; font-weight: bold; text-transform: uppercase; }
             .footer { margin-top: 40px; display: flex; justify-content: space-between; padding-top: 20px; border-top: 1px solid #000; }
-            @media print { .no-print { display: none; } }
         </style>
         </head><body>
         <div class="header">
@@ -1615,34 +1619,206 @@ window.createBatch = async function() {
     const manifestDate = new Date().toLocaleDateString();
     if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
 
-    const selectedItems = [];
+    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+
+    // Refresh local data to reflect change
     window.APP_DATA.manifest.forEach(x => {
-        if(ids.includes(x.id)) { x.batchNo = batchId; x.manifestDate = manifestDate; selectedItems.push(x); }
+        if(ids.includes(x.id)) { x.batchNo = batchId; x.manifestDate = manifestDate; }
     });
 
+    // Generate PDF for the batch
+    const selectedItems = window.APP_DATA.manifest.filter(x => ids.includes(x.id));
     window.downloadManifestPdf(selectedItems, net);
+
+    // Re-render
     renderManifest();
-    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    renderDailyManifest();
     toast("Manifest Created & PDF Generated");
 };
 
-// ... Render Receivers (Simple version for demo) ...
-window.renderReceivers = function(refresh=false) {
+// --- Receivers Slip (Real Implementation) ---
+window.renderReceivers = function() {
     const list = document.getElementById('rcList');
-    const items = window.APP_DATA.overview.paper || [];
-    list.innerHTML = items.map(x => `<tr><td><input type="checkbox"></td><td>${x.id}</td><td>Today</td><td>${x.client}</td><td>USA</td><td>${x.chgWgt}</td><td>Pending</td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="alert('Print functionality requires full data in mock mode')"><i class="bi bi-printer"></i></button></td></tr>`).join('');
+    // Combine ALL shipments for the receiver slip view
+    const allItems = [
+        ...(window.APP_DATA.overview.auto || []),
+        ...(window.APP_DATA.overview.paper || []),
+        ...(window.APP_DATA.manifest || []),
+        ...(window.APP_DATA.holdings || [])
+    ];
+
+    // Unique items by ID
+    const uniqueItems = Array.from(new Map(allItems.map(item => [item.id, item])).values());
+
+    if(!uniqueItems.length) {
+         list.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-muted">No shipments found</td></tr>';
+         return;
+    }
+
+    list.innerHTML = uniqueItems.map(x => `
+        <tr>
+            <td><input type="checkbox" value="${x.id}"></td>
+            <td class="fw-bold font-monospace">${x.id}</td>
+            <td>${new Date(x.date).toLocaleDateString()}</td>
+            <td>${(x.client||'').slice(0,15)}</td>
+            <td>${x.dest}</td>
+            <td>${x.chgWgt}</td>
+            <td><span class="badge bg-light text-dark border">${x.holdStatus === "On Hold" ? "Hold" : (x.batchNo ? "Manifested" : "Pending")}</span></td>
+            <td class="text-end">
+                <button class="btn btn-sm btn-outline-dark" onclick="fetchAndPrintReceiver('${x.id}')" title="Print Slip">
+                    <i class="bi bi-printer"></i>
+                </button>
+            </td>
+        </tr>`
+    ).join('');
+}
+
+window.fetchAndPrintReceiver = async function(id) {
+    showSpin(true);
+    const r = await fetchGet('getShipmentDetails&awb=' + encodeURIComponent(id));
+    showSpin(false);
+    if(r.result === "success") {
+        downloadReceiverPdf(r);
+    } else {
+        alert("Failed to fetch details: " + r.message);
+    }
+}
+
+window.downloadReceiverPdf = function(data) {
+    const s = data.shipment;
+    const boxes = data.boxes || [];
+
+    const doc = new jspdf.jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Helper to draw a slip at a specific Y offset
+    const drawSlip = (y, title) => {
+        // Logo
+        if(LOGO_BASE64) {
+            doc.addImage(LOGO_BASE64, 'PNG', 10, y + 5, 50, 15);
+        } else {
+            doc.setFontSize(16); doc.setFont("helvetica", "bold");
+            doc.text("ZEPHYR EXPRESS", 10, y + 15);
+        }
+
+        doc.setFontSize(10); doc.setFont("helvetica", "normal");
+        doc.text("New Delhi, India", 10, y + 25);
+
+        // Title Block
+        doc.setFontSize(14); doc.setFont("helvetica", "bold");
+        doc.text(title, pageWidth - 10, y + 15, { align: "right" });
+
+        // Barcode
+        try {
+            const canvas = document.createElement("canvas");
+            JsBarcode(canvas, s.id, { format: "CODE128", displayValue: false });
+            const imgData = canvas.toDataURL("image/png");
+            doc.addImage(imgData, 'PNG', pageWidth - 60, y + 20, 50, 10);
+        } catch(e) { console.error(e); }
+
+        doc.setFontSize(11); doc.text(`AWB: ${s.id}`, pageWidth - 10, y + 35, { align: "right" });
+
+        // Divider
+        doc.setLineWidth(0.5); doc.line(10, y + 40, pageWidth - 10, y + 40);
+
+        // Info Grid
+        let cy = y + 48;
+        const col1 = 12;
+        const col2 = 110;
+
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold"); doc.text("ORIGIN:", col1, cy);
+        doc.setFont("helvetica", "normal"); doc.text("DELHI (DEL)", col1 + 25, cy);
+
+        doc.setFont("helvetica", "bold"); doc.text("DESTINATION:", col2, cy);
+        doc.setFont("helvetica", "normal"); doc.text(`${s.dest}`, col2 + 30, cy);
+
+        cy += 6;
+        doc.setFont("helvetica", "bold"); doc.text("DATE:", col1, cy);
+        doc.setFont("helvetica", "normal"); doc.text(new Date(s.date).toLocaleDateString(), col1 + 25, cy);
+
+        doc.setFont("helvetica", "bold"); doc.text("NETWORK:", col2, cy);
+        doc.setFont("helvetica", "normal"); doc.text(`${s.net}`, col2 + 30, cy);
+
+        cy += 6;
+        doc.setFont("helvetica", "bold"); doc.text("SENDER:", col1, cy);
+        doc.setFont("helvetica", "normal"); doc.text(`${s.client}`, col1 + 25, cy);
+
+        doc.setFont("helvetica", "bold"); doc.text("TYPE:", col2, cy);
+        doc.setFont("helvetica", "normal"); doc.text(`${s.type}`, col2 + 30, cy);
+
+        cy += 12;
+
+        // Table Header
+        doc.setFillColor(230, 230, 230);
+        doc.rect(10, cy, pageWidth - 20, 8, 'F');
+        doc.setFont("helvetica", "bold");
+        doc.text("PCS", 15, cy + 5);
+        doc.text("ACT WEIGHT", 50, cy + 5);
+        doc.text("VOL WEIGHT", 90, cy + 5);
+        doc.text("CHG WEIGHT", 140, cy + 5);
+
+        cy += 8;
+        doc.setFont("helvetica", "normal");
+
+        const totalPcs = s.boxes || boxes.length;
+        const actWgt = s.actWgt || 0;
+        const volWgt = s.volWgt || 0;
+        const chgWgt = s.chgWgt || 0;
+
+        doc.text(String(totalPcs), 15, cy + 6);
+        doc.text(`${actWgt} KG`, 50, cy + 6);
+        doc.text(`${volWgt} KG`, 90, cy + 6);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${chgWgt} KG`, 140, cy + 6);
+
+        cy += 15;
+
+        // Footer Terms
+        doc.setFontSize(7); doc.setFont("helvetica", "normal");
+        const terms = "TERMS: Liability limited to $100 unless declared. Claims to be made within 24 hours. Proof of delivery available on request. Subject to Delhi Jurisdiction.";
+        doc.text(doc.splitTextToSize(terms, pageWidth - 20), 10, cy);
+
+        cy += 15;
+        doc.setFontSize(9);
+        doc.line(10, cy, 60, cy);
+        doc.text("Sender Signature", 10, cy + 5);
+
+        doc.line(pageWidth - 60, cy, pageWidth - 10, cy);
+        doc.text("Receiver Signature", pageWidth - 60, cy + 5);
+
+        // Border
+        doc.setLineWidth(0.2);
+        doc.rect(5, y + 2, pageWidth - 10, (pageHeight/2) - 10);
+    };
+
+    drawSlip(5, "RECEIVER COPY");
+
+    // Cut Line
+    doc.setLineDash([3, 3], 0);
+    doc.line(0, pageHeight / 2, pageWidth, pageHeight / 2);
+    doc.setLineDash([], 0);
+
+    drawSlip((pageHeight / 2) + 5, "POD COPY");
+
+    doc.save(`ReceiverSlip_${s.id}.pdf`);
 }
 window.exportReceiverExcel = function() { toast("Receiver Excel Exported"); }
+
 window.chkStype = function(el) {
     if(el.checked) {
         document.querySelectorAll('input[name="stype"]').forEach(c => { if(c!==el) c.checked=false; });
-        // Handle suffix logic if needed
         const f = document.getElementById('f_awb');
         if(f && f.value) {
-            let val = f.value.replace(/-FRT|-CBV|-COM/g, '');
-            if(el.value === "Regular" && val) f.value = val;
-            if(el.value === "CBV 5" && val) f.value = val + "-CBV";
-            if(el.value === "Commercial" && val) f.value = val + "-COM";
+            let val = f.value.replace(/-FRT|-CBV|-COM/g, ''); // Clean existing
+
+            if(el.value === "Regular") {
+                f.value = val;
+            }
+            else if(el.value === "CBV 5" || el.value === "Commercial") {
+                f.value = val + "-FRT";
+            }
         }
     }
 }
