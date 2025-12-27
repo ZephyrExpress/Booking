@@ -1394,6 +1394,14 @@ window.toggleAllDaily = function(el) {
     document.querySelectorAll('.daily-check').forEach(c => c.checked = el.checked);
 }
 
+window.toggleAllMan = function(el) {
+    document.querySelectorAll('.batch-check').forEach(c => c.checked = el.checked);
+}
+
+window.toggleRc = function(el) {
+    document.querySelectorAll('#rcList input[type="checkbox"]').forEach(c => c.checked = el.checked);
+}
+
 window.printDailyManifest = function() {
     const net = document.getElementById('man_daily_net').value || "ALL";
     const items = [];
@@ -1675,7 +1683,7 @@ window.renderReceivers = function() {
 
 window.fetchAndPrintReceiver = async function(id) {
     showSpin(true);
-    const r = await fetchGet('getShipmentDetails&awb=' + encodeURIComponent(id));
+    const r = await callApi({action: 'getShipmentDetails', awb: id, user: curUser});
     showSpin(false);
     if(r.result === "success") {
         downloadReceiverPdf(r);
