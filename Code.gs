@@ -109,6 +109,9 @@ function hashString(str) {
 // --- MAIN DATA FETCH ---
 function getAllData(username) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let taskSS = null;
+  const getTaskSS = () => { if(!taskSS) try { taskSS = SpreadsheetApp.openById(TASK_SHEET_ID); } catch(e){console.error(e);} return taskSS; };
+
   const sh = ss.getSheetByName("Shipments");
   const targetUser = String(username).trim().toLowerCase();
 
@@ -134,8 +137,8 @@ function getAllData(username) {
       };
       let staff = [];
       try {
-        const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
-        const stSh = remoteSS.getSheetByName("Subordinate Staff");
+        const remoteSS = getTaskSS();
+        const stSh = remoteSS ? remoteSS.getSheetByName("Subordinate Staff") : null;
         if(stSh) staff = stSh.getRange(2,1,50).getValues().flat().filter(String);
       } catch(e) { console.error(e); }
 
@@ -173,8 +176,8 @@ function getAllData(username) {
   let updates = [];
   let fmsUpdates = [];
   try {
-      const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
-      const brSheet = remoteSS.getSheetByName("Booking_Report");
+      const remoteSS = getTaskSS();
+      const brSheet = remoteSS ? remoteSS.getSheetByName("Booking_Report") : null;
       if(brSheet) {
           const brLast = brSheet.getLastRow();
           if(brLast > 1) {
@@ -211,7 +214,8 @@ function getAllData(username) {
 
   if(fmsUpdates.length > 0) {
       try {
-          const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
+          const remoteSS = getTaskSS();
+          const fms = remoteSS ? remoteSS.getSheetByName("FMS") : null;
           if(fms && fms.getLastRow() >= 7) {
               const ids = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
               fmsUpdates.forEach(u => {
