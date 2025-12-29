@@ -154,6 +154,8 @@ function getAllData(username) {
   };
 
   const sh = ss.getSheetByName("Shipments");
+  if (!sh) return jsonResponse("error", "Shipments Sheet Missing");
+
   const targetUser = String(username).trim().toLowerCase();
 
   const cache = CacheService.getScriptCache();
@@ -330,9 +332,14 @@ function getAllData(username) {
     }
   });
 
-  const rs = ss.getSheetByName("Requests");
-  const reqs = rs.getLastRow()>1 ? rs.getRange(2, 1, rs.getLastRow()-1, 7).getValues().filter(r => r[5]==="Pending") : [];
-  const reqList = reqs.map(r => ({ reqId:r[0], taskId:r[1], type:r[2], by:r[3], to:r[4], date:r[6] }));
+  let reqList = [];
+  try {
+      const rs = ss.getSheetByName("Requests");
+      if(rs) {
+          const reqs = rs.getLastRow()>1 ? rs.getRange(2, 1, rs.getLastRow()-1, 7).getValues().filter(r => r[5]==="Pending") : [];
+          reqList = reqs.map(r => ({ reqId:r[0], taskId:r[1], type:r[2], by:r[3], to:r[4], date:r[6] }));
+      }
+  } catch(e) { console.error("Requests Sheet Error", e); }
 
   return jsonResponse("success", "OK", {
     role: role,
