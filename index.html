@@ -149,7 +149,7 @@
   <div class="login-overlay"></div>
   <div class="login-card">
     <div class="text-center mb-4">
-        <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="60" class="d-block mx-auto">
+        <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="40" class="d-block mx-auto">
     </div>
     <p class="text-center text-muted small mb-4">PORTAL LOGIN v6.0</p>
     <form onsubmit="event.preventDefault(); doLogin();">
@@ -1364,7 +1364,7 @@ window.renderManifest = function() {
     document.getElementById('manifestEmptyState').style.display = 'none';
     list.innerHTML = filtered.map(x => {
         const badge = x.batchNo ? `<span class="badge bg-secondary" title="In Batch: ${x.batchNo}">History</span>` : `<span class="badge bg-success">Ready</span>`;
-        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${badge}</td></tr>`;
+        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check pending-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${badge}</td></tr>`;
     }).join('');
 };
 
@@ -1408,7 +1408,7 @@ window.toggleAllDaily = function(el) {
 }
 
 window.toggleAllMan = function(el) {
-    document.querySelectorAll('.batch-check').forEach(c => c.checked = el.checked);
+    document.querySelectorAll('.pending-check').forEach(c => c.checked = el.checked);
 }
 
 window.toggleRc = function(el) {
@@ -1631,9 +1631,18 @@ window.downloadManifestPdf = function(items, network) {
 };
 
 window.createBatch = async function() {
-    const net = document.getElementById('man_net').value;
+    // Determine active view
+    const isDaily = document.getElementById('man-daily-view').style.display === 'block';
+
+    // Use correct network selector
+    const netSelectId = isDaily ? 'man_daily_net' : 'man_net';
+    const net = document.getElementById(netSelectId).value;
     if(!net) return alert("Select Network");
-    const chks = document.querySelectorAll('.batch-check:checked');
+
+    // Use correct checkbox class
+    const checkClass = isDaily ? '.daily-check:checked' : '.pending-check:checked';
+    const chks = document.querySelectorAll(checkClass);
+
     if(chks.length === 0) return alert("Select at least one item");
     const ids = Array.from(chks).map(c => c.value);
     const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
