@@ -1037,6 +1037,11 @@ window.clearHoldSearch = function() {
     document.getElementById('holdResultPanel').style.display='none';
 }
 
+window.openHoldAction = function(id) {
+    document.getElementById('holdSearchAwb').value = id;
+    searchHoldings();
+}
+
 window.openHoldModal = function(id, netNo) {
     selectedHoldAwb = id;
     document.getElementById('modalHoldAwb').textContent = id;
@@ -1597,6 +1602,15 @@ window.downloadManifestPdf = function(items, network) {
     const pageWidth = doc.internal.pageSize.getWidth();
     const dateStr = new Date().toLocaleDateString();
 
+    // Center Logo
+    if(LOGO_BASE64) {
+        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth - 50) / 2, 10, 50, 15);
+    } else {
+        doc.setFontSize(14); doc.setFont("helvetica", "bold");
+        const textWidth = doc.getTextWidth("ZEPHYR EXPRESS");
+        doc.text("ZEPHYR EXPRESS", (pageWidth - textWidth) / 2, 20);
+    }
+
     doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.text("MANIFEST", 10, 35);
     doc.setFontSize(10); doc.text(`Network: ${network}`, 10, 42);
     doc.setFont("helvetica", "normal"); doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
@@ -1727,12 +1741,13 @@ window.downloadReceiverPdf = function(data) {
 
     // Helper to draw a slip at a specific Y offset
     const drawSlip = (y, title) => {
-        // Logo
+        // Center Logo
         if(LOGO_BASE64) {
-            doc.addImage(LOGO_BASE64, 'PNG', 10, y + 5, 50, 15);
+            doc.addImage(LOGO_BASE64, 'PNG', (pageWidth - 50) / 2, y + 5, 50, 15);
         } else {
             doc.setFontSize(16); doc.setFont("helvetica", "bold");
-            doc.text("ZEPHYR EXPRESS", 10, y + 15);
+            const textWidth = doc.getTextWidth("ZEPHYR EXPRESS");
+            doc.text("ZEPHYR EXPRESS", (pageWidth - textWidth) / 2, y + 15);
         }
 
         doc.setFontSize(10); doc.setFont("helvetica", "normal");
@@ -1745,7 +1760,7 @@ window.downloadReceiverPdf = function(data) {
         // Barcode
         try {
             const canvas = document.createElement("canvas");
-            JsBarcode(canvas, s.id, { format: "CODE128", displayValue: false });
+            JsBarcode(canvas, s.id, { format: "CODE128", displayValue: false, width: 4, height: 100, margin: 0 });
             const imgData = canvas.toDataURL("image/png");
             doc.addImage(imgData, 'PNG', pageWidth - 60, y + 20, 50, 10);
         } catch(e) { console.error(e); }
