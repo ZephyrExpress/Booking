@@ -448,6 +448,8 @@ function handleManifestBatch(b) {
               if(net.includes("dhl")) { fms.getRange(r, 25).setValue(doer); }
               else if(net.includes("aramex")) { fms.getRange(r, 30).setValue(doer); }
               else if(net.includes("fedex")) { fms.getRange(r, 35).setValue(doer); }
+              else if(net.includes("ups")) { fms.getRange(r, 40).setValue(doer); }
+              else if(net.includes("self")) { fms.getRange(r, 45).setValue(doer); }
           }
       }
   });
