@@ -616,15 +616,24 @@ function handleTransferRequest(b) { SpreadsheetApp.getActiveSpreadsheet().getShe
 function handleLogin(u,p){
   const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
   const d = s.getDataRange().getValues();
-  const hashedInput = hashString(p);
+
+  // Robust input handling
+  const inputStr = String(p).trim();
+  const hashedInput = hashString(inputStr);
 
   for(let i=1;i<d.length;i++) {
     if(String(d[i][0]).toLowerCase() == String(u).toLowerCase()) {
-        const storedPass = String(d[i][1]);
-        if (storedPass === hashedInput) {
+        // Robust stored value handling
+        const storedVal = d[i][1];
+        const storedStr = String(storedVal).trim();
+
+        // 1. Check Hash Match
+        if (storedStr === hashedInput) {
              return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
         }
-        if (String(storedPass).trim() === String(p).trim()) {
+
+        // 2. Check Plain Text Match
+        if (storedStr === inputStr) {
             s.getRange(i+1, 2).setValue(hashedInput);
             return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
         }
