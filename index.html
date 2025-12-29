@@ -388,7 +388,13 @@
       <div id="taskhub-tab" class="tab-view" style="display:none;">
         <div id="adminTaskView" style="display:none">
            <div class="panel-card">
-              <div class="panel-header bg-primary text-white"><span><i class="bi bi-kanban me-2"></i>Task Manager (Global Pool)</span> <button class="btn btn-sm btn-light text-primary fw-bold" onclick="exportPool()">Export</button></div>
+              <div class="panel-header bg-primary text-white">
+                  <span><i class="bi bi-kanban me-2"></i>Task Manager (Global Pool)</span>
+                  <div class="d-flex gap-2">
+                      <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-box-arrow-up-right me-1"></i> Quick Entry</a>
+                      <button class="btn btn-sm btn-light text-primary fw-bold" onclick="exportPool()">Export</button>
+                  </div>
+              </div>
               <div class="table-responsive">
                   <table class="table table-hover align-middle mb-0 excel-table">
                       <thead class="bg-light"><tr><th>AWB</th><th>Net No</th><th>Network</th><th>Weight</th><th>Details</th><th>Client</th><th class="text-center">Assigned To</th><th>Action</th></tr></thead>
@@ -1394,6 +1400,14 @@ window.toggleAllDaily = function(el) {
     document.querySelectorAll('.daily-check').forEach(c => c.checked = el.checked);
 }
 
+window.toggleAllMan = function(el) {
+    document.querySelectorAll('.batch-check').forEach(c => c.checked = el.checked);
+}
+
+window.toggleRc = function(el) {
+    document.querySelectorAll('#rcList input[type="checkbox"]').forEach(c => c.checked = el.checked);
+}
+
 window.printDailyManifest = function() {
     const net = document.getElementById('man_daily_net').value || "ALL";
     const items = [];
@@ -1619,21 +1633,24 @@ window.createBatch = async function() {
     const manifestDate = new Date().toLocaleDateString();
     if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
 
+    // Generate PDF instantly (Optimistic UI)
+    const selectedItems = window.APP_DATA.manifest.filter(x => ids.includes(x.id));
+    // Temporarily update local state for PDF
+    selectedItems.forEach(x => { x.batchNo = batchId; x.manifestDate = manifestDate; });
+    window.downloadManifestPdf(selectedItems, net);
+
+    // Call API in background
     await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
 
-    // Refresh local data to reflect change
+    // Permanently update local data
     window.APP_DATA.manifest.forEach(x => {
         if(ids.includes(x.id)) { x.batchNo = batchId; x.manifestDate = manifestDate; }
     });
 
-    // Generate PDF for the batch
-    const selectedItems = window.APP_DATA.manifest.filter(x => ids.includes(x.id));
-    window.downloadManifestPdf(selectedItems, net);
-
     // Re-render
     renderManifest();
     renderDailyManifest();
-    toast("Manifest Created & PDF Generated");
+    toast("Manifest Created");
 };
 
 // --- Receivers Slip (Real Implementation) ---
@@ -1675,7 +1692,7 @@ window.renderReceivers = function() {
 
 window.fetchAndPrintReceiver = async function(id) {
     showSpin(true);
-    const r = await fetchGet('getShipmentDetails&awb=' + encodeURIComponent(id));
+    const r = await callApi({action: 'getShipmentDetails', awb: id, user: curUser});
     showSpin(false);
     if(r.result === "success") {
         downloadReceiverPdf(r);
