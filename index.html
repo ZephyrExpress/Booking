@@ -406,6 +406,9 @@
            </div>
         </div>
         <div id="staffTaskView" style="display:none">
+             <div class="d-flex justify-content-end mb-3">
+                  <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-box-arrow-up-right me-1"></i> Quick Entry</a>
+             </div>
              <div class="row g-4">
                  <div class="col-lg-6">
                      <div class="alert alert-info py-3 shadow-sm border-0 border-start border-4 border-info"><h5 class="alert-heading fw-bold m-0"><i class="bi bi-robot me-2"></i>My Automated Shipments</h5></div>
@@ -731,6 +734,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'short',day:'numeric'});
   setInterval(() => document.getElementById('timeDisplay').textContent = new Date().toLocaleTimeString('en-US'), 1000);
   document.getElementById('f_date').valueAsDate=new Date();
+
+  // Auto Sync (1 min)
+  setInterval(() => {
+      if (curUser && document.getElementById('appSection').style.display !== 'none') {
+          syncData(false);
+      }
+  }, 60000);
 });
 
 // Explicit Sidebar Close Function
@@ -1881,6 +1891,40 @@ window.toggleAutoAwb = function(el) {
     document.getElementById('autoAwbLabel').textContent = el.checked ? "Enabled" : "Disabled";
     document.getElementById('btnAutoAwb').style.display = el.checked ? 'block' : 'none';
     callApi({action:'setConfig', key:'AUTO_AWB', value: el.checked});
+}
+
+window.openReassign = function(id, type) {
+    curReassign = {id: id, type: type};
+    document.getElementById('rId').textContent = id;
+    const s = document.getElementById('rStaff');
+    s.innerHTML = '<option value="">Select Staff...</option>';
+    if (window.APP_DATA.static && window.APP_DATA.static.staff) {
+        window.APP_DATA.static.staff.forEach(st => {
+            s.innerHTML += `<option value="${st}">${st}</option>`;
+        });
+    }
+    new bootstrap.Modal(document.getElementById('reassignModal')).show();
+}
+
+window.sendTransfer = async function() {
+    const s = document.getElementById('rStaff').value;
+    if (!s) return alert("Select Staff");
+
+    bootstrap.Modal.getInstance(document.getElementById('reassignModal')).hide();
+
+    const r = await callApi({
+        action: "requestTransfer",
+        taskId: curReassign.id,
+        type: curReassign.type,
+        by: curUser,
+        to: s
+    });
+
+    if (r.result === "success") {
+        toast("Transfer Request Sent");
+    } else {
+        alert("Error: " + r.message);
+    }
 }
 
 </script>
