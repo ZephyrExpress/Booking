@@ -267,6 +267,8 @@
                      <div class="col-md-4"><label class="fun-label">Total Amount</label><input type="number" step="0.01" id="f_payTotal" class="form-control fun-input" oninput="cPay()"></div>
                      <div class="col-md-4"><label class="fun-label">Amount Paid</label><input type="number" step="0.01" id="f_payPaid" class="form-control fun-input" oninput="cPay()"></div>
                      <div class="col-md-4"><label class="fun-label">Pending Amount</label><input type="number" step="0.01" id="f_payPending" class="form-control fun-input bg-warning bg-opacity-10 fw-bold" readonly value="0"></div>
+                     <div class="col-md-6"><label class="fun-label">Name of Payee (Optional)</label><input type="text" id="f_payeeName" class="form-control fun-input" placeholder="Enter Name"></div>
+                     <div class="col-md-6"><label class="fun-label">Contact (10 Digit) (Optional)</label><input type="text" id="f_payeeContact" class="form-control fun-input" maxlength="10" placeholder="1234567890"></div>
                   </div>
                </div>
 
@@ -420,11 +422,11 @@
       <!-- MANIFEST TAB -->
       <div id="manifest-tab" class="tab-view" style="display:none;">
         <ul class="nav nav-pills mb-3" id="manTabs">
-           <li class="nav-item"><button class="nav-link active rounded-pill px-4" onclick="switchManifestView('pending')">Pending Manifest</button></li>
-           <li class="nav-item ms-2"><button class="nav-link rounded-pill px-4" onclick="switchManifestView('daily')">Daily Manifest</button></li>
+           <li class="nav-item"><button class="nav-link active rounded-pill px-4" onclick="switchManifestView('daily')">Daily Manifest</button></li>
+           <li class="nav-item ms-2"><button class="nav-link rounded-pill px-4" onclick="switchManifestView('pending')">Pending Manifest</button></li>
            <li class="nav-item ms-2"><button class="nav-link rounded-pill px-4" onclick="switchManifestView('history')">Manifest History</button></li>
         </ul>
-        <div id="man-pending-view">
+        <div id="man-pending-view" style="display:none;">
           <div class="panel-card p-3">
              <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-3">
                 <div class="d-flex align-items-center gap-3">
@@ -463,7 +465,7 @@
         </div>
 
         <!-- DAILY MANIFEST VIEW -->
-        <div id="man-daily-view" style="display:none;">
+        <div id="man-daily-view">
           <div class="panel-card p-3">
              <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-3">
                 <div class="d-flex align-items-center gap-3">
@@ -1296,12 +1298,17 @@ document.getElementById('shipForm').onsubmit = async (e)=>{
    const stype = document.querySelector('input[name="stype"]:checked');
    if(stype) extra.push("Type: " + stype.value);
 
-   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, paperwork: pw.join(', ') });
+   const payeeName = document.getElementById('f_payeeName').value || "";
+   const payeeContact = document.getElementById('f_payeeContact').value || "";
+
+   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', ') });
    showSpin(false); if(r.result==='success') { toast("Entry Saved"); resetForm(); syncData(false); } else alert(r.message);
 };
 function resetForm(){
     document.getElementById('shipForm').reset();
     document.getElementById('boxTable').innerHTML='';
+    document.getElementById('f_payeeName').value = "";
+    document.getElementById('f_payeeContact').value = "";
     if(window.tomInstances.client) window.tomInstances.client.clear();
     if(window.tomInstances.dest) window.tomInstances.dest.clear();
     document.getElementById('f_date').valueAsDate=new Date();
@@ -1326,7 +1333,7 @@ window.decideTr=async function(rid,tid,typ,to,dec){ showSpin(true); await callAp
 window.exportPool=function(){ const data = window.APP_DATA.adminPool.map(x=>({"AWB":x.id,"Client":x.client,"Net":x.net,"Status":x.assignee?"Assigned":"Unassigned","Assignee":x.assignee||""})); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Pool"); XLSX.writeFile(wb, "Pool.xlsx"); }
 window.switchManifestView = function(view) {
    document.querySelectorAll('#manTabs .nav-link').forEach(el => el.classList.remove('active'));
-   const idx = view === 'pending' ? 0 : (view === 'daily' ? 1 : 2);
+   const idx = view === 'daily' ? 0 : (view === 'pending' ? 1 : 2);
    document.querySelectorAll('#manTabs .nav-link')[idx].classList.add('active');
    document.getElementById('man-pending-view').style.display = view === 'pending' ? 'block' : 'none';
    document.getElementById('man-daily-view').style.display = view === 'daily' ? 'block' : 'none';
