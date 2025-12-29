@@ -510,7 +510,7 @@ function handleSubmit(body){
       body.totalBoxes, body.extraCharges, body.username, new Date(),
       tA.toFixed(2), tV.toFixed(2), tC.toFixed(2), body.extraRemarks,
       "Pending", "", "", "", "", "", "",
-      body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
+      body.payTotal, body.payPaid, body.payPending, body.payeeName, body.payeeContact, body.paperwork,
       holdStatus, holdReason, ""
   ]);
 
