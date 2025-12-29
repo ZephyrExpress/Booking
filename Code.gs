@@ -432,47 +432,25 @@ function handleManifestBatch(b) {
   const allIds = ss.getRange(2, 1, ss.getLastRow()-1, 1).getValues().flat();
   const awbMap = {};
   allIds.forEach((id, i) => { awbMap[String(id).replace(/'/g,"").trim().toLowerCase()] = i + 2; });
+  const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
+  let fmsIds = [];
+  if(fms && fms.getLastRow() >= 7) fmsIds = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x => String(x).replace(/'/g,"").trim().toLowerCase());
 
-  // Prepare batch updates for Shipments sheet
-  const shipmentUpdates = [];
-  // Map network to RangeList updates for FMS
-  const fmsUpdates = { dhl: [], aramex: [], fedex: [] };
-
-  try {
-      const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
-      let fmsIds = [];
-      if(fms && fms.getLastRow() >= 7) {
-          fmsIds = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x => String(x).replace(/'/g,"").trim().toLowerCase());
+  b.ids.forEach(id => {
+      const key = String(id).replace(/'/g,"").trim().toLowerCase();
+      if(awbMap[key]) ss.getRange(awbMap[key], 25, 1, 2).setValues([[b.batchNo, b.date]]);
+      if(fms) {
+          const idx = fmsIds.indexOf(key);
+          if(idx > -1) {
+              const r = idx + 7;
+              const net = b.network.toLowerCase();
+              const doer = b.user;
+              if(net.includes("dhl")) { fms.getRange(r, 25).setValue(doer); }
+              else if(net.includes("aramex")) { fms.getRange(r, 30).setValue(doer); }
+              else if(net.includes("fedex")) { fms.getRange(r, 35).setValue(doer); }
+          }
       }
-
-      b.ids.forEach(id => {
-          const key = String(id).replace(/'/g,"").trim().toLowerCase();
-          // Update Shipments Sheet
-          if(awbMap[key]) {
-              ss.getRange(awbMap[key], 25, 1, 2).setValues([[b.batchNo, b.date]]);
-          }
-
-          // Update FMS Sheet
-          if(fms) {
-              const idx = fmsIds.indexOf(key);
-              if(idx > -1) {
-                  const r = idx + 7;
-                  const net = b.network.toLowerCase();
-                  if(net.includes("dhl")) fmsUpdates.dhl.push("Y" + r);
-                  else if(net.includes("aramex")) fmsUpdates.aramex.push("AD" + r);
-                  else if(net.includes("fedex")) fmsUpdates.fedex.push("AI" + r);
-              }
-          }
-      });
-
-      // Execute FMS Batch Updates
-      const doer = b.user;
-      if(fmsUpdates.dhl.length) fms.getRangeList(fmsUpdates.dhl).setValue(doer);
-      if(fmsUpdates.aramex.length) fms.getRangeList(fmsUpdates.aramex).setValue(doer);
-      if(fmsUpdates.fedex.length) fms.getRangeList(fmsUpdates.fedex).setValue(doer);
-
-  } catch(e) { console.error("FMS Batch Error", e); }
-
+  });
   return jsonResponse("success", "Batch Updated");
 }
 
@@ -506,8 +484,8 @@ function handleSubmit(body){
       body.totalBoxes, body.extraCharges, body.username, new Date(),
       tA.toFixed(2), tV.toFixed(2), tC.toFixed(2), body.extraRemarks,
       "Pending", "", "", "", "", "", "",
-      body.payTotal, body.payPaid, body.payPending, body.payeeName, body.payeeContact, body.paperwork,
-      holdStatus, holdReason, ""
+      body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
+      holdStatus, holdReason, "", body.payeeName, body.payeeContact
   ]);
 
   if(br.length) bx.getRange(bx.getLastRow()+1,1,br.length,8).setValues(br);
