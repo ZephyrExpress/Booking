@@ -501,12 +501,12 @@ function handleSubmit(body){
 
 function addToFMS(d) {
     try {
-        const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
-        if(fms) {
-            const lr = fms.getLastRow();
-            const row = lr + 1;
-            fms.getRange(row, 2).setValue("'"+d.awb);
-        }
+        // const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
+        // if(fms) {
+        //     const lr = fms.getLastRow();
+        //     const row = lr + 1;
+        //     // fms.getRange(row, 2).setValue("'"+d.awb);
+        // }
     } catch(e) { console.error("FMS Add Error", e); }
 }
 
@@ -530,6 +530,7 @@ function syncFMS(id, data) {
             if(data.assignee) fms.getRange(row, 19).setValue(data.assignee); // S
             if(data.assigner) fms.getRange(row, 20).setValue(data.assigner); // T
             if(data.autoDoer) fms.getRange(row, 14).setValue(data.autoDoer); // N
+            if(data.paperStatus) fms.getRange(row, 17).setValue(data.paperStatus); // Q (Status)
         }
     } catch(e){}
 }
@@ -563,6 +564,7 @@ function handlePaperDone(b) {
   const holdStatus = ss.getRange(row, 28).getValue();
   if(holdStatus === "On Hold") return jsonResponse("error", "Shipment is On Hold");
   ss.getRange(row, 17).setValue("Completed");
+  syncFMS(b.id, { paperStatus: "Completed" });
   return jsonResponse("success", "Completed");
 }
 
@@ -581,7 +583,11 @@ function handleApproveTransfer(b) {
   const oldLog = sh.getRange(row, 20).getValue();
   sh.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} ${b.type} Transfer to ${b.to}]`);
   if(b.type==="Automation") { sh.getRange(row, 16).setValue(b.to); }
-  else { sh.getRange(row, 18).setValue(b.to); syncFMS(b.taskId, { assignee: b.to }); }
+  else {
+      sh.getRange(row, 18).setValue(b.to);
+      // If transferring paperwork, sync assignment to FMS
+      syncFMS(b.taskId, { assignee: b.to });
+  }
   req.getRange(r,6).setValue("Approved");
   return jsonResponse("success","Transferred");
 }
