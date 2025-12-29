@@ -624,7 +624,7 @@ function handleLogin(u,p){
         if (storedPass === hashedInput) {
              return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
         }
-        if (storedPass === String(p)) {
+        if (String(storedPass).trim() === String(p).trim()) {
             s.getRange(i+1, 2).setValue(hashedInput);
             return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
         }
