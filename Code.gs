@@ -217,13 +217,27 @@ function getAllData(username) {
           const remoteSS = getTaskSS();
           const fms = remoteSS ? remoteSS.getSheetByName("FMS") : null;
           if(fms && fms.getLastRow() >= 7) {
-              const ids = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
+              const rangeHeight = fms.getLastRow() - 6;
+              const ids = fms.getRange(7, 2, rangeHeight, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
+
+              // Read current values of Col 14 (Auto Doer)
+              const col14Range = fms.getRange(7, 14, rangeHeight, 1);
+              const col14Values = col14Range.getValues();
+              let isModified = false;
+
               fmsUpdates.forEach(u => {
                   const idx = ids.indexOf(u.awb);
                   if(idx > -1) {
-                      fms.getRange(idx+7, 14).setValue(u.autoDoer);
+                      if (col14Values[idx][0] !== u.autoDoer) {
+                          col14Values[idx][0] = u.autoDoer;
+                          isModified = true;
+                      }
                   }
               });
+
+              if (isModified) {
+                  col14Range.setValues(col14Values);
+              }
           }
       } catch(e) { console.error("FMS Sync Error", e); }
   }
