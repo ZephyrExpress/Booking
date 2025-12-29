@@ -41,7 +41,7 @@ function doPost(e) {
     // --- 1. AUTH ---
     if (act === "login") return handleLogin(body.username, body.password);
 
-    // --- 2. DATA RETRIEVAL (FIXED: Added to doPost) ---
+    // --- 2. DATA RETRIEVAL ---
     if (act === 'getAllData') return getAllData(body.user);
     if (act === 'getAdminRequests') return getAdminRequests();
     if (act === 'getUsers') return getUsersJson(body.user);
@@ -106,6 +106,38 @@ function hashString(str) {
   return txtHash;
 }
 
+// ⚡ Bolt Optimization: Cache Users Map to reduce read operations
+function getUserMap() {
+    const cache = CacheService.getScriptCache();
+    const cached = cache.get('users_map');
+    if (cached) return JSON.parse(cached);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const uSheet = ss.getSheetByName("Users");
+    if (!uSheet || uSheet.getLastRow() < 2) return {};
+
+    const data = uSheet.getDataRange().getValues();
+    const map = {};
+    // Skip header
+    for (let i = 1; i < data.length; i++) {
+        const u = String(data[i][0]).trim().toLowerCase();
+        if (u) {
+            map[u] = {
+                username: data[i][0], // Keep original case
+                name: data[i][2],
+                role: data[i][3],
+                perms: data[i][4] || ""
+            };
+        }
+    }
+    cache.put('users_map', JSON.stringify(map), 21600); // Cache for 6 hours
+    return map;
+}
+
+function clearUserCache() {
+    CacheService.getScriptCache().remove('users_map');
+}
+
 // --- MAIN DATA FETCH ---
 function getAllData(username) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -153,22 +185,17 @@ function getAllData(username) {
 
   let role = "Staff";
   let perms = [];
-  try {
-      const uSheet = ss.getSheetByName("Users");
-      if (uSheet && uSheet.getLastRow() > 1) {
-          const uData = uSheet.getDataRange().getValues();
-          for(let i=1; i<uData.length; i++) {
-            if(String(uData[i][0]).toLowerCase() === targetUser) {
-                role = uData[i][3];
-                const pStr = uData[i][4] || "";
-                perms = pStr.split(',').map(s=>s.trim()).filter(Boolean);
-                break;
-            }
-          }
-      } else {
-          if(targetUser.includes("admin") || targetUser.includes("owner")) role = "Admin";
-      }
-  } catch(e) { console.error("User Fetch Error", e); }
+
+  // ⚡ Use Cached User Map for faster lookup and robust matching
+  const userMap = getUserMap();
+  if (userMap[targetUser]) {
+      role = userMap[targetUser].role;
+      const pStr = userMap[targetUser].perms;
+      perms = pStr.split(',').map(s=>s.trim()).filter(Boolean);
+  } else {
+      // Fallback for hardcoded admins not in DB (legacy support)
+      if(targetUser.includes("admin") || targetUser.includes("owner")) role = "Admin";
+  }
 
   const lastRow = sh.getLastRow();
   const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 30).getDisplayValues() : [];
@@ -394,6 +421,7 @@ function handleManageHold(b) {
 }
 
 function handleManageUserRole(b) {
+    clearUserCache(); // Invalidate cache
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const uSheet = ss.getSheetByName("Users");
     const d = uSheet.getDataRange().getValues();
@@ -412,6 +440,7 @@ function handleManageUserRole(b) {
 }
 
 function handleUpdateUserPerms(b) {
+    clearUserCache(); // Invalidate cache
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const uSheet = ss.getSheetByName("Users");
     const d = uSheet.getDataRange().getValues();
@@ -622,7 +651,7 @@ function handleLogin(u,p){
   const hashedInput = hashString(inputStr);
 
   for(let i=1;i<d.length;i++) {
-    if(String(d[i][0]).toLowerCase() == String(u).toLowerCase()) {
+    if(String(d[i][0]).trim().toLowerCase() == String(u).trim().toLowerCase()) {
         // Robust stored value handling
         const storedVal = d[i][1];
         const storedStr = String(storedVal).trim();
@@ -652,9 +681,10 @@ function getUsersJson(requestingUser) {
 
 function getAdminRequests() { const d = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Requests").getDataRange().getValues(); const p = []; for(let i=1;i<d.length;i++) if(d[i][5]==="Pending") p.push({reqId:d[i][0], taskId:d[i][1], type:d[i][2], by:d[i][3], to:d[i][4], date:d[i][6]}); return jsonResponse("success", "OK", { requests: p }); }
 function handleAddUser(b){
+  clearUserCache();
   SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users").appendRow([b.u, hashString(b.p), b.n, b.r]);
   return jsonResponse("success","Added");
 }
-function handleDeleteUser(u){const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users"),d=s.getDataRange().getValues();for(let i=1;i<d.length;i++)if(String(d[i][0]).toLowerCase()==String(u).toLowerCase()){s.deleteRow(i+1);return jsonResponse("success","Deleted");}return jsonResponse("error","Not Found");}
+function handleDeleteUser(u){clearUserCache(); const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users"),d=s.getDataRange().getValues();for(let i=1;i<d.length;i++)if(String(d[i][0]).toLowerCase()==String(u).toLowerCase()){s.deleteRow(i+1);return jsonResponse("success","Deleted");}return jsonResponse("error","Not Found");}
 function handleSetConfig(b) { PropertiesService.getScriptProperties().setProperty(b.key, b.value); return jsonResponse("success", "Config Saved"); }
 function jsonResponse(s,m,d){return ContentService.createTextOutput(JSON.stringify({result:s,message:m,...d})).setMimeType(ContentService.MimeType.JSON);}

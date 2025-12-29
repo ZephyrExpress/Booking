@@ -147,8 +147,7 @@
 <!-- LOGIN -->
 <div id="loginSection" class="login-wrapper">
   <div class="login-overlay"></div>
-  <div class="login-card position-relative">
-    <button class="btn btn-light btn-sm position-absolute top-0 end-0 m-3 rounded-circle shadow-sm text-muted" onclick="openConfig()" title="Settings"><i class="bi bi-gear-fill"></i></button>
+  <div class="login-card">
     <div class="text-center mb-4">
         <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="40" class="d-block mx-auto">
     </div>
@@ -759,15 +758,6 @@ function toast(msg, type='success'){
 }
 
 
-// CONFIG FUNCTION
-window.openConfig = function() {
-    const u = prompt("API Configuration\n\nEnter your Web App Deployment URL:", API_URL);
-    if(u !== null) {
-        localStorage.setItem("ZEPHYR_API_URL", u.trim());
-        location.reload();
-    }
-}
-
 // FIXED callApi FUNCTION (Real API Only)
 async function callApi(d){
     try {
@@ -788,7 +778,7 @@ async function callApi(d){
     } catch(e) {
         console.error("API Error:", e);
         if(d.action === 'login') {
-             alert("Login Failed: Network Error.\n\nEnsure:\n1. GAS Web App is deployed as 'Me' with access 'Anyone'.\n2. API_URL is correct (Click Gear Icon to configure).\n3. Check internet connection.");
+             alert("Login Failed: Network Error.\n\nEnsure:\n1. GAS Web App is deployed as 'Me' with access 'Anyone'.\n2. API_URL matches deployment.\n3. Check internet connection.");
         }
         return { result: "error", message: e.toString() };
     }
