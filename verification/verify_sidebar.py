@@ -1,78 +1,70 @@
-
 import os
+import sys
 from playwright.sync_api import sync_playwright
 
 def verify_sidebar_order():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
+        # Set viewport to mobile size to ensure toggle is visible
+        context = browser.new_context(viewport={"width": 375, "height": 667})
         page = context.new_page()
 
-        # Mock APP_DATA injection script
-        mock_data_script = """
-        window.APP_DATA = {
-            staff: ['Admin', 'Staff1'],
-            dropdowns: {
-                networks: ['DHL', 'FedEx'],
-                clients: ['Client A', 'Client B']
-            },
-            overview: { auto: [], paper: [] },
-            workflow: { toAssign: [], toDo: [] },
-            adminPool: [],
-            static: { staff: ['Admin', 'Staff1'], dropdowns: { networks: [], clients: [], destinations: [] } },
-            manifest: [],
-            holdings: [],
-            stats: { inbound: 0, auto: 0, paper: 0, holdings: 0, requests: 0 }
-        };
-        """
-
-        # Load the file
+        # Load local index.html
         page.goto(f"file://{os.getcwd()}/index.html")
 
-        # Inject mock data
-        page.evaluate(mock_data_script)
+        # Inject mock data to ensure sidebar renders
+        page.evaluate("""
+            window.APP_DATA = {
+                role: 'Admin',
+                perms: [],
+                static: {},
+                overview: {auto:[], paper:[]},
+                workflow: {toAssign:[], toDo:[]},
+                manifest: [],
+                holdings: [],
+                adminPool: []
+            };
+            window.curRole = 'Admin';
+            window.curPerms = [];
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('appSection').style.display = 'flex';
+            updateNavVisibility();
+        """)
 
-        # Hide login, show app
-        page.evaluate("document.getElementById('loginSection').style.display='none'")
-        page.evaluate("document.getElementById('appSection').style.display='flex'")
+        # Open sidebar
+        page.wait_for_selector('.mobile-toggle', state="visible")
+        page.click('.mobile-toggle')
+        page.wait_for_selector('.sidebar.show')
 
-        # Initialize as Admin to see all links
-        page.evaluate("curRole = 'Admin'")
-        page.evaluate("updateNavVisibility()")
-
-        # --- VERIFY SIDEBAR ORDER ---
-        # Select all visible nav items
-        # Order: Inbound, Overview, TaskHub, Manifest, Holdings, Receivers, Admin
-
-        nav_items = page.locator(".sidebar-nav .nav-item-custom:visible")
-        count = nav_items.count()
+        # Get nav items
+        items = page.query_selector_all('.nav-item-custom')
+        print(f"Found {len(items)} nav items.")
 
         expected_order = [
-            "Inbound",
-            "Overview",
-            "Task Manager", # TaskHub label changes based on role, for Admin it is Task Manager
-            "Manifest",
-            "Holdings",
-            "Receivers Slip",
-            "Admin Panel"
+            "OVERVIEW",
+            "INBOUND",
+            "TASK MANAGER",
+            "MANIFEST",
+            "RECEIVERS SLIP",
+            "HOLDINGS",
+            "ADMIN PANEL"
         ]
 
-        print(f"Found {count} nav items.")
+        for i, item in enumerate(items):
+            # Check visibility before asserting text, as hidden items shouldn't count if we filter by visible.
+            # But the selector gets all.
+            # updateNavVisibility sets display:none on items based on role. We are Admin, so all should be flex/block.
 
-        for i in range(min(count, len(expected_order))):
-            text = nav_items.nth(i).inner_text().strip()
+            text = item.inner_text().strip().upper()
             print(f"Item {i}: {text}")
-            # Note: Task Manager might have extra spaces or newlines, so we check inclusion
-            if expected_order[i] not in text:
-                 print(f"❌ Mismatch at index {i}. Expected {expected_order[i]}, got {text}")
-                 # raise Exception(f"Order Mismatch: {text} != {expected_order[i]}")
-            else:
-                 print(f"✅ Item {i} matches {expected_order[i]}")
+            if i < len(expected_order):
+                expected = expected_order[i]
+                if "TASK" in expected and "TASK" in text:
+                    continue
 
-        # Take screenshot
+                assert text == expected, f"Mismatch at index {i}. Expected {expected}, got {text}"
+
         page.screenshot(path="verification/sidebar_order.png")
-        print("Verification screenshot saved.")
-
         browser.close()
 
 if __name__ == "__main__":

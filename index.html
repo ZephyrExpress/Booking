@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js" defer></script>
   <script src="https://unpkg.com/html5-qrcode" defer></script>
@@ -152,9 +153,9 @@
         <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="40" class="d-block mx-auto">
     </div>
     <p class="text-center text-muted small mb-4">PORTAL LOGIN v6.0</p>
-    <form onsubmit="event.preventDefault(); doLogin();">
-      <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required>
-      <input type="text" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required>
+    <form onsubmit="event.preventDefault(); doLogin();" autocomplete="off">
+      <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required autocomplete="off">
+      <input type="password" id="pIn" class="form-control mb-4 p-3" placeholder="Password" required autocomplete="new-password">
       <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm" style="background-color: var(--brand-blue); border:none;">SIGN IN</button>
     </form>
     <div id="loginError" class="alert alert-danger mt-3 small text-center" style="display:none;"></div>
@@ -171,12 +172,12 @@
     </div>
     <div class="sidebar-nav">
       <div class="nav-label">Main Menu</div>
-      <a class="nav-item-custom" id="nav-inbound" onclick="switchTab('inbound')" style="display:none"><i class="bi bi-box-seam me-2"></i> Inbound</a>
       <a class="nav-item-custom active" id="nav-overview" onclick="switchTab('overview')" style="display:none"><i class="bi bi-grid-1x2 me-2"></i> Overview</a>
+      <a class="nav-item-custom" id="nav-inbound" onclick="switchTab('inbound')" style="display:none"><i class="bi bi-box-seam me-2"></i> Inbound</a>
       <a class="nav-item-custom" id="nav-taskhub" onclick="switchTab('taskhub')" style="display:none"><i class="bi bi-check-circle me-2"></i> <span id="taskLabel">My Tasks</span></a>
       <a class="nav-item-custom" id="nav-manifest" onclick="switchTab('manifest')" style="display:none"><i class="bi bi-file-earmark-spreadsheet me-2"></i> Manifest</a>
-      <a class="nav-item-custom" id="nav-holdings" onclick="switchTab('holdings')" style="display:none"><i class="bi bi-pause-circle me-2"></i> Holdings</a>
       <a class="nav-item-custom" id="nav-receivers" onclick="switchTab('receivers')" style="display:none"><i class="bi bi-printer me-2"></i> Receivers Slip</a>
+      <a class="nav-item-custom" id="nav-holdings" onclick="switchTab('holdings')" style="display:none"><i class="bi bi-pause-circle me-2"></i> Holdings</a>
 
       <div id="adminNavGroup" style="display:none;">
         <div class="nav-label">Administration</div>
@@ -393,7 +394,7 @@
               <div class="panel-header bg-primary text-white">
                   <span><i class="bi bi-kanban me-2"></i>Task Manager (Global Pool)</span>
                   <div class="d-flex gap-2">
-                      <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-box-arrow-up-right me-1"></i> Quick Entry</a>
+                      <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-box-arrow-up-right me-1"></i> Automation Data</a>
                       <button class="btn btn-sm btn-light text-primary fw-bold" onclick="exportPool()">Export</button>
                   </div>
               </div>
@@ -407,7 +408,7 @@
         </div>
         <div id="staffTaskView" style="display:none">
              <div class="d-flex justify-content-end mb-3">
-                  <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-box-arrow-up-right me-1"></i> Quick Entry</a>
+                  <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-box-arrow-up-right me-1"></i> Automation Data</a>
              </div>
              <div class="row g-4">
                  <div class="col-lg-6">
@@ -537,13 +538,19 @@
 
       <!-- ADMIN TAB (UPDATED) -->
       <div id="admin-tab" class="tab-view" style="display:none;">
-         <div class="row g-4">
-            <div class="col-12">
-               <div class="panel-card p-4">
-                  <h5 class="fw-bold text-primary mb-3">User & Permission Management</h5>
-                  <div class="alert alert-light border small text-muted"><i class="bi bi-info-circle me-2"></i>Owners can promote/demote. Admins can manage data. Staff access is restricted by permissions.</div>
+         <div class="panel-card p-4">
+             <h5 class="fw-bold text-primary mb-3">Admin Panel</h5>
+             <ul class="nav nav-pills mb-4" id="adminTabs" role="tablist">
+                <li class="nav-item" role="presentation"><button class="nav-link active rounded-pill px-4" id="tab-users" data-bs-toggle="pill" data-bs-target="#content-users" type="button" role="tab">User Management</button></li>
+                <li class="nav-item ms-2" role="presentation"><button class="nav-link rounded-pill px-4" id="tab-reqs" data-bs-toggle="pill" data-bs-target="#content-reqs" type="button" role="tab">Transfer Requests</button></li>
+                <li class="nav-item ms-2" role="presentation"><button class="nav-link rounded-pill px-4" id="tab-dd" data-bs-toggle="pill" data-bs-target="#content-dd" type="button" role="tab">Dropdown Manager</button></li>
+             </ul>
 
-                  <!-- Auto AWB Toggle -->
+             <div class="tab-content">
+                <!-- Users Tab -->
+                <div class="tab-pane fade show active" id="content-users" role="tabpanel">
+                  <div class="alert alert-light border small text-muted mb-3"><i class="bi bi-info-circle me-2"></i>Owners can promote/demote. Admins can manage data. Staff access is restricted by permissions.</div>
+
                   <div class="d-flex align-items-center justify-content-between p-3 border rounded mb-4 bg-light">
                       <div class="fw-bold text-dark"><i class="bi bi-magic me-2"></i>Auto AWB Generation</div>
                       <div class="form-check form-switch">
@@ -552,7 +559,6 @@
                       </div>
                   </div>
 
-                  <!-- Add User -->
                   <div class="input-group mb-4">
                       <input id="nu_u" class="form-control" placeholder="New Username">
                       <input id="nu_p" class="form-control" placeholder="Password">
@@ -561,26 +567,24 @@
                       <button class="btn btn-success" onclick="addUser()">Add User</button>
                   </div>
 
-                  <!-- User Table -->
                   <div class="table-responsive border rounded">
                       <table class="table table-hover align-middle mb-0">
                           <thead class="bg-light"><tr><th>User</th><th>Pass</th><th>Name</th><th>Role</th><th>Permissions (Staff Only)</th><th>Actions</th></tr></thead>
                           <tbody id="userList"></tbody>
                       </table>
                   </div>
-               </div>
-            </div>
+                </div>
 
-            <div class="col-md-6">
-               <div class="panel-card p-3 h-100">
-                  <h6 class="fw-bold text-warning mb-3">Transfer Requests</h6>
-                  <div id="reqList" class="list-group list-group-flush"></div>
-               </div>
-            </div>
-            <div class="col-md-6">
-               <div class="panel-card p-3 h-100">
-                  <h6 class="fw-bold text-success mb-3">Dropdown Manager</h6>
-                  <div class="d-flex gap-2 mb-3">
+                <!-- Transfer Requests Tab -->
+                <div class="tab-pane fade" id="content-reqs" role="tabpanel">
+                   <h6 class="fw-bold text-warning mb-3">Pending Transfer Requests</h6>
+                   <div id="reqList" class="list-group list-group-flush"></div>
+                </div>
+
+                <!-- Dropdowns Tab -->
+                <div class="tab-pane fade" id="content-dd" role="tabpanel">
+                   <h6 class="fw-bold text-success mb-3">Manage Dropdown Lists</h6>
+                   <div class="d-flex gap-2 mb-3">
                       <select id="dd_cat" class="form-select" onchange="updDd()">
                           <option value="network">Network</option>
                           <option value="client">Client</option>
@@ -591,10 +595,10 @@
                       <input id="dd_val" class="form-control" placeholder="Value">
                       <input id="dd_desc" class="form-control" placeholder="Desc" style="display:none;">
                       <button class="btn btn-success" onclick="manDd('add')">Add</button>
-                  </div>
-                  <div class="d-flex gap-2 bg-light p-2 rounded"><select id="dd_del" class="form-select"></select><button class="btn btn-danger" onclick="delDd()">Delete</button></div>
-               </div>
-            </div>
+                   </div>
+                   <div class="d-flex gap-2 bg-light p-2 rounded"><select id="dd_del" class="form-select"></select><button class="btn btn-danger" onclick="delDd()">Delete</button></div>
+                </div>
+             </div>
          </div>
       </div>
 
@@ -951,16 +955,21 @@ window.renderHoldings = function() {
     const items = window.APP_DATA.holdings || [];
     if(!items.length) list.innerHTML='<tr><td colspan="7" class="text-center p-5 text-muted"><h5>No Active Holdings</h5><p class="small">Shipments placed on hold will appear here.</p></td></tr>';
     else {
-        list.innerHTML = items.map(x =>
-            `<tr>
+        list.innerHTML = items.map(x => {
+            // Extract user from remarks if present [User: name]
+            let heldBy = x.user || '-';
+            const userMatch = (x.holdRem || '').match(/\[User:\s*([^\]]+)\]/);
+            if(userMatch) heldBy = userMatch[1];
+
+            return `<tr>
                 <td class="clickable-cell font-monospace" onclick="openHoldAction('${x.id}')">${x.id}</td>
                 <td class="clickable-cell" onclick="openHoldAction('${x.id}')">${x.netNo||'-'}</td>
                 <td>${x.client}</td>
                 <td><span class="badge bg-danger bg-opacity-10 text-danger">${x.holdReason}</span></td>
                 <td><small class="text-muted text-wrap" style="max-width:200px;">${x.holdRem}</small></td>
-                <td><small>${x.user}</small></td>
-            </tr>`
-        ).join('');
+                <td><small>${heldBy}</small></td>
+            </tr>`;
+        }).join('');
     }
 }
 
@@ -1108,7 +1117,7 @@ window.submitHoldFromModal = async function() {
     bootstrap.Modal.getInstance(document.getElementById('holdModal')).hide();
     document.getElementById('holdResultPanel').style.display='none';
 
-    await callApi({action:"manageHold", subAction:"set", awb:selectedHoldAwb, reason:r, remarks:rem});
+    await callApi({action:"manageHold", subAction:"set", awb:selectedHoldAwb, reason:r, remarks:rem, user: curUser});
     syncData(false); toast("Shipment put on Hold");
     clearHoldSearch();
 }
@@ -1693,7 +1702,8 @@ window.createBatch = async function() {
     if(chks.length === 0) return alert("Select at least one item");
     const ids = Array.from(chks).map(c => c.value);
     const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
-    const manifestDate = new Date().toLocaleDateString();
+    // Use ISO Date (YYYY-MM-DD) for consistency
+    const manifestDate = new Date().toISOString().slice(0,10);
     if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
 
     // Generate PDF instantly (Optimistic UI)
@@ -1856,10 +1866,16 @@ window.downloadReceiverPdf = function(data) {
 
         cy += 15;
 
-        // Footer Terms
+        // Footer Details (Replaced Terms)
+        doc.setFontSize(8); doc.setFont("helvetica", "bold");
+        doc.text("ZEPHYR EXPRESS (INTERNATIONAL COURIER & CARGO SERVICES)", 10, cy);
         doc.setFontSize(7); doc.setFont("helvetica", "normal");
-        const terms = "TERMS: Liability limited to $100 unless declared. Claims to be made within 24 hours. Proof of delivery available on request. Subject to Delhi Jurisdiction.";
-        doc.text(doc.splitTextToSize(terms, pageWidth - 20), 10, cy);
+        cy += 4;
+        doc.text("Official Website : www.zephyrexpress.in", 10, cy);
+        cy += 4;
+        doc.text("H.O: Shop No: CB-385B, Ring Road, Naraina, and New Delhi-110028.", 10, cy);
+        cy += 4;
+        doc.text("Ph.: 8588825984", 10, cy);
 
         cy += 15;
         doc.setFontSize(9);

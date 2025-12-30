@@ -437,7 +437,8 @@ function handleManageHold(b) {
     if(row === -1) return jsonResponse("error", "AWB Not Found");
 
     if(b.subAction === "set") {
-        ss.getRange(row, 28, 1, 3).setValues([["On Hold", b.reason, b.remarks]]);
+        const holdRem = b.user ? `[User: ${b.user}] ${b.remarks}` : b.remarks;
+        ss.getRange(row, 28, 1, 3).setValues([["On Hold", b.reason, holdRem]]);
     } else if(b.subAction === "clear") {
         const net = String(ss.getRange(row, 4).getValue()).toUpperCase();
         const dest = String(ss.getRange(row, 6).getValue()).toUpperCase();
