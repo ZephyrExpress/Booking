@@ -320,8 +320,8 @@ function getAllData(username) {
     } else {
         const paperStatus = r[16];
         const autoStatus = r[14];
-        const assignee = String(r[17]).toLowerCase();
-        const autoBy = String(r[15]).toLowerCase();
+        const assignee = String(r[17]).trim().toLowerCase();
+        const autoBy = String(r[15]).trim().toLowerCase();
 
         if (paperStatus === "Completed") {
           completedManifest.push(item);
