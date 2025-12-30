@@ -232,8 +232,13 @@ function getAllData(username) {
   let updates = [];
   let fmsUpdates = [];
   try {
-      const remoteSS = getTaskSS();
-      const brSheet = remoteSS ? remoteSS.getSheetByName("Booking_Report") : null;
+      // Priority: Check Local Sheet first, then Remote (Task SS)
+      let brSheet = ss.getSheetByName("Booking_Report");
+      if (!brSheet) {
+          const remoteSS = getTaskSS();
+          brSheet = remoteSS ? remoteSS.getSheetByName("Booking_Report") : null;
+      }
+
       if(brSheet) {
           const brLast = brSheet.getLastRow();
           if(brLast > 1) {
