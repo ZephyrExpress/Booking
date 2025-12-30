@@ -108,43 +108,54 @@ function hashString(str) {
 
 // ⚡ Bolt Optimization: Cache Users Map to reduce read operations
 function getUserMap() {
-    const cache = CacheService.getScriptCache();
-    const cached = cache.get('users_map');
-    if (cached) return JSON.parse(cached);
+    try {
+        const cache = CacheService.getScriptCache();
+        const cached = cache.get('users_map');
+        if (cached) return JSON.parse(cached);
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const uSheet = ss.getSheetByName("Users");
-    if (!uSheet || uSheet.getLastRow() < 2) return {};
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const uSheet = ss.getSheetByName("Users");
+        if (!uSheet || uSheet.getLastRow() < 2) return {};
 
-    const data = uSheet.getDataRange().getValues();
-    const map = {};
-    // Skip header
-    for (let i = 1; i < data.length; i++) {
-        const u = String(data[i][0]).trim().toLowerCase();
-        if (u) {
-            map[u] = {
-                username: data[i][0], // Keep original case
-                name: data[i][2],
-                role: data[i][3],
-                perms: data[i][4] || ""
-            };
+        const data = uSheet.getDataRange().getValues();
+        const map = {};
+        // Skip header
+        for (let i = 1; i < data.length; i++) {
+            const u = String(data[i][0]).trim().toLowerCase();
+            if (u) {
+                map[u] = {
+                    username: data[i][0], // Keep original case
+                    name: data[i][2],
+                    role: data[i][3],
+                    perms: data[i][4] || ""
+                };
+            }
         }
-    }
-    cache.put('users_map', JSON.stringify(map), 21600); // Cache for 6 hours
-    return map;
+        try { cache.put('users_map', JSON.stringify(map), 21600); } catch(e){} // Cache for 6 hours
+        return map;
+    } catch(e) { console.error("getUserMap Error", e); return {}; }
 }
 
 function clearUserCache() {
-    CacheService.getScriptCache().remove('users_map');
+    try { CacheService.getScriptCache().remove('users_map'); } catch(e){}
 }
 
 // --- MAIN DATA FETCH ---
 function getAllData(username) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let taskSS = null;
-  const getTaskSS = () => { if(!taskSS) try { taskSS = SpreadsheetApp.openById(TASK_SHEET_ID); } catch(e){console.error(e);} return taskSS; };
+  // FMS ACCESS ON HOLD: Wrap in strict try-catch to prevent timeouts or crashes
+  const getTaskSS = () => {
+      if(!taskSS) {
+          try { taskSS = SpreadsheetApp.openById(TASK_SHEET_ID); }
+          catch(e){ console.error("FMS Access Error", e); taskSS = null; }
+      }
+      return taskSS;
+  };
 
   const sh = ss.getSheetByName("Shipments");
+  if (!sh) return jsonResponse("error", "Shipments Sheet Missing");
+
   const targetUser = String(username).trim().toLowerCase();
 
   const cache = CacheService.getScriptCache();
@@ -186,15 +197,33 @@ function getAllData(username) {
   let role = "Staff";
   let perms = [];
 
-  // ⚡ Use Cached User Map for faster lookup and robust matching
+  // 1. Try Optimized Map Lookup
   const userMap = getUserMap();
   if (userMap[targetUser]) {
       role = userMap[targetUser].role;
       const pStr = userMap[targetUser].perms;
       perms = pStr.split(',').map(s=>s.trim()).filter(Boolean);
-  } else {
-      // Fallback for hardcoded admins not in DB (legacy support)
-      if(targetUser.includes("admin") || targetUser.includes("owner")) role = "Admin";
+  }
+
+  // 2. Fallback: Linear Search (If Map fails or user not found in map)
+  // This ensures "Manoj Kumar" is found even if map logic fails.
+  if (!role || (role === 'Staff' && perms.length === 0 && !userMap[targetUser])) {
+      try {
+         const uSheet = ss.getSheetByName("Users");
+         const uData = uSheet.getDataRange().getValues();
+         for(let i=1; i<uData.length; i++) {
+             if(String(uData[i][0]).trim().toLowerCase() === targetUser) {
+                 role = uData[i][3];
+                 perms = (uData[i][4]||"").split(',').map(s=>s.trim()).filter(Boolean);
+                 break;
+             }
+         }
+      } catch(e) { console.error("Fallback User Lookup Error", e); }
+  }
+
+  // 3. Legacy Admin Fallback
+  if ((!role || role === 'Staff') && (targetUser.includes("admin") || targetUser.includes("owner"))) {
+      role = "Admin";
   }
 
   const lastRow = sh.getLastRow();
@@ -203,8 +232,13 @@ function getAllData(username) {
   let updates = [];
   let fmsUpdates = [];
   try {
-      const remoteSS = getTaskSS();
-      const brSheet = remoteSS ? remoteSS.getSheetByName("Booking_Report") : null;
+      // Priority: Check Local Sheet first, then Remote (Task SS)
+      let brSheet = ss.getSheetByName("Booking_Report");
+      if (!brSheet) {
+          const remoteSS = getTaskSS();
+          brSheet = remoteSS ? remoteSS.getSheetByName("Booking_Report") : null;
+      }
+
       if(brSheet) {
           const brLast = brSheet.getLastRow();
           if(brLast > 1) {
@@ -303,9 +337,14 @@ function getAllData(username) {
     }
   });
 
-  const rs = ss.getSheetByName("Requests");
-  const reqs = rs.getLastRow()>1 ? rs.getRange(2, 1, rs.getLastRow()-1, 7).getValues().filter(r => r[5]==="Pending") : [];
-  const reqList = reqs.map(r => ({ reqId:r[0], taskId:r[1], type:r[2], by:r[3], to:r[4], date:r[6] }));
+  let reqList = [];
+  try {
+      const rs = ss.getSheetByName("Requests");
+      if(rs) {
+          const reqs = rs.getLastRow()>1 ? rs.getRange(2, 1, rs.getLastRow()-1, 7).getValues().filter(r => r[5]==="Pending") : [];
+          reqList = reqs.map(r => ({ reqId:r[0], taskId:r[1], type:r[2], by:r[3], to:r[4], date:r[6] }));
+      }
+  } catch(e) { console.error("Requests Sheet Error", e); }
 
   return jsonResponse("success", "OK", {
     role: role,
