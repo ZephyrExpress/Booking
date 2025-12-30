@@ -508,23 +508,47 @@ function handleManifestBatch(b) {
   let fmsIds = [];
   if(fms && fms.getLastRow() >= 7) fmsIds = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x => String(x).replace(/'/g,"").trim().toLowerCase());
 
+  const localRangesCol25 = []; // Batch ID (Y)
+  const localRangesCol26 = []; // Manifest Date (Z)
+  const fmsRanges = [];
+
+  // Helper to convert (row, col) to A1 Notation
+  const getA1 = (r, c) => {
+      const letter = (c === 25) ? 'Y' : (c === 26 ? 'Z' : (c===30?'AD': (c===35?'AI': (c===40?'AN': (c===45?'AS':'?')))));
+      return `${letter}${r}`;
+  };
+
   b.ids.forEach(id => {
       const key = String(id).replace(/'/g,"").trim().toLowerCase();
-      if(awbMap[key]) ss.getRange(awbMap[key], 25, 1, 2).setValues([[b.batchNo, b.date]]);
+      // Local Sheet Updates
+      if(awbMap[key]) {
+          const r = awbMap[key];
+          localRangesCol25.push(`Y${r}`);
+          localRangesCol26.push(`Z${r}`);
+      }
+      // FMS Updates
       if(fms) {
           const idx = fmsIds.indexOf(key);
           if(idx > -1) {
               const r = idx + 7;
               const net = b.network.toLowerCase();
-              const doer = b.user;
-              if(net.includes("dhl")) { fms.getRange(r, 25).setValue(doer); }
-              else if(net.includes("aramex")) { fms.getRange(r, 30).setValue(doer); }
-              else if(net.includes("fedex")) { fms.getRange(r, 35).setValue(doer); }
-              else if(net.includes("ups")) { fms.getRange(r, 40).setValue(doer); }
-              else if(net.includes("self")) { fms.getRange(r, 45).setValue(doer); }
+              let col = 0;
+              if(net.includes("dhl")) col = 25; // Y
+              else if(net.includes("aramex")) col = 30; // AD
+              else if(net.includes("fedex")) col = 35; // AI
+              else if(net.includes("ups")) col = 40; // AN
+              else if(net.includes("self")) col = 45; // AS
+
+              if(col > 0) fmsRanges.push(getA1(r, col));
           }
       }
   });
+
+  // ⚡ Bolt Optimization: Batch updates using RangeList to reduce API calls
+  if(localRangesCol25.length) ss.getRangeList(localRangesCol25).setValue(b.batchNo);
+  if(localRangesCol26.length) ss.getRangeList(localRangesCol26).setValue(b.date);
+  if(fmsRanges.length && fms) fms.getRangeList(fmsRanges).setValue(b.user);
+
   return jsonResponse("success", "Batch Updated");
 }
 
