@@ -227,7 +227,7 @@ function getAllData(username) {
   }
 
   const lastRow = sh.getLastRow();
-  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 30).getDisplayValues() : [];
+  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 31).getDisplayValues() : [];
 
   let updates = [];
   let fmsUpdates = [];
@@ -310,7 +310,7 @@ function getAllData(username) {
       actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
       netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
       batchNo: r[24], manifestDate: r[25], paperwork: r[26],
-      holdStatus: r[27], holdReason: r[28], holdRem: r[29]
+      holdStatus: r[27], holdReason: r[28], holdRem: r[29], heldBy: r[30]
     };
 
     if (item.holdStatus === "On Hold") {
@@ -437,7 +437,7 @@ function handleManageHold(b) {
     if(row === -1) return jsonResponse("error", "AWB Not Found");
 
     if(b.subAction === "set") {
-        ss.getRange(row, 28, 1, 3).setValues([["On Hold", b.reason, b.remarks]]);
+        ss.getRange(row, 28, 1, 4).setValues([["On Hold", b.reason, b.remarks, b.user || ""]]);
     } else if(b.subAction === "clear") {
         const net = String(ss.getRange(row, 4).getValue()).toUpperCase();
         const dest = String(ss.getRange(row, 6).getValue()).toUpperCase();
@@ -447,7 +447,7 @@ function handleManageHold(b) {
         }
 
         if(!b.remarks || !b.remarks.trim()) return jsonResponse("error", "Remarks are mandatory");
-        ss.getRange(row, 28, 1, 3).setValues([["", "", ""]]);
+        ss.getRange(row, 28, 1, 4).setValues([["", "", "", ""]]);
         const oldLog = ss.getRange(row, 20).getValue();
         ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Hold Cleared: ${b.remarks}]`);
     } else if(b.subAction === "rto") {
