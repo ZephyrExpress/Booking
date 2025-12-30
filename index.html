@@ -11,6 +11,10 @@
   <link rel="icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
   <link rel="shortcut icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Zephyr Express">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js" defer></script>
   <script src="https://unpkg.com/html5-qrcode" defer></script>
@@ -1379,7 +1383,7 @@ window.decideTr=async function(rid,tid,typ,to,dec){ showSpin(true); await callAp
 window.exportPool=function(){ const data = window.APP_DATA.adminPool.map(x=>({"AWB":x.id,"Client":x.client,"Net":x.net,"Status":x.assignee?"Assigned":"Unassigned","Assignee":x.assignee||""})); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Pool"); XLSX.writeFile(wb, "Pool.xlsx"); }
 window.switchManifestView = function(view) {
    document.querySelectorAll('#manTabs .nav-link').forEach(el => el.classList.remove('active'));
-   const idx = view === 'daily' ? 0 : (view === 'pending' ? 1 : 2);
+   const idx = view === 'pending' ? 0 : (view === 'daily' ? 1 : 2);
    document.querySelectorAll('#manTabs .nav-link')[idx].classList.add('active');
    document.getElementById('man-pending-view').style.display = view === 'pending' ? 'block' : 'none';
    document.getElementById('man-daily-view').style.display = view === 'daily' ? 'block' : 'none';
@@ -1791,8 +1795,9 @@ window.downloadReceiverPdf = function(data) {
             doc.text("ZEPHYR EXPRESS", (pageWidth - textWidth) / 2, y + 15);
         }
 
-        doc.setFontSize(10); doc.setFont("helvetica", "normal");
-        doc.text("New Delhi, India", 10, y + 25);
+        doc.setFontSize(8); doc.setFont("helvetica", "bold");
+        const companyDetails = "ZEPHYR EXPRESS (INTERNATIONAL COURIER & CARGO SERVICES)\nOfficial Website : www.zephyrexpress.in\nH.O: Shop No: CB-385B, Ring Road, Naraina, and New Delhi-110028. Ph.: 8588825984";
+        doc.text(companyDetails, 10, y + 25);
 
         // Title Block
         doc.setFontSize(14); doc.setFont("helvetica", "bold");
@@ -1865,9 +1870,9 @@ window.downloadReceiverPdf = function(data) {
         cy += 15;
 
         // Footer Terms
-        doc.setFontSize(7); doc.setFont("helvetica", "bold");
-        const companyDetails = "ZEPHYR EXPRESS (INTERNATIONAL COURIER & CARGO SERVICES)\nOfficial Website : www.zephyrexpress.in\nH.O: Shop No: CB-385B, Ring Road, Naraina, and New Delhi-110028. Ph.: 8588825984";
-        doc.text(companyDetails, 10, cy);
+        doc.setFontSize(7); doc.setFont("helvetica", "normal");
+        const terms = "Insurance at 4% is charged in advance. In case of shipment loss, 95% of the declared value will be paid within 30 days from the date the network company declares the shipment lost. Otherwise, the claim will be settled at USD 100 or the invoice value, whichever is lower, as per network company policy. No shortage claims will be entertained.";
+        doc.text(doc.splitTextToSize(terms, pageWidth - 20), 10, cy);
 
         cy += 15;
         doc.setFontSize(9);
