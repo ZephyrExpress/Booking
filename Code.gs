@@ -442,7 +442,8 @@ function handleManageHold(b) {
         const net = String(ss.getRange(row, 4).getValue()).toUpperCase();
         const dest = String(ss.getRange(row, 6).getValue()).toUpperCase();
 
-        if(net.startsWith("NA") || dest.startsWith("NA")) {
+        // ⚡ Bolt Fix: Broaden check for "Not Known" logic
+        if(net.startsWith("NA") || dest.startsWith("NA") || net.includes("NOT KNOWN") || dest.includes("NOT KNOWN")) {
             return jsonResponse("error", "Update Network/Dest before clearing hold");
         }
 
@@ -572,7 +573,8 @@ function handleSubmit(body){
   let holdReason = "";
   const net = String(body.network).toUpperCase();
   const dest = String(body.destination).toUpperCase();
-  if(net.startsWith("NA") || dest.startsWith("NA")) {
+  // ⚡ Bolt Fix: Broaden check for "Not Known" logic
+  if(net.startsWith("NA") || dest.startsWith("NA") || net.includes("NOT KNOWN") || dest.includes("NOT KNOWN")) {
       holdStatus = "On Hold";
       holdReason = "Invalid Data";
   }
