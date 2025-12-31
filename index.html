@@ -1675,18 +1675,19 @@ window.downloadManifestPdf = function(items, network) {
     doc.setFontSize(10); doc.text(`Network: ${network}`, 10, 42);
     doc.setFont("helvetica", "normal"); doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
 
+    // ⚡ Bolt Fix: Add Net No column
     const tableBody = items.map((x, i) => [
-        i + 1, x.id, new Date(x.date).toLocaleDateString(), x.dest, x.boxes, x.chgWgt, (x.client || '').slice(-4)
+        i + 1, x.id, new Date(x.date).toLocaleDateString(), x.dest, x.netNo || '-', x.boxes, x.chgWgt, (x.client || '').slice(-4)
     ]);
 
     doc.autoTable({
         startY: 48,
-        head: [['#', 'AWB', 'Date', 'Dest', 'Pcs', 'Wgt', 'Client']],
+        head: [['#', 'AWB', 'Date', 'Dest', 'Net No', 'Pcs', 'Wgt', 'Client']],
         body: tableBody,
         theme: 'grid',
         styles: { fontSize: 8, cellPadding: 2 },
         headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
-        columnStyles: { 0: { cellWidth: 10 }, 4: { cellWidth: 15 }, 5: { cellWidth: 20 } }
+        columnStyles: { 0: { cellWidth: 8 }, 4: { cellWidth: 25 }, 5: { cellWidth: 10 }, 6: { cellWidth: 15 } }
     });
 
     const finalY = doc.lastAutoTable.finalY + 10;
@@ -1746,6 +1747,8 @@ window.createBatch = async function() {
 // --- Receivers Slip (Real Implementation) ---
 window.renderReceivers = function() {
     const list = document.getElementById('rcList');
+    const term = document.getElementById('rc_search').value.toLowerCase().trim();
+
     // Combine ALL shipments for the receiver slip view
     const allItems = [
         ...(window.APP_DATA.overview.auto || []),
@@ -1757,12 +1760,20 @@ window.renderReceivers = function() {
     // Unique items by ID
     const uniqueItems = Array.from(new Map(allItems.map(item => [item.id, item])).values());
 
-    if(!uniqueItems.length) {
-         list.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-muted">No shipments found</td></tr>';
+    // ⚡ Bolt Fix: Implement filtering for searchbar
+    const filtered = uniqueItems.filter(x => {
+        if(!term) return true;
+        return x.id.toLowerCase().includes(term) ||
+               (x.client||'').toLowerCase().includes(term) ||
+               (x.netNo||'').toLowerCase().includes(term);
+    });
+
+    if(!filtered.length) {
+         list.innerHTML = '<tr><td colspan="8" class="text-center p-4 text-muted">No matching shipments found</td></tr>';
          return;
     }
 
-    list.innerHTML = uniqueItems.map(x => `
+    list.innerHTML = filtered.map(x => `
         <tr>
             <td><input type="checkbox" value="${x.id}"></td>
             <td class="fw-bold font-monospace">${x.id}</td>
