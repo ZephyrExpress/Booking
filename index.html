@@ -356,13 +356,13 @@
                  <div class="col-md-5">
                      <div class="input-group input-group-lg">
                          <button class="btn btn-dark" onclick="startScanner('holdSearchAwb')" title="Scan"><i class="bi bi-qr-code-scan"></i></button>
-                         <input id="holdSearchAwb" class="form-control border-start-0" placeholder="Scan or Enter AWB Number..." oninput="searchHoldings()">
+                         <input id="holdSearchAwb" class="form-control border-start-0" placeholder="Scan or Enter AWB Number..." oninput="d_searchHoldings()">
                      </div>
                  </div>
                  <div class="col-md-5">
                      <div class="input-group input-group-lg">
                          <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-globe"></i></span>
-                         <input id="holdSearchNet" class="form-control border-start-0" placeholder="Search by Network No..." oninput="searchHoldings()">
+                         <input id="holdSearchNet" class="form-control border-start-0" placeholder="Search by Network No..." oninput="d_searchHoldings()">
                      </div>
                  </div>
                  <div class="col-md-2">
@@ -448,7 +448,7 @@
                    <select id="man_net" class="form-select form-select-sm" style="width:150px" onchange="renderManifest()"><option value="">Select Network...</option></select>
                    <div class="input-group input-group-sm" style="width:200px;">
                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                       <input id="man_search" class="form-control" placeholder="Search ID/NetNo..." oninput="renderManifest()">
+                       <input id="man_search" class="form-control" placeholder="Search ID/NetNo..." oninput="d_renderManifest()">
                    </div>
                    <button class="btn btn-primary btn-sm rounded-pill shadow-sm text-nowrap px-3" onclick="createBatch()"><i class="bi bi-file-text me-2"></i>Create Manifest</button>
                 </div>
@@ -487,7 +487,7 @@
                    <select id="man_daily_net" class="form-select form-select-sm" style="width:150px" onchange="renderDailyManifest()"><option value="">Select Network...</option></select>
                    <div class="input-group input-group-sm" style="width:200px;">
                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                       <input id="man_daily_search" class="form-control" placeholder="Search ID/NetNo..." oninput="renderDailyManifest()">
+                       <input id="man_daily_search" class="form-control" placeholder="Search ID/NetNo..." oninput="d_renderDailyManifest()">
                    </div>
                    <button class="btn btn-primary btn-sm rounded-pill shadow-sm text-nowrap px-3" onclick="createBatch()"><i class="bi bi-file-text me-2"></i>Create Manifest</button>
                 </div>
@@ -526,7 +526,7 @@
                <div class="d-flex gap-2 align-items-center">
                    <div class="input-group input-group-sm" style="width:200px;">
                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                       <input id="rc_search" class="form-control" placeholder="Search..." oninput="renderReceivers()">
+                       <input id="rc_search" class="form-control" placeholder="Search..." oninput="d_renderReceivers()">
                    </div>
                    <button class="btn btn-outline-secondary rounded-pill shadow-sm" onclick="renderReceivers(true)"><i class="bi bi-arrow-clockwise me-2"></i>Refresh</button>
                    <button class="btn btn-success rounded-pill shadow-sm" onclick="exportReceiverExcel()"><i class="bi bi-file-earmark-excel me-2"></i>Excel</button>
@@ -714,6 +714,21 @@
 // IMPORTANT: MOCK MODE DISABLED & REMOVED
 // =======================================================
 const MOCK_MODE = false;
+
+// ⚡ Bolt Optimization: Debounce for search inputs
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// Debounced wrappers
+window.d_renderManifest = debounce(() => renderManifest(), 300);
+window.d_renderDailyManifest = debounce(() => renderDailyManifest(), 300);
+window.d_renderReceivers = debounce(() => renderReceivers(), 300);
+window.d_searchHoldings = debounce(() => searchHoldings(), 300);
 
 const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
 let API_URL = localStorage.getItem("ZEPHYR_API_URL") || DEFAULT_API_URL;
