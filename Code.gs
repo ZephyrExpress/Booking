@@ -662,8 +662,13 @@ function handleAssignTask(b) {
 
 // ⚡ Bolt: Bulk Assignment
 function handleBulkAssign(b) {
+    // ⚡ Bolt Fix: Parse stringified assignments
+    if (typeof b.assignments === 'string') {
+        try { b.assignments = JSON.parse(b.assignments); } catch(e){}
+    }
+
     const assignments = b.assignments; // [{id, staff}, ...]
-    if (!assignments || !assignments.length) return jsonResponse("error", "No assignments");
+    if (!assignments || !Array.isArray(assignments) || !assignments.length) return jsonResponse("error", "No assignments");
 
     const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
     const lr = ss.getLastRow();
