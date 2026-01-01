@@ -396,16 +396,17 @@
       <div id="taskhub-tab" class="tab-view" style="display:none;">
         <div id="adminTaskView" style="display:none">
            <div class="panel-card">
-              <div class="panel-header bg-primary text-white">
+              <div class="panel-header bg-primary text-white sticky-top">
                   <span><i class="bi bi-kanban me-2"></i>Task Manager (Global Pool)</span>
-                  <div class="d-flex gap-2">
+                  <div class="d-flex gap-2 align-items-center">
+                      <button class="btn btn-sm btn-light text-primary fw-bold" onclick="saveBulkAssignments()"><i class="bi bi-save-fill me-1"></i> Bulk Assign</button>
                       <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-box-arrow-up-right me-1"></i> Automation Data</a>
                       <button class="btn btn-sm btn-light text-primary fw-bold" onclick="exportPool()">Export</button>
                   </div>
               </div>
-              <div class="table-responsive">
+              <div class="table-responsive" style="max-height: 70vh;">
                   <table class="table table-hover align-middle mb-0 excel-table">
-                      <thead class="bg-light"><tr><th>AWB</th><th>Net No</th><th>Network</th><th>Weight</th><th>Details</th><th>Client</th><th class="text-center">Assigned To</th><th>Action</th></tr></thead>
+                      <thead class="bg-light sticky-top" style="top:0; z-index:5;"><tr><th>AWB</th><th>Net No</th><th>Network</th><th>Weight</th><th>Details</th><th>Client</th><th class="text-center">Assigned To</th><th>Action</th></tr></thead>
                       <tbody id="poolBody"></tbody>
                   </table>
               </div>
@@ -625,6 +626,33 @@
         <div class="mb-3"><label class="form-label small fw-bold text-muted">Reason</label><select id="modalHoldReason" class="form-select form-select-lg"></select></div>
         <div class="mb-4"><label class="form-label small fw-bold text-muted">Remarks</label><textarea id="modalHoldRem" class="form-control" rows="3" placeholder="Additional details..."></textarea></div>
         <button class="btn btn-danger w-100 btn-lg fw-bold" onclick="submitHoldFromModal()">Confirm Hold</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editShipmentModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white"><h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Edit Inbound Entry</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body p-4">
+         <form id="editForm">
+             <div class="alert alert-warning small border-warning"><i class="bi bi-exclamation-triangle me-2"></i>Edits are logged with your username and timestamp.</div>
+             <input type="hidden" id="e_awb_hidden">
+             <div class="row g-3 mb-3">
+                 <div class="col-md-6"><label class="small fw-bold">AWB</label><input id="e_awb" class="form-control bg-light" readonly></div>
+                 <div class="col-md-6"><label class="small fw-bold">Date</label><input id="e_date" class="form-control bg-light" readonly></div>
+                 <div class="col-md-6"><label class="small fw-bold">Client</label><select id="e_client" class="form-select"></select></div>
+                 <div class="col-md-6"><label class="small fw-bold">Network</label><select id="e_net" class="form-select"></select></div>
+                 <div class="col-md-6"><label class="small fw-bold">Destination</label><select id="e_dest" class="form-select"></select></div>
+                 <div class="col-md-6"><label class="small fw-bold">Boxes</label><input id="e_boxes" type="number" class="form-control"></div>
+                 <div class="col-md-4"><label class="small fw-bold">Act Wgt</label><input id="e_act" type="number" step="any" class="form-control"></div>
+                 <div class="col-md-4"><label class="small fw-bold">Vol Wgt</label><input id="e_vol" type="number" step="any" class="form-control"></div>
+                 <div class="col-md-4"><label class="small fw-bold">Chg Wgt</label><input id="e_chg" type="number" step="any" class="form-control"></div>
+                 <div class="col-12"><label class="small fw-bold">Extra Charges</label><input id="e_extra" class="form-control"></div>
+             </div>
+             <button type="button" class="btn btn-primary w-100 fw-bold" onclick="saveEditShipment()">Save Changes</button>
+         </form>
       </div>
     </div>
   </div>
@@ -959,7 +987,7 @@ function renderTaskHub(){
    if(role === 'admin' || role === 'owner') {
       document.getElementById('adminTaskView').style.display = 'block'; document.getElementById('staffTaskView').style.display = 'none';
       const pt=document.getElementById('poolBody'); let opts=`<option value="">Select Staff...</option>`; if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`);
-      pt.innerHTML = window.APP_DATA.adminPool.map(x => { let assignVal = x.assignee || ""; return `<tr><td class="fw-bold font-monospace">${x.id}</td><td>${x.netNo||'-'}</td><td>${x.net}</td><td>${x.chgWgt}</td><td><small class="text-muted">${x.details}</small></td><td>${x.client.slice(-4)}</td><td class="text-center">${assignVal}</td><td><div class="d-flex gap-2 align-items-center"><select id="adm_as_${x.id}" class="form-select form-select-sm" style="width:120px">${opts}</select><button class="btn btn-primary btn-sm fw-bold" onclick="actAssign('${x.id}','adm_as_')">Assign</button></div></td></tr>`; }).join('');
+      pt.innerHTML = window.APP_DATA.adminPool.map(x => { let assignVal = x.assignee || ""; return `<tr><td class="fw-bold font-monospace">${x.id}</td><td>${x.netNo||'-'}</td><td>${x.net}</td><td>${x.chgWgt}</td><td><small class="text-muted">${x.details}</small></td><td>${x.client.slice(-4)}</td><td class="text-center">${assignVal}</td><td><div class="d-flex gap-2 align-items-center"><select id="adm_as_${x.id}" class="form-select form-select-sm" style="width:120px">${opts}</select></div></td></tr>`; }).join('');
    } else {
       document.getElementById('adminTaskView').style.display = 'none'; document.getElementById('staffTaskView').style.display = 'block';
       const wf=window.APP_DATA.workflow; const ca=document.getElementById('contAssign');
@@ -977,17 +1005,24 @@ window.renderHoldings = function() {
     const items = window.APP_DATA.holdings || [];
     if(!items.length) list.innerHTML='<tr><td colspan="7" class="text-center p-5 text-muted"><h5>No Active Holdings</h5><p class="small">Shipments placed on hold will appear here.</p></td></tr>';
     else {
-        list.innerHTML = items.map(x =>
-            `<tr>
+    const getReasonDesc = (code) => {
+        if(!code || !window.APP_DATA.static || !window.APP_DATA.static.dropdowns.holdReasons) return code;
+        const match = window.APP_DATA.static.dropdowns.holdReasons.find(r => r.code === code);
+        return match ? match.desc : code;
+    };
+
+    list.innerHTML = items.map(x => {
+            const reasonDesc = getReasonDesc(x.holdReason);
+            return `<tr>
                 <td class="clickable-cell font-monospace" onclick="openHoldAction('${x.id}')">${x.id}</td>
                 <td class="clickable-cell" onclick="openHoldAction('${x.id}')">${x.netNo||'-'}</td>
                 <td>${x.client}</td>
-                <td><span class="badge bg-danger bg-opacity-10 text-danger">${x.holdReason}</span></td>
+                <td><span class="badge bg-danger bg-opacity-10 text-danger" title="${reasonDesc}" style="cursor:help;">${x.holdReason}</span></td>
                 <td><small class="text-muted text-wrap" style="max-width:200px;">${x.holdRem}</small></td>
                 <td><span class="badge bg-light text-dark border">${x.heldBy||'-'}</span></td>
                 <td><small>${x.user}</small></td>
-            </tr>`
-        ).join('');
+            </tr>`;
+    }).join('');
     }
 }
 
@@ -1449,11 +1484,13 @@ window.renderDailyManifest = function() {
     }
 
     const filtered = items.filter(x => {
-        const isToday = x.manifestDate === today;
-        const hasBatch = !!x.batchNo;
+        // ⚡ Bolt Fix: Show all items from today (Inbound OR Manifested)
+        const inboundDate = new Date(x.date).toLocaleDateString();
+        const isToday = (x.manifestDate === today) || (inboundDate === today);
+
         const matchesNet = net ? x.net === net : true;
         const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
-        return isToday && hasBatch && matchesNet && (!term || matchesTerm);
+        return isToday && matchesNet && (!term || matchesTerm);
     });
 
     if (filtered.length === 0) {
@@ -1464,7 +1501,8 @@ window.renderDailyManifest = function() {
     document.getElementById('dailyManifestEmptyState').style.display = 'none';
 
     list.innerHTML = filtered.map(x => {
-        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check daily-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end"><span class="badge bg-secondary">${x.batchNo}</span></td></tr>`;
+        const batchBadge = x.batchNo ? `<span class="badge bg-secondary">${x.batchNo}</span>` : `<span class="badge bg-success">Pending</span>`;
+        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check daily-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${batchBadge}</td></tr>`;
     }).join('');
 };
 
@@ -1783,9 +1821,8 @@ window.renderReceivers = function() {
             <td>${x.chgWgt}</td>
             <td><span class="badge bg-light text-dark border">${x.holdStatus === "On Hold" ? "Hold" : (x.batchNo ? "Manifested" : "Pending")}</span></td>
             <td class="text-end">
-                <button class="btn btn-sm btn-outline-dark" onclick="fetchAndPrintReceiver('${x.id}')" title="Print Slip">
-                    <i class="bi bi-printer"></i>
-                </button>
+                <button class="btn btn-sm btn-outline-dark" onclick="fetchAndPrintReceiver('${x.id}')" title="Print Slip"><i class="bi bi-printer"></i></button>
+                <button class="btn btn-sm btn-outline-primary ms-1" onclick="openEditModal('${x.id}')" title="Edit"><i class="bi bi-pencil"></i></button>
             </td>
         </tr>`
     ).join('');
@@ -1992,3 +2029,101 @@ window.sendTransfer = async function() {
 </script>
 </body>
 </html>
+
+// ⚡ Bolt: Bulk Assignment Save
+window.saveBulkAssignments = async function() {
+    const assignments = [];
+    // Iterate through all dropdowns in the table
+    // Selectors: ID starts with 'adm_as_'
+    document.querySelectorAll('select[id^="adm_as_"]').forEach(sel => {
+        const staff = sel.value;
+        if(staff) {
+            const id = sel.id.replace('adm_as_', '');
+            assignments.push({id: id, staff: staff});
+        }
+    });
+
+    if(assignments.length === 0) return alert("No staff selected for any task.");
+    if(!confirm(`Assign ${assignments.length} tasks?`)) return;
+
+    showSpin(true);
+    const r = await callApi({
+        action: 'bulkAssign',
+        assignments: assignments,
+        assigner: curUser
+    });
+    showSpin(false);
+
+    if(r.result === "success") {
+        toast(`${assignments.length} tasks assigned successfully.`);
+        syncData(false);
+    } else {
+        alert("Error: " + r.message);
+    }
+};
+
+// ⚡ Bolt: Edit Inbound Entry
+window.openEditModal = async function(id) {
+    showSpin(true);
+    const r = await callApi({action: 'getShipmentDetails', awb: id, user: curUser});
+    showSpin(false);
+
+    if(r.result !== "success") return alert(r.message);
+
+    const s = r.shipment;
+    document.getElementById('e_awb_hidden').value = s.id;
+    document.getElementById('e_awb').value = s.id;
+    document.getElementById('e_date').value = new Date(s.date).toLocaleDateString();
+
+    // Fill dropdowns if needed (similar to initForms)
+    const dd = window.APP_DATA.static.dropdowns;
+    if(dd) {
+        fillSel('e_net', dd.networks);
+        fillSel('e_client', dd.clients);
+        fillSel('e_dest', dd.destinations);
+    }
+
+    document.getElementById('e_net').value = s.net;
+    document.getElementById('e_client').value = s.client;
+    document.getElementById('e_dest').value = s.dest;
+    document.getElementById('e_boxes').value = s.boxes;
+    document.getElementById('e_act').value = s.actWgt;
+    document.getElementById('e_vol').value = s.volWgt;
+    document.getElementById('e_chg').value = s.chgWgt;
+    document.getElementById('e_extra').value = s.extra || "";
+
+    new bootstrap.Modal(document.getElementById('editShipmentModal')).show();
+};
+
+window.saveEditShipment = async function() {
+    const awb = document.getElementById('e_awb_hidden').value;
+    const updates = {
+        net: document.getElementById('e_net').value,
+        client: document.getElementById('e_client').value,
+        dest: document.getElementById('e_dest').value,
+        boxes: document.getElementById('e_boxes').value,
+        actWgt: document.getElementById('e_act').value,
+        volWgt: document.getElementById('e_vol').value,
+        chgWgt: document.getElementById('e_chg').value,
+        extra: document.getElementById('e_extra').value
+    };
+
+    if(!updates.net || !updates.client || !updates.dest) return alert("Network, Client and Destination are mandatory.");
+
+    if(!confirm("Save changes? This will be logged.")) return;
+
+    showSpin(true);
+    const r = await callApi({
+        action: 'editShipment',
+        awb: awb,
+        updates: updates,
+        user: curUser
+    });
+    showSpin(false);
+
+    if(r.result === "success") {
+        toast("Shipment Updated");
+        bootstrap.Modal.getInstance(document.getElementById('editShipmentModal')).hide();
+        syncData(false);
+    } else {
+</script></body></html>

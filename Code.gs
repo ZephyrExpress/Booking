@@ -84,6 +84,10 @@ function doPost(e) {
     if (act === "updateShipmentDetails") return handleUpdateShipmentDetails(body);
     if (act === 'setConfig') return handleSetConfig(body);
 
+    // ⚡ Bolt New Features
+    if (act === "bulkAssign") return handleBulkAssign(body);
+    if (act === "editShipment") return handleEditShipment(body);
+
     return jsonResponse("error", "Unknown Action: " + act);
 
   } catch (err) {
@@ -654,6 +658,106 @@ function handleAssignTask(b) {
   ss.getRange(row, 17, 1, 3).setValues([["Assigned", b.staff, b.assigner]]);
   syncFMS(b.id, { assignee: b.staff, assigner: b.assigner });
   return jsonResponse("success", "Task Assigned");
+}
+
+// ⚡ Bolt: Bulk Assignment
+function handleBulkAssign(b) {
+    const assignments = b.assignments; // [{id, staff}, ...]
+    if (!assignments || !assignments.length) return jsonResponse("error", "No assignments");
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
+    const lr = ss.getLastRow();
+    if (lr < 2) return jsonResponse("error", "No data");
+
+    const ids = ss.getRange(2, 1, lr - 1, 1).getValues().flat();
+    const idMap = {};
+    ids.forEach((id, i) => { idMap[String(id).replace(/'/g, "").trim().toLowerCase()] = i + 2; });
+
+    // We can't use RangeList easily for different values, so we iterate
+    // But we can optimize by reading existing data if needed, though here we just write.
+    // For max speed in GAS, fewer calls is better. But random access writes are slow.
+    // Since users usually assign 10-20 at a time, loop is acceptable IF we don't open SS every time.
+    // We already have 'ss'.
+
+    const fmsData = [];
+
+    assignments.forEach(a => {
+        const key = String(a.id).replace(/'/g, "").trim().toLowerCase();
+        if (idMap[key]) {
+            const r = idMap[key];
+            // Write: Status (17), Assignee (18), Assigner (19) -> Cols Q, R, S
+            ss.getRange(r, 17, 1, 3).setValues([["Assigned", a.staff, b.assigner]]);
+            fmsData.push({ id: a.id, assignee: a.staff, assigner: b.assigner });
+        }
+    });
+
+    // Sync FMS (Batched lookup)
+    if (fmsData.length > 0) {
+        try {
+            const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
+            if (fms && fms.getLastRow() >= 7) {
+                const fmsIds = fms.getRange(7, 2, fms.getLastRow() - 6, 1).getValues().flat().map(x => String(x).replace(/'/g, "").trim().toLowerCase());
+                fmsData.forEach(item => {
+                    const idx = fmsIds.indexOf(String(item.id).trim().toLowerCase());
+                    if (idx > -1) {
+                        const r = idx + 7;
+                        fms.getRange(r, 19).setValue(item.assignee); // S
+                        fms.getRange(r, 20).setValue(item.assigner); // T
+                    }
+                });
+            }
+        } catch (e) { console.error("FMS Bulk Sync Error", e); }
+    }
+
+    return jsonResponse("success", "Bulk Assigned");
+}
+
+// ⚡ Bolt: Edit Shipment & Logging
+function handleEditShipment(b) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
+    const row = findRow(ss, b.awb);
+    if (row === -1) return jsonResponse("error", "AWB Not Found");
+
+    const updates = b.updates;
+    let logMsg = `[${new Date().toLocaleString()} Edit by ${b.user}]: `;
+    let hasChange = false;
+
+    // Mapping fields to columns (1-based)
+    // 4: Net, 5: Client, 6: Dest, 7: Boxes, 8: Extra, 11: ActWgt, 12: VolWgt, 13: ChgWgt
+    const colMap = {
+        'net': 4, 'client': 5, 'dest': 6, 'boxes': 7,
+        'actWgt': 11, 'volWgt': 12, 'chgWgt': 13, 'extra': 8, 'details': 14
+    };
+
+    const changes = [];
+
+    // Get current values to log changes (optional, but good for accountability)
+    // For speed, we just write. If strict logging needed, we read first.
+    // Let's read the row to compare.
+    const currentRow = ss.getRange(row, 1, 1, 30).getValues()[0];
+
+    for (const key in updates) {
+        if (colMap[key]) {
+            const col = colMap[key];
+            const oldVal = currentRow[col - 1];
+            const newVal = updates[key];
+            if (String(oldVal) !== String(newVal)) {
+                ss.getRange(row, col).setValue(newVal);
+                changes.push(`${key}: ${oldVal} -> ${newVal}`);
+                hasChange = true;
+            }
+        }
+    }
+
+    if (hasChange) {
+        logMsg += changes.join(", ");
+        // Append to Log Column (20 / T)
+        const oldLog = ss.getRange(row, 20).getValue();
+        ss.getRange(row, 20).setValue(oldLog + " | " + logMsg);
+        return jsonResponse("success", "Updated & Logged");
+    }
+
+    return jsonResponse("success", "No Changes");
 }
 
 function handleDirectTransfer(b) {
