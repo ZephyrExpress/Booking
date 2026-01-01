@@ -1043,7 +1043,7 @@ window.searchHoldings = function() {
 
     if(match) {
         const isOnHold = match.holdStatus === "On Hold";
-        const isNA = (match.net === "NA" || match.net === "N/A" || match.dest === "NA" || match.dest === "N/A");
+        const isNA = (match.net === "NA" || match.net === "N/A" || match.dest === "NA" || match.dest === "N/A" || (match.net||'').includes("NOT KNOWN") || (match.dest||'').includes("NOT KNOWN"));
 
         let actionBtn = "";
 
@@ -2026,9 +2026,6 @@ window.sendTransfer = async function() {
     }
 }
 
-</script>
-</body>
-</html>
 
 // ⚡ Bolt: Bulk Assignment Save
 window.saveBulkAssignments = async function() {
@@ -2126,4 +2123,7 @@ window.saveEditShipment = async function() {
         bootstrap.Modal.getInstance(document.getElementById('editShipmentModal')).hide();
         syncData(false);
     } else {
+        alert('Error: ' + r.message);
+    }
+}
 </script></body></html>
