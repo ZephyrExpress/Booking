@@ -266,25 +266,37 @@ function getAllData(username) {
       }
   } catch(e) {}
 
+  // ⚡ Bolt Optimization: Batch write local updates to reduce API calls
   if(updates.length > 0) {
-      updates.forEach(u => {
-          if(u.col) sh.getRange(u.row, u.col, 1, 1).setValues(u.val);
-          else sh.getRange(u.row, 15, 1, 2).setValues(u.vals);
-      });
+      const updatesOP = data.map(r => [r[14], r[15]]); // Columns O, P (Auto Status, Doer)
+      const updatesU = data.map(r => [r[20]]);         // Column U (Net No)
+      sh.getRange(2, 15, updatesOP.length, 2).setValues(updatesOP);
+      sh.getRange(2, 21, updatesU.length, 1).setValues(updatesU);
   }
 
+  // ⚡ Bolt Optimization: Batch write FMS updates
   if(fmsUpdates.length > 0) {
       try {
           const remoteSS = getTaskSS();
           const fms = remoteSS ? remoteSS.getSheetByName("FMS") : null;
           if(fms && fms.getLastRow() >= 7) {
-              const ids = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
+              const numRows = fms.getLastRow() - 6;
+              const range = fms.getRange(7, 14, numRows, 1);
+              const doerData = range.getValues();
+              const ids = fms.getRange(7, 2, numRows, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
+
+              let changed = false;
               fmsUpdates.forEach(u => {
                   const idx = ids.indexOf(u.awb);
                   if(idx > -1) {
-                      fms.getRange(idx+7, 14).setValue(u.autoDoer);
+                      if(doerData[idx][0] !== u.autoDoer) {
+                          doerData[idx][0] = u.autoDoer;
+                          changed = true;
+                      }
                   }
               });
+
+              if(changed) range.setValues(doerData);
           }
       } catch(e) { console.error("FMS Sync Error", e); }
   }
