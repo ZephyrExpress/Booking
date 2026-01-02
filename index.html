@@ -11,6 +11,8 @@
   <link rel="icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
   <link rel="shortcut icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
+  <link rel="icon" sizes="192x192" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
+  <link rel="icon" sizes="512x512" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Zephyr Express">
@@ -549,6 +551,7 @@
                 <li class="nav-item"><button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tab-users">User & Permissions</button></li>
                 <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-reqs">Transfer Requests</button></li>
                 <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-dd">Dropdown Manager</button></li>
+                <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-bill">Billing Panel</button></li>
              </ul>
 
              <div class="tab-content">
@@ -606,6 +609,16 @@
                       </div>
                       <div class="d-flex gap-2 bg-light p-2 rounded"><select id="dd_del" class="form-select"></select><button class="btn btn-danger" onclick="delDd()">Delete</button></div>
                  </div>
+
+                 <!-- Billing Tab -->
+                 <div class="tab-pane fade" id="tab-bill">
+                      <div class="alert alert-info small"><i class="bi bi-info-circle me-1"></i> Generates report from latest Booking Report data.</div>
+                      <div class="row g-3 align-items-end mb-4">
+                          <div class="col-md-4"><label class="small fw-bold">From Date</label><input type="date" id="bill_from" class="form-control"></div>
+                          <div class="col-md-4"><label class="small fw-bold">To Date</label><input type="date" id="bill_to" class="form-control"></div>
+                          <div class="col-md-4"><button class="btn btn-primary w-100 fw-bold" onclick="getBillingData()">Generate & Export</button></div>
+                      </div>
+                 </div>
              </div>
          </div>
       </div>
@@ -640,8 +653,8 @@
              <div class="alert alert-warning small border-warning"><i class="bi bi-exclamation-triangle me-2"></i>Edits are logged with your username and timestamp.</div>
              <input type="hidden" id="e_awb_hidden">
              <div class="row g-3 mb-3">
-                 <div class="col-md-6"><label class="small fw-bold">AWB</label><input id="e_awb" class="form-control bg-light" readonly></div>
-                 <div class="col-md-6"><label class="small fw-bold">Date</label><input id="e_date" class="form-control bg-light" readonly></div>
+                 <div class="col-md-6"><label class="small fw-bold">AWB</label><input id="e_awb" class="form-control"></div>
+                 <div class="col-md-6"><label class="small fw-bold">Date</label><input id="e_date" type="date" class="form-control"></div>
                  <div class="col-md-6"><label class="small fw-bold">Client</label><select id="e_client" class="form-select"></select></div>
                  <div class="col-md-6"><label class="small fw-bold">Network</label><select id="e_net" class="form-select"></select></div>
                  <div class="col-md-6"><label class="small fw-bold">Destination</label><select id="e_dest" class="form-select"></select></div>
@@ -649,7 +662,8 @@
                  <div class="col-md-4"><label class="small fw-bold">Act Wgt</label><input id="e_act" type="number" step="any" class="form-control"></div>
                  <div class="col-md-4"><label class="small fw-bold">Vol Wgt</label><input id="e_vol" type="number" step="any" class="form-control"></div>
                  <div class="col-md-4"><label class="small fw-bold">Chg Wgt</label><input id="e_chg" type="number" step="any" class="form-control"></div>
-                 <div class="col-12"><label class="small fw-bold">Extra Charges</label><input id="e_extra" class="form-control"></div>
+                 <div class="col-12"><label class="small fw-bold">Extra Charges</label><div id="e_extra_container" class="d-flex flex-wrap gap-2 p-2 border rounded bg-light"></div></div>
+                 <div class="col-12"><label class="small fw-bold">Extra Charges Remarks</label><textarea id="e_remarks" class="form-control" rows="2"></textarea></div>
              </div>
              <button type="button" class="btn btn-primary w-100 fw-bold" onclick="saveEditShipment()">Save Changes</button>
          </form>
@@ -1389,7 +1403,8 @@ function updDd(){
    if(window.tomInstances.dest && dd.destinations){ window.tomInstances.dest.clearOptions(); dd.destinations.forEach(x=>window.tomInstances.dest.addOption({value:x,text:x})); window.tomInstances.dest.sync(); }
    const ex=document.getElementById('f_extra'); if(ex && dd.extraCharges) ex.innerHTML=dd.extraCharges.map(x=>`<div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label small">${x}</label></div>`).join('');
 
-   if(curRole==='admin' || curRole==='owner'){
+   const r = curRole.toLowerCase();
+   if(r==='admin' || r==='owner'){
      const cat=document.getElementById('dd_cat').value;
      if(cat==="hold") document.getElementById('dd_desc').style.display='block'; else document.getElementById('dd_desc').style.display='none';
      let targetList = [];
@@ -1446,6 +1461,25 @@ window.changePass=async function(u){ const p = prompt("New Password for "+u+":")
 
 window.decideTr=async function(rid,tid,typ,to,dec){ showSpin(true); await callApi({action:"approveTransfer", reqId:rid, taskId:tid, type:typ, to:to, decision:dec}); renderAdminPanel(); showSpin(false); }
 window.exportPool=function(){ const data = window.APP_DATA.adminPool.map(x=>({"AWB":x.id,"Client":x.client,"Net":x.net,"Status":x.assignee?"Assigned":"Unassigned","Assignee":x.assignee||""})); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Pool"); XLSX.writeFile(wb, "Pool.xlsx"); }
+
+window.getBillingData = async function() {
+    const f = document.getElementById('bill_from').value;
+    const t = document.getElementById('bill_to').value;
+    if(!f || !t) return alert("Select Date Range");
+
+    showSpin(true);
+    const r = await callApi({action: 'getBillingData', from: f, to: t});
+    showSpin(false);
+
+    if(r.result === "success") {
+        if(!r.data || !r.data.length) return alert("No data found for range.");
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.data), "Billing Report");
+        XLSX.writeFile(wb, `Billing_${f}_to_${t}.xlsx`);
+    } else {
+        alert("Error: " + r.message);
+    }
+}
 window.switchManifestView = function(view) {
    document.querySelectorAll('#manTabs .nav-link').forEach(el => el.classList.remove('active'));
    const idx = view === 'pending' ? 0 : (view === 'daily' ? 1 : 2);
@@ -2086,7 +2120,16 @@ window.openEditModal = async function(id) {
     const s = r.shipment;
     document.getElementById('e_awb_hidden').value = s.id;
     document.getElementById('e_awb').value = s.id;
-    document.getElementById('e_date').value = new Date(s.date).toLocaleDateString();
+    // Format date for input type=date (YYYY-MM-DD)
+    if(s.date) {
+        const d = new Date(s.date);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        document.getElementById('e_date').value = `${y}-${m}-${day}`;
+    } else {
+        document.getElementById('e_date').value = '';
+    }
 
     // Fill dropdowns if needed (similar to initForms)
     const dd = window.APP_DATA.static.dropdowns;
@@ -2094,6 +2137,12 @@ window.openEditModal = async function(id) {
         fillSel('e_net', dd.networks);
         fillSel('e_client', dd.clients);
         fillSel('e_dest', dd.destinations);
+
+        // Generate Checkboxes for Extra Charges
+        const ecContainer = document.getElementById('e_extra_container');
+        if(ecContainer && dd.extraCharges) {
+            ecContainer.innerHTML = dd.extraCharges.map(x => `<div class="form-check"><input class="form-check-input e-extra-chk" type="checkbox" value="${x}"><label class="form-check-label small">${x}</label></div>`).join('');
+        }
     }
 
     document.getElementById('e_net').value = s.net;
@@ -2103,14 +2152,27 @@ window.openEditModal = async function(id) {
     document.getElementById('e_act').value = s.actWgt;
     document.getElementById('e_vol').value = s.volWgt;
     document.getElementById('e_chg').value = s.chgWgt;
-    document.getElementById('e_extra').value = s.extra || "";
+    document.getElementById('e_remarks').value = s.rem || "";
+
+    // Parse existing extra charges (string) to check boxes
+    const existingExtra = (s.extra || "").split(',').map(x => x.trim());
+    document.querySelectorAll('.e-extra-chk').forEach(chk => {
+        if(existingExtra.includes(chk.value)) chk.checked = true;
+    });
 
     new bootstrap.Modal(document.getElementById('editShipmentModal')).show();
 };
 
 window.saveEditShipment = async function() {
     const awb = document.getElementById('e_awb_hidden').value;
+    const newAwb = document.getElementById('e_awb').value;
+
+    let extraArr = [];
+    document.querySelectorAll('.e-extra-chk:checked').forEach(c => extraArr.push(c.value));
+
     const updates = {
+        awb: newAwb,
+        date: document.getElementById('e_date').value,
         net: document.getElementById('e_net').value,
         client: document.getElementById('e_client').value,
         dest: document.getElementById('e_dest').value,
@@ -2118,7 +2180,8 @@ window.saveEditShipment = async function() {
         actWgt: document.getElementById('e_act').value,
         volWgt: document.getElementById('e_vol').value,
         chgWgt: document.getElementById('e_chg').value,
-        extra: document.getElementById('e_extra').value
+        extra: extraArr.join(', '),
+        remarks: document.getElementById('e_remarks').value
     };
 
     if(!updates.net || !updates.client || !updates.dest) return alert("Network, Client and Destination are mandatory.");
@@ -2128,7 +2191,7 @@ window.saveEditShipment = async function() {
     showSpin(true);
     const r = await callApi({
         action: 'editShipment',
-        awb: awb,
+        awb: awb, // Original AWB for lookup
         updates: updates,
         user: curUser
     });
@@ -2141,5 +2204,24 @@ window.saveEditShipment = async function() {
     } else {
         alert('Error: ' + r.message);
     }
+}
+
+window.submitCorrection = async function(id) {
+    const net = document.getElementById('fix_net').value;
+    const dest = document.getElementById('fix_dest').value;
+    if(!net || !dest) return alert("Select both Network and Destination");
+
+    showSpin(true);
+    const r = await callApi({action: 'updateShipmentDetails', awb: id, network: net, destination: dest});
+    if(r.result === "success") {
+        // Now clear hold
+        await callApi({action:"manageHold", subAction:"clear", awb:id, remarks:"Hold cleared after correction"});
+        toast("Correction Saved & Hold Cleared");
+        clearHoldSearch();
+        syncData(false);
+    } else {
+        alert("Error: " + r.message);
+    }
+    showSpin(false);
 }
 </script></body></html>

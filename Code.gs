@@ -87,6 +87,7 @@ function doPost(e) {
     // ⚡ Bolt New Features
     if (act === "bulkAssign") return handleBulkAssign(body);
     if (act === "editShipment") return handleEditShipment(body);
+    if (act === "getBillingData") return getBillingData(body.from, body.to);
 
     return jsonResponse("error", "Unknown Action: " + act);
 
@@ -269,6 +270,88 @@ function getAllData(username) {
           }
       }
   } catch(e) {}
+
+  // ⚡ Bolt: Booking Report Sync (Latest Data Top-Down)
+  // Fields to update from Booking Report:
+  // D(Dest)->Col 6(F), E(ClientCode), F(ClientName)->Col 5(E), T(Net)->Col 4(D), U(NetNo)->Col 21(U)
+  // W(Content)->Col 3(C), X(Box)->Col 7(G), Y(Act)->Col 11(K), Z(Vol)->Col 12(L), AA(Chg)->Col 13(M)
+  // AO(User)->Col 9(I), AP(AutoDoer)->Col 16(P)
+  try {
+      const brSheet = ss.getSheetByName("Booking_Report") || (taskSS ? taskSS.getSheetByName("Booking_Report") : null);
+      if(brSheet) {
+          const brData = brSheet.getDataRange().getValues();
+          // Create map of AWB -> First Row (Latest)
+          const brMap = {};
+          // Assuming Header Row 1
+          for(let i=1; i<brData.length; i++) {
+              const r = brData[i];
+              const awbKey = String(r[0]).replace(/'/g,"").trim().toLowerCase();
+              if(awbKey && !brMap[awbKey]) {
+                  brMap[awbKey] = {
+                      dest: r[3], // D
+                      clientCode: r[4], // E
+                      clientName: r[5], // F
+                      net: r[19], // T
+                      netNo: r[20], // U
+                      type: r[22], // W
+                      boxes: r[23], // X
+                      act: r[24], // Y
+                      vol: r[25], // Z
+                      chg: r[26], // AA
+                      user: r[40], // AO
+                      autoDoer: r[41] // AP
+                  };
+              }
+          }
+
+          const range = sh.getRange(2, 1, lastRow-1, 31);
+          const sData = range.getValues();
+          let hasChange = false;
+
+          for(let i=0; i<sData.length; i++) {
+              const r = sData[i]; // Row data
+              const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
+
+              if(brMap[awb]) {
+                  const br = brMap[awb];
+                  // Helper to check diff
+                  const ch = (idx, val) => {
+                      if(String(r[idx]) !== String(val)) {
+                          r[idx] = val;
+                          hasChange = true;
+                      }
+                  };
+
+                  // Update Columns (Index = Col - 1)
+                  ch(5, br.dest); // Col F (Dest) index 5
+                  ch(4, `${br.clientName}-${br.clientCode}`.slice(-4) === br.clientCode ? `${br.clientName}-${br.clientCode}` : br.clientName); // Simplified Client Logic?
+                  // User said: "In our system we uses a pattern like "Client Name","-","Client Code") and because of that pattern we uses =Right(4) system to get only client codes."
+                  // So we should construct "Name-Code".
+                  const clientStr = `${br.clientName}-${br.clientCode}`;
+                  ch(4, clientStr); // Col E (Client) index 4
+
+                  ch(3, br.net); // Col D (Network) index 3
+                  ch(20, br.netNo); // Col U (NetNo) index 20
+                  ch(2, br.type); // Col C (Type) index 2
+                  ch(6, br.boxes); // Col G (Boxes) index 6
+                  ch(10, br.act); // Col K (Act) index 10
+                  ch(11, br.vol); // Col L (Vol) index 11
+                  ch(12, br.chg); // Col M (Chg) index 12
+                  ch(8, br.user); // Col I (User) index 8
+
+                  // For Auto Doer (Col P / 15) and Status (Col O / 14)
+                  if(br.autoDoer) {
+                      ch(15, br.autoDoer);
+                      if(r[14] !== 'Done' && r[14] !== 'Completed') ch(14, 'Done');
+                  }
+              }
+          }
+
+          if(hasChange) {
+              range.setValues(sData);
+          }
+      }
+  } catch(e) { console.error("Sync BR Error", e); }
 
   // ⚡ Bolt Optimization: Batch write local updates to reduce API calls
   if(updates.length > 0) {
@@ -719,35 +802,66 @@ function handleBulkAssign(b) {
 
 // ⚡ Bolt: Edit Shipment & Logging
 function handleEditShipment(b) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
-    const row = findRow(ss, b.awb);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sh = ss.getSheetByName("Shipments");
+    const row = findRow(sh, b.awb);
     if (row === -1) return jsonResponse("error", "AWB Not Found");
 
     const updates = b.updates;
+    const newAwb = updates.awb ? String(updates.awb).trim() : null;
     let logMsg = `[${new Date().toLocaleString()} Edit by ${b.user}]: `;
     let hasChange = false;
+    let awbChanged = false;
 
-    // Mapping fields to columns (1-based)
-    // 4: Net, 5: Client, 6: Dest, 7: Boxes, 8: Extra, 11: ActWgt, 12: VolWgt, 13: ChgWgt
+    // Handle AWB Rename
+    if(newAwb && newAwb !== String(b.awb)) {
+        // Check duplicate
+        const existing = findRow(sh, newAwb);
+        if(existing !== -1) return jsonResponse("error", "New AWB already exists");
+
+        sh.getRange(row, 1).setValue("'" + newAwb); // Update ID
+
+        // Update BoxDetails
+        try {
+            const bx = ss.getSheetByName("BoxDetails");
+            if(bx) {
+                const lr = bx.getLastRow();
+                if(lr > 1) {
+                    const bxData = bx.getRange(2, 1, lr-1, 1).getValues();
+                    const oldKey = "'" + b.awb;
+                    bxData.forEach((r, i) => {
+                        if(String(r[0]) === oldKey) {
+                            bx.getRange(i+2, 1).setValue("'" + newAwb);
+                        }
+                    });
+                }
+            }
+        } catch(e){ console.error("Box update fail", e); }
+
+        logMsg += `AWB: ${b.awb} -> ${newAwb}, `;
+        hasChange = true;
+        awbChanged = true;
+    }
+
+    // Handle other fields
+    // Map fields to columns
     const colMap = {
-        'net': 4, 'client': 5, 'dest': 6, 'boxes': 7,
-        'actWgt': 11, 'volWgt': 12, 'chgWgt': 13, 'extra': 8, 'details': 14
+        'date': 2, 'net': 4, 'client': 5, 'dest': 6, 'boxes': 7,
+        'extra': 8, 'actWgt': 11, 'volWgt': 12, 'chgWgt': 13, 'remarks': 14
     };
 
     const changes = [];
-
-    // Get current values to log changes (optional, but good for accountability)
-    // For speed, we just write. If strict logging needed, we read first.
-    // Let's read the row to compare.
-    const currentRow = ss.getRange(row, 1, 1, 30).getValues()[0];
+    const currentRow = sh.getRange(row, 1, 1, 30).getValues()[0];
 
     for (const key in updates) {
+        if(key === 'awb') continue;
         if (colMap[key]) {
             const col = colMap[key];
-            const oldVal = currentRow[col - 1];
+            const oldVal = (key === 'date') ? new Date(currentRow[col - 1]).toISOString().split('T')[0] : currentRow[col - 1];
             const newVal = updates[key];
+
             if (String(oldVal) !== String(newVal)) {
-                ss.getRange(row, col).setValue(newVal);
+                sh.getRange(row, col).setValue(newVal);
                 changes.push(`${key}: ${oldVal} -> ${newVal}`);
                 hasChange = true;
             }
@@ -756,13 +870,70 @@ function handleEditShipment(b) {
 
     if (hasChange) {
         logMsg += changes.join(", ");
-        // Append to Log Column (20 / T)
-        const oldLog = ss.getRange(row, 20).getValue();
-        ss.getRange(row, 20).setValue(oldLog + " | " + logMsg);
+        const oldLog = sh.getRange(row, 20).getValue();
+        sh.getRange(row, 20).setValue(oldLog + " | " + logMsg);
         return jsonResponse("success", "Updated & Logged");
     }
 
     return jsonResponse("success", "No Changes");
+}
+
+function getBillingData(from, to) {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        let brSheet = ss.getSheetByName("Booking_Report");
+        if (!brSheet) {
+            const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID); // Or reuse getTaskSS logic if accessible
+            brSheet = remoteSS ? remoteSS.getSheetByName("Booking_Report") : null;
+        }
+        if(!brSheet) return jsonResponse("error", "Booking Report not found");
+
+        const data = brSheet.getDataRange().getValues();
+        if(data.length < 2) return jsonResponse("success", "OK", { data: [] });
+
+        const fromDate = new Date(from).getTime();
+        const toDate = new Date(to).getTime();
+        const headers = data[0];
+
+        // Latest Data Logic (Top-down first match)
+        const unique = {};
+        const result = [];
+
+        // Assuming Row 1 is header
+        for(let i=1; i<data.length; i++) {
+            const r = data[i];
+            const awb = String(r[0]).trim(); // AWB is Col A (0)
+            if(!awb) continue;
+
+            if(!unique[awb]) {
+                // Check Date (Col B / 1) - Text format likely "2/1/2026"
+                const dStr = String(r[1]);
+                const parts = dStr.split('/');
+                let rowDate = 0;
+                if(parts.length === 3) {
+                    // Assuming D/M/YYYY or M/D/YYYY? User said "2/1/2026". Standard is often M/D/Y in US or D/M/Y elsewhere.
+                    // Given example, let's try standard JS parse first, if fails try manual.
+                    let d = new Date(dStr);
+                    if(isNaN(d.getTime())) {
+                        // Try D/M/YYYY
+                        d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                    }
+                    rowDate = d.getTime();
+                }
+
+                if(rowDate >= fromDate && rowDate <= toDate + 86400000) { // Include end date
+                    unique[awb] = true;
+                    // Create object based on headers
+                    const obj = {};
+                    headers.forEach((h, idx) => obj[h] = r[idx]);
+                    result.push(obj);
+                }
+            }
+        }
+
+        return jsonResponse("success", "OK", { data: result });
+
+    } catch(e) { return jsonResponse("error", e.toString()); }
 }
 
 function handleDirectTransfer(b) {
