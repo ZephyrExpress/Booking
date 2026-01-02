@@ -538,7 +538,7 @@
             </div>
             <div class="table-responsive border rounded" style="max-height: 600px; overflow-y: auto;">
                 <table class="table table-hover align-middle mb-0 small">
-                    <thead class="bg-light sticky-top"><tr><th style="width:40px"><input type="checkbox" onchange="toggleRc(this)"></th><th>AWB</th><th>Date</th><th>Client</th><th>Dest</th><th>Wgt</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+                    <thead class="bg-light sticky-top"><tr><th style="width:40px"><input type="checkbox" onchange="toggleRc(this)"></th><th>AWB</th><th>Date</th><th>Client</th><th>Dest</th><th>Wgt</th><th>Status</th><th>Entry By</th><th class="text-end">Action</th></tr></thead>
                     <tbody id="rcList"></tbody>
                 </table>
             </div>
@@ -1880,6 +1880,7 @@ window.renderReceivers = function() {
             <td>${x.dest}</td>
             <td>${x.chgWgt}</td>
             <td><span class="badge bg-light text-dark border">${x.holdStatus === "On Hold" ? "Hold" : (x.batchNo ? "Manifested" : "Pending")}</span></td>
+            <td><small class="text-muted">${x.user||'-'}</small></td>
             <td class="text-end">
                 <button class="btn btn-sm btn-outline-dark" onclick="fetchAndPrintReceiver('${x.id}')" title="Print Slip"><i class="bi bi-printer"></i></button>
                 <button class="btn btn-sm btn-outline-primary ms-1" onclick="openEditModal('${x.id}')" title="Edit"><i class="bi bi-pencil"></i></button>
@@ -2004,6 +2005,12 @@ window.downloadReceiverPdf = function(data) {
 
         doc.line(pageWidth - 60, cy, pageWidth - 10, cy);
         doc.text("Receiver Signature", pageWidth - 60, cy + 5);
+
+        // Entry User
+        if(s.user) {
+            doc.setFontSize(7); doc.setFont("helvetica", "italic");
+            doc.text(`Entry By: ${s.user}`, 10, cy + 10);
+        }
 
         // Border
         doc.setLineWidth(0.2);
