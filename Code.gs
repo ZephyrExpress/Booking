@@ -87,7 +87,7 @@ function doPost(e) {
     // ⚡ Bolt New Features
     if (act === "bulkAssign") return handleBulkAssign(body);
     if (act === "editShipment") return handleEditShipment(body);
-    if (act === "getBillingData") return getBillingData(body.from, body.to);
+    if (act === "getBillingData") return getBillingData(body.from, body.to, body.net, body.client);
 
     return jsonResponse("error", "Unknown Action: " + act);
 
@@ -857,7 +857,13 @@ function handleEditShipment(b) {
         if(key === 'awb') continue;
         if (colMap[key]) {
             const col = colMap[key];
-            const oldVal = (key === 'date') ? new Date(currentRow[col - 1]).toISOString().split('T')[0] : currentRow[col - 1];
+            let oldVal = currentRow[col - 1];
+
+            // Safe Date Comparison
+            if (key === 'date' && oldVal instanceof Date) {
+                try { oldVal = oldVal.toISOString().split('T')[0]; } catch(e){}
+            }
+
             const newVal = updates[key];
 
             if (String(oldVal) !== String(newVal)) {
@@ -878,7 +884,7 @@ function handleEditShipment(b) {
     return jsonResponse("success", "No Changes");
 }
 
-function getBillingData(from, to) {
+function getBillingData(from, to, netFilter, clientFilter) {
     try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         let brSheet = ss.getSheetByName("Booking_Report");
@@ -895,6 +901,9 @@ function getBillingData(from, to) {
         const toDate = new Date(to).getTime();
         const headers = data[0];
 
+        // Identify Indices for Filter
+        // Col T (19) is Network, Col E (4) is Client Code, Col F (5) is Client Name
+
         // Latest Data Logic (Top-down first match)
         const unique = {};
         const result = [];
@@ -906,22 +915,31 @@ function getBillingData(from, to) {
             if(!awb) continue;
 
             if(!unique[awb]) {
-                // Check Date (Col B / 1) - Text format likely "2/1/2026"
-                const dStr = String(r[1]);
-                const parts = dStr.split('/');
-                let rowDate = 0;
-                if(parts.length === 3) {
-                    // Assuming D/M/YYYY or M/D/YYYY? User said "2/1/2026". Standard is often M/D/Y in US or D/M/Y elsewhere.
-                    // Given example, let's try standard JS parse first, if fails try manual.
-                    let d = new Date(dStr);
-                    if(isNaN(d.getTime())) {
-                        // Try D/M/YYYY
-                        d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                    }
-                    rowDate = d.getTime();
+                // Check Filters
+                if (netFilter && String(r[19]).toLowerCase() !== String(netFilter).toLowerCase()) continue;
+                // Client check: Check both Code (Col 4) and Name (Col 5)
+                if (clientFilter) {
+                    const cf = String(clientFilter).toLowerCase();
+                    if (!String(r[4]).toLowerCase().includes(cf) && !String(r[5]).toLowerCase().includes(cf)) continue;
                 }
 
-                if(rowDate >= fromDate && rowDate <= toDate + 86400000) { // Include end date
+                // Check Date (Col B / 1) - M/D/YYYY Strict
+                const dStr = String(r[1]).trim();
+                let rowDate = 0;
+                // Try Parsing M/D/YYYY
+                const parts = dStr.split('/');
+                if(parts.length === 3) {
+                   // Month is 0-indexed in JS Date(y, m, d) but 1-based in string
+                   // new Date(y, m-1, d)
+                   // parts[0]=M, parts[1]=D, parts[2]=Y
+                   const dt = new Date(parts[2], parts[0]-1, parts[1]);
+                   rowDate = dt.getTime();
+                } else {
+                   // Fallback to standard parse if not slash separated
+                   rowDate = new Date(dStr).getTime();
+                }
+
+                if(!isNaN(rowDate) && rowDate >= fromDate && rowDate <= toDate + 86400000) { // Include end date (full day buffer)
                     unique[awb] = true;
                     // Create object based on headers
                     const obj = {};
