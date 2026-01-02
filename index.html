@@ -859,6 +859,21 @@ async function syncData(init=false){
   try {
      const r = await fetchGet('getAllData');
      if(r.result==="success"){
+        // ⚡ Bolt Optimization: Pre-calculate formatted dates to avoid O(N) re-parsing during render loops
+        const fmt = (d) => d ? new Date(d).toLocaleDateString() : '';
+        const processList = (list) => { if(list) list.forEach(x => x.fmtDate = fmt(x.date)); };
+
+        processList(r.manifest);
+        processList(r.holdings);
+        if(r.overview) {
+            processList(r.overview.auto);
+            processList(r.overview.paper);
+        }
+        if(r.workflow) {
+            processList(r.workflow.toAssign);
+            processList(r.workflow.toDo);
+        }
+
         window.APP_DATA = r;
         if(r.role) curRole = r.role;
         curPerms = r.perms || [];
@@ -1464,7 +1479,7 @@ window.renderManifest = function() {
     document.getElementById('manifestEmptyState').style.display = 'none';
     list.innerHTML = filtered.map(x => {
         const badge = x.batchNo ? `<span class="badge bg-secondary" title="In Batch: ${x.batchNo}">History</span>` : `<span class="badge bg-success">Ready</span>`;
-        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check pending-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${badge}</td></tr>`;
+        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check pending-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${x.fmtDate}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${badge}</td></tr>`;
     }).join('');
 };
 
@@ -1485,8 +1500,8 @@ window.renderDailyManifest = function() {
 
     const filtered = items.filter(x => {
         // ⚡ Bolt Fix: Show all items from today (Inbound OR Manifested)
-        const inboundDate = new Date(x.date).toLocaleDateString();
-        const isToday = (x.manifestDate === today) || (inboundDate === today);
+        // Optimization: Use pre-calculated fmtDate
+        const isToday = (x.manifestDate === today) || (x.fmtDate === today);
 
         const matchesNet = net ? x.net === net : true;
         const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
@@ -1502,7 +1517,7 @@ window.renderDailyManifest = function() {
 
     list.innerHTML = filtered.map(x => {
         const batchBadge = x.batchNo ? `<span class="badge bg-secondary">${x.batchNo}</span>` : `<span class="badge bg-success">Pending</span>`;
-        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check daily-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${batchBadge}</td></tr>`;
+        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check daily-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${x.fmtDate}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${batchBadge}</td></tr>`;
     }).join('');
 };
 
@@ -1607,7 +1622,8 @@ window.ahmAdd = async function() {
              id: s.id, date: s.date, net: s.net, client: s.client, dest: s.dest,
              details: `${s.boxes} Boxes | ${s.chgWgt} Kg`,
              chgWgt: s.chgWgt, boxes: s.boxes, netNo: s.netNo,
-             batchNo: "" 
+             batchNo: "",
+             fmtDate: new Date(s.date).toLocaleDateString() // ⚡ Bolt: Add pre-calc date
         };
 
         if(existingIdx > -1) {
@@ -1815,7 +1831,7 @@ window.renderReceivers = function() {
         <tr>
             <td><input type="checkbox" value="${x.id}"></td>
             <td class="fw-bold font-monospace">${x.id}</td>
-            <td>${new Date(x.date).toLocaleDateString()}</td>
+            <td>${x.fmtDate}</td>
             <td>${(x.client||'').slice(0,15)}</td>
             <td>${x.dest}</td>
             <td>${x.chgWgt}</td>
