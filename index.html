@@ -13,6 +13,7 @@
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
   <link rel="icon" sizes="192x192" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
   <link rel="icon" sizes="512x512" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
+  <link rel="manifest" href='data:application/manifest+json,{"name":"Zephyr Express","short_name":"Zephyr","start_url":".","display":"standalone","background_color":"#f8fafc","theme_color":"#003399","icons":[{"src":"https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png","sizes":"192x192","type":"image/png"},{"src":"https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png","sizes":"512x512","type":"image/png"}]}'>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Zephyr Express">
@@ -614,9 +615,11 @@
                  <div class="tab-pane fade" id="tab-bill">
                       <div class="alert alert-info small"><i class="bi bi-info-circle me-1"></i> Generates report from latest Booking Report data.</div>
                       <div class="row g-3 align-items-end mb-4">
-                          <div class="col-md-4"><label class="small fw-bold">From Date</label><input type="date" id="bill_from" class="form-control"></div>
-                          <div class="col-md-4"><label class="small fw-bold">To Date</label><input type="date" id="bill_to" class="form-control"></div>
-                          <div class="col-md-4"><button class="btn btn-primary w-100 fw-bold" onclick="getBillingData()">Generate & Export</button></div>
+                          <div class="col-md-3"><label class="small fw-bold">From Date</label><input type="date" id="bill_from" class="form-control"></div>
+                          <div class="col-md-3"><label class="small fw-bold">To Date</label><input type="date" id="bill_to" class="form-control"></div>
+                          <div class="col-md-3"><label class="small fw-bold">Network</label><select id="bill_net" class="form-select"><option value="">All Networks</option></select></div>
+                          <div class="col-md-3"><label class="small fw-bold">Client</label><select id="bill_client" class="form-select"><option value="">All Clients</option></select></div>
+                          <div class="col-12"><button class="btn btn-primary w-100 fw-bold" onclick="getBillingData()">Generate & Export</button></div>
                       </div>
                  </div>
              </div>
@@ -1398,8 +1401,13 @@ function initForms(){
 function updDd(){
    if(!window.APP_DATA.static) return;
    const dd=window.APP_DATA.static.dropdowns; if(!dd) return;
-   fillSel('f_net', dd.networks); const mn=document.getElementById('man_net'); if(mn && mn.options.length<=1 && dd.networks){ let opts=''; dd.networks.forEach(x=>opts+=`<option value="${x}">${x}</option>`); mn.innerHTML+=opts; }
-   if(window.tomInstances.client && dd.clients){ window.tomInstances.client.clearOptions(); dd.clients.forEach(x=>window.tomInstances.client.addOption({value:x,text:x})); window.tomInstances.client.sync(); }
+   fillSel('f_net', dd.networks);
+   fillSel('bill_net', dd.networks);
+   const mn=document.getElementById('man_net'); if(mn && mn.options.length<=1 && dd.networks){ let opts=''; dd.networks.forEach(x=>opts+=`<option value="${x}">${x}</option>`); mn.innerHTML+=opts; }
+   if(window.tomInstances.client && dd.clients){
+       window.tomInstances.client.clearOptions(); dd.clients.forEach(x=>window.tomInstances.client.addOption({value:x,text:x})); window.tomInstances.client.sync();
+       const bc = document.getElementById('bill_client'); if(bc && bc.options.length<=1) { let opts=''; dd.clients.forEach(x=>opts+=`<option value="${x}">${x}</option>`); bc.innerHTML+=opts; }
+   }
    if(window.tomInstances.dest && dd.destinations){ window.tomInstances.dest.clearOptions(); dd.destinations.forEach(x=>window.tomInstances.dest.addOption({value:x,text:x})); window.tomInstances.dest.sync(); }
    const ex=document.getElementById('f_extra'); if(ex && dd.extraCharges) ex.innerHTML=dd.extraCharges.map(x=>`<div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label small">${x}</label></div>`).join('');
 
@@ -1465,10 +1473,12 @@ window.exportPool=function(){ const data = window.APP_DATA.adminPool.map(x=>({"A
 window.getBillingData = async function() {
     const f = document.getElementById('bill_from').value;
     const t = document.getElementById('bill_to').value;
+    const net = document.getElementById('bill_net').value;
+    const client = document.getElementById('bill_client').value;
     if(!f || !t) return alert("Select Date Range");
 
     showSpin(true);
-    const r = await callApi({action: 'getBillingData', from: f, to: t});
+    const r = await callApi({action: 'getBillingData', from: f, to: t, net: net, client: client});
     showSpin(false);
 
     if(r.result === "success") {
