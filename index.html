@@ -2241,4 +2241,73 @@ window.submitCorrection = async function(id) {
     }
     showSpin(false);
 }
+
+// ⚡ Bolt: Custom Enter Navigation for Inbound Form
+document.addEventListener('keydown', function(e) {
+    if(e.key !== 'Enter') return;
+
+    const active = document.activeElement;
+    if(!active) return;
+
+    // Must be inside #shipForm or specific inputs
+    const form = active.closest('#shipForm');
+    if(!form) return;
+
+    // Ignore textareas (let them insert newlines) and Submit Buttons
+    if(active.tagName === 'TEXTAREA' || (active.tagName === 'BUTTON' && active.type === 'submit')) return;
+
+    // Special Handling for TomSelect
+    const tsWrapper = active.closest('.ts-wrapper');
+    if(tsWrapper) {
+        // If dropdown is open, let TomSelect handle it (Select item)
+        // Check if .ts-dropdown is visible (TomSelect adds .dropdown-active to wrapper)
+        if(tsWrapper.classList.contains('dropdown-active')) {
+            // Allow default behavior (selection).
+            // We might want to move focus AFTER selection, but TomSelect's event handling is complex.
+            // For now, let TomSelect consume Enter to select. User can press Enter again to move?
+            // Actually, request says "select current one and move".
+            // If we don't preventDefault, TomSelect selects.
+            // We can try to move focus on the NEXT tick.
+            setTimeout(() => moveFocusNext(form, active), 50);
+            return;
+        }
+    }
+
+    e.preventDefault();
+    moveFocusNext(form, active);
+});
+
+function moveFocusNext(form, currentEl) {
+    // Get all focusable elements in logical order
+    // Exclude hidden, disabled, and non-tabbable
+    const candidates = Array.from(form.querySelectorAll('input, select, textarea, button, .ts-control'));
+
+    const visibleCandidates = candidates.filter(el => {
+        return !el.disabled &&
+               el.type !== 'hidden' &&
+               el.offsetParent !== null && // visible
+               el.tabIndex !== -1 &&
+               !el.classList.contains('ts-hidden-accessible'); // Skip TomSelect hidden inputs
+    });
+
+    // Find current index
+    // If current is inside TomSelect, the active element is the input inside .ts-control
+    // But .ts-control itself might be the candidate we found?
+    // TomSelect structure: .ts-wrapper > .ts-control > input
+
+    let currentIndex = visibleCandidates.indexOf(currentEl);
+
+    if(currentIndex === -1) {
+        // Fallback for nested inputs
+        currentIndex = visibleCandidates.findIndex(c => c.contains(currentEl) || c === currentEl);
+    }
+
+    if(currentIndex > -1 && currentIndex < visibleCandidates.length - 1) {
+        const next = visibleCandidates[currentIndex + 1];
+        next.focus();
+        if(next.tagName === 'INPUT' && typeof next.select === 'function') {
+            next.select();
+        }
+    }
+}
 </script></body></html>
