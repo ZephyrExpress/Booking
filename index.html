@@ -936,7 +936,13 @@ function updateNavVisibility() {
     show('nav-holdings', 'holdings');
     show('nav-taskhub', 'taskhub');
     show('nav-manifest', 'manifest');
-    document.getElementById('nav-receivers').style.display = 'flex';
+
+    // ⚡ Bolt Fix: Hide Receivers Slip from Admin/Staff
+    if(role.includes('owner')) {
+        document.getElementById('nav-receivers').style.display = 'flex';
+    } else {
+        document.getElementById('nav-receivers').style.display = 'none';
+    }
 
     const taskLabel = document.getElementById('taskLabel');
     if (taskLabel) {

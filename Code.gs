@@ -368,7 +368,8 @@ function getAllData(username) {
           const fms = remoteSS ? remoteSS.getSheetByName("FMS") : null;
           if(fms && fms.getLastRow() >= 7) {
               const numRows = fms.getLastRow() - 6;
-              const range = fms.getRange(7, 14, numRows, 1);
+              // ⚡ Bolt Fix: Shift +2 (N=14 -> P=16)
+              const range = fms.getRange(7, 16, numRows, 1);
               const doerData = range.getValues();
               const ids = fms.getRange(7, 2, numRows, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
 
@@ -613,9 +614,17 @@ function handleManifestBatch(b) {
   const fmsRanges = [];
 
   // Helper to convert (row, col) to A1 Notation
+  // ⚡ Bolt Fix: Update A1 notation for shifted columns
   const getA1 = (r, c) => {
-      const letter = (c === 25) ? 'Y' : (c === 26 ? 'Z' : (c===30?'AD': (c===35?'AI': (c===40?'AN': (c===45?'AS':'?')))));
-      return `${letter}${r}`;
+      // Y(25)->AA(27), AD(30)->AF(32), AI(35)->AK(37), AN(40)->AP(42), AS(45)->AU(47)
+      // Also local sheet (Y=25, Z=26)
+      if(c === 25) return `Y${r}`;
+      if(c === 26) return `Z${r}`;
+
+      const colMap = {
+          27: 'AA', 32: 'AF', 37: 'AK', 42: 'AP', 47: 'AU'
+      };
+      return `${colMap[c] || '?'}${r}`;
   };
 
   b.ids.forEach(id => {
@@ -726,10 +735,11 @@ function syncFMS(id, data) {
         const idx = ids.findIndex(x => String(x).replace(/'/g,"").trim().toLowerCase() === String(id).replace(/'/g,"").trim().toLowerCase());
         if(idx > -1) {
             const row = idx + 7;
-            if(data.assignee) fms.getRange(row, 19).setValue(data.assignee); // S
-            if(data.assigner) fms.getRange(row, 20).setValue(data.assigner); // T
-            if(data.autoDoer) fms.getRange(row, 14).setValue(data.autoDoer); // N
-            if(data.paperStatus) fms.getRange(row, 17).setValue(data.paperStatus); // Q (Status)
+            // ⚡ Bolt Fix: Shift +2 columns
+            if(data.assignee) fms.getRange(row, 21).setValue(data.assignee); // U (was S/19)
+            if(data.assigner) fms.getRange(row, 22).setValue(data.assigner); // V (was T/20)
+            if(data.autoDoer) fms.getRange(row, 16).setValue(data.autoDoer); // P (was N/14)
+            if(data.paperStatus) fms.getRange(row, 19).setValue(data.paperStatus); // S (was Q/17)
         }
     } catch(e){}
 }
@@ -789,8 +799,9 @@ function handleBulkAssign(b) {
                     const idx = fmsIds.indexOf(String(item.id).trim().toLowerCase());
                     if (idx > -1) {
                         const r = idx + 7;
-                        fms.getRange(r, 19).setValue(item.assignee); // S
-                        fms.getRange(r, 20).setValue(item.assigner); // T
+                        // ⚡ Bolt Fix: Shift +2
+                        fms.getRange(r, 21).setValue(item.assignee); // U (was S/19)
+                        fms.getRange(r, 22).setValue(item.assigner); // V (was T/20)
                     }
                 });
             }
