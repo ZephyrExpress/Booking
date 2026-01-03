@@ -234,51 +234,14 @@ function getAllData(username) {
   const lastRow = sh.getLastRow();
   const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 31).getDisplayValues() : [];
 
-  let updates = [];
   let fmsUpdates = [];
+
+  // ⚡ Bolt: Consolidated Booking Report Sync (Optimized, Safe & Comprehensive)
+  // Single pass to read Booking_Report, update local sheet safely (Pending only) and prepare FMS updates
   try {
-      // Priority: Check Local Sheet first, then Remote (Task SS)
-      let brSheet = ss.getSheetByName("Booking_Report");
-      if (!brSheet) {
-          const remoteSS = getTaskSS();
-          brSheet = remoteSS ? remoteSS.getSheetByName("Booking_Report") : null;
-      }
-
-      if(brSheet) {
-          const brLast = brSheet.getLastRow();
-          if(brLast > 1) {
-              const brData = brSheet.getRange(2, 1, brLast-1, 41).getValues();
-              const brMap = {};
-              brData.forEach(r => {
-                 const k = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-                 if(k) brMap[k] = { netNo: r[20], user: r[40] };
-              });
-
-              data.forEach((r, i) => {
-                  const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-                  const autoStatus = r[14];
-                  if((autoStatus === "Pending" || autoStatus === "") && r[27] !== "On Hold" && brMap[awb]) {
-                      const match = brMap[awb];
-                      const user = match.user || "System";
-                      const netNo = match.netNo || "";
-                      r[14] = "Done"; r[15] = user; r[20] = netNo;
-                      updates.push({ row: i+2, vals: [["Done", user]] });
-                      updates.push({ row: i+2, col: 21, val: [[netNo]] });
-                      fmsUpdates.push({ awb: awb, autoDoer: user });
-                  }
-              });
-          }
-      }
-  } catch(e) {}
-
-  // ⚡ Bolt: Booking Report Sync (Latest Data Top-Down)
-  // Fields to update from Booking Report:
-  // D(Dest)->Col 6(F), E(ClientCode), F(ClientName)->Col 5(E), T(Net)->Col 4(D), U(NetNo)->Col 21(U)
-  // W(Content)->Col 3(C), X(Box)->Col 7(G), Y(Act)->Col 11(K), Z(Vol)->Col 12(L), AA(Chg)->Col 13(M)
-  // AO(User)->Col 9(I), AP(AutoDoer)->Col 16(P)
-  try {
+      const taskSS = getTaskSS(); // ⚡ Bolt: Define taskSS properly
       const brSheet = ss.getSheetByName("Booking_Report") || (taskSS ? taskSS.getSheetByName("Booking_Report") : null);
-      if(brSheet) {
+      if(brSheet && lastRow > 1) {
           const brData = brSheet.getDataRange().getValues();
           // Create map of AWB -> First Row (Latest)
           const brMap = {};
@@ -286,7 +249,8 @@ function getAllData(username) {
           for(let i=1; i<brData.length; i++) {
               const r = brData[i];
               const awbKey = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-              if(awbKey && !brMap[awbKey]) {
+              if(awbKey) {
+                  // ⚡ Bolt: Overwrite to ensure Latest (bottom) row is used
                   brMap[awbKey] = {
                       dest: r[3], // D
                       clientCode: r[4], // E
@@ -311,6 +275,11 @@ function getAllData(username) {
           for(let i=0; i<sData.length; i++) {
               const r = sData[i]; // Row data
               const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
+              const autoStatus = r[14]; // Col O
+              const onHold = r[27]; // Col AB
+
+              // ⚡ Bolt: Safety Check - Only update if "Pending" (or empty) AND not "On Hold"
+              if((autoStatus !== "Pending" && autoStatus !== "") || onHold === "On Hold") continue;
 
               if(brMap[awb]) {
                   const br = brMap[awb];
@@ -319,14 +288,14 @@ function getAllData(username) {
                       if(String(r[idx]) !== String(val)) {
                           r[idx] = val;
                           hasChange = true;
+                          // ⚡ Bolt: Update Display Values (data) so client gets latest data without refresh
+                          if(data[i]) data[i][idx] = String(val);
                       }
                   };
 
                   // Update Columns (Index = Col - 1)
                   ch(5, br.dest); // Col F (Dest) index 5
-                  ch(4, `${br.clientName}-${br.clientCode}`.slice(-4) === br.clientCode ? `${br.clientName}-${br.clientCode}` : br.clientName); // Simplified Client Logic?
-                  // User said: "In our system we uses a pattern like "Client Name","-","Client Code") and because of that pattern we uses =Right(4) system to get only client codes."
-                  // So we should construct "Name-Code".
+                  // Client: "Name-Code"
                   const clientStr = `${br.clientName}-${br.clientCode}`;
                   ch(4, clientStr); // Col E (Client) index 4
 
@@ -341,25 +310,23 @@ function getAllData(username) {
 
                   // For Auto Doer (Col P / 15) and Status (Col O / 14)
                   if(br.autoDoer) {
+                      const oldDoer = r[15];
                       ch(15, br.autoDoer);
                       if(r[14] !== 'Done' && r[14] !== 'Completed') ch(14, 'Done');
+
+                      // ⚡ Bolt: Trigger FMS Sync if Doer Changed
+                      if(oldDoer !== br.autoDoer) {
+                          fmsUpdates.push({ awb: awb, autoDoer: br.autoDoer });
+                      }
                   }
               }
           }
 
           if(hasChange) {
-              range.setValues(sData);
+              range.setValues(sData); // ⚡ Bolt: Persistence
           }
       }
   } catch(e) { console.error("Sync BR Error", e); }
-
-  // ⚡ Bolt Optimization: Batch write local updates to reduce API calls
-  if(updates.length > 0) {
-      const updatesOP = data.map(r => [r[14], r[15]]); // Columns O, P (Auto Status, Doer)
-      const updatesU = data.map(r => [r[20]]);         // Column U (Net No)
-      sh.getRange(2, 15, updatesOP.length, 2).setValues(updatesOP);
-      sh.getRange(2, 21, updatesU.length, 1).setValues(updatesU);
-  }
 
   // ⚡ Bolt Optimization: Batch write FMS updates
   if(fmsUpdates.length > 0) {
