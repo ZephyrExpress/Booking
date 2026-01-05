@@ -15,7 +15,7 @@ function doGet(e) {
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(10000)) return jsonResponse("error", "System Busy");
+  let hasLock = false;
 
   try {
     let body = {};
@@ -37,6 +37,13 @@ function doPost(e) {
 
     if (!body) body = {};
     const act = body.action;
+
+    // ⚡ Bolt Optimization: Only lock for Write operations to prevent 'System Busy' on concurrent reads
+    const READ_ACTIONS = ['login', 'getAllData', 'getAdminRequests', 'getUsers', 'getRecent', 'getShipmentDetails', 'getBillingData'];
+    if (!READ_ACTIONS.includes(act)) {
+        if (!lock.tryLock(10000)) return jsonResponse("error", "System Busy");
+        hasLock = true;
+    }
 
     // --- 1. AUTH ---
     if (act === "login") return handleLogin(body.username, body.password);
@@ -94,7 +101,7 @@ function doPost(e) {
   } catch (err) {
       return jsonResponse("error", err.toString());
   } finally {
-      lock.releaseLock();
+      if (hasLock) lock.releaseLock();
   }
 }
 
@@ -395,12 +402,16 @@ function getAllData(username) {
   let myToDo = [];
   let completedManifest = [];
   let holdings = [];
+  let allAwbs = []; // ⚡ Bolt: Lightweight list for instant duplicate checks
 
   let inboundTodayCount = 0;
   const getNormDate = (d) => new Date(d).setHours(0,0,0,0);
   const todayTime = getNormDate(new Date());
 
   data.forEach(r => {
+    const rId = String(r[0]);
+    if(rId) allAwbs.push(rId);
+
     if(getNormDate(r[1]) === todayTime) inboundTodayCount++;
 
     const item = {
@@ -455,6 +466,7 @@ function getAllData(username) {
     workflow: { toAssign: toAssign, toDo: myToDo },
     manifest: completedManifest,
     holdings: holdings,
+    allAwbs: allAwbs,
     adminPool: pendingPaper.filter(x => !x.assignee)
   });
 }
