@@ -771,6 +771,7 @@ function handleBulkAssign(b) {
     const idMap = {};
     ids.forEach((id, i) => { idMap[String(id).replace(/'/g, "").trim().toLowerCase()] = i + 2; });
 
+    // ⚡ Bolt Fix: Explicitly EXCLUDE 'user' column (9) from updates
     // We can't use RangeList easily for different values, so we iterate
     // But we can optimize by reading existing data if needed, though here we just write.
     // For max speed in GAS, fewer calls is better. But random access writes are slow.
