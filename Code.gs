@@ -409,7 +409,7 @@ function getAllData(username) {
   const todayTime = getNormDate(new Date());
 
   data.forEach(r => {
-    const rId = String(r[0]);
+    const rId = String(r[0]).replace(/'/g, "").trim();
     if(rId) allAwbs.push(rId);
 
     if(getNormDate(r[1]) === todayTime) inboundTodayCount++;
