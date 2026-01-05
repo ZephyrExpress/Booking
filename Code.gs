@@ -664,8 +664,12 @@ function handleManifestBatch(b) {
 function handleSubmit(body){
   if(!body.awb) return jsonResponse("error","Missing Fields");
   const ss=SpreadsheetApp.getActiveSpreadsheet(), sh=ss.getSheetByName("Shipments"), bx=ss.getSheetByName("BoxDetails");
-  const lr=sh.getRange(Math.max(1,sh.getLastRow()-100),1,Math.min(101,sh.getLastRow())).getValues().flat();
-  const exists = lr.some(existing => String(existing).replace(/'/g, "").trim().toLowerCase() === String(body.awb).trim().toLowerCase());
+  // ⚡ Bolt Fix: Check ALL rows for duplicates, not just the last 100.
+  // Reading a single column is fast enough (approx 100ms for 5000 rows).
+  const lastRow = sh.getLastRow();
+  const allIds = lastRow > 1 ? sh.getRange(2, 1, lastRow - 1, 1).getValues().flat() : [];
+  const targetAwb = String(body.awb).trim().toLowerCase();
+  const exists = allIds.some(existing => String(existing).replace(/'/g, "").trim().toLowerCase() === targetAwb);
   if(exists) return jsonResponse("error","AWB Exists");
 
   let tA=0,tV=0,tC=0,br=[];
