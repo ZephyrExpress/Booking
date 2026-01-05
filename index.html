@@ -11,6 +11,9 @@
   <link rel="icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
   <link rel="shortcut icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
+  <link rel="icon" sizes="192x192" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
+  <link rel="icon" sizes="512x512" href="https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png">
+  <link rel="manifest" href='data:application/manifest+json,{"name":"Zephyr Express","short_name":"Zephyr","start_url":".","display":"standalone","background_color":"#f8fafc","theme_color":"#003399","icons":[{"src":"https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png","sizes":"192x192","type":"image/png"},{"src":"https://raw.githubusercontent.com/zephyrexpress/Booking/main/Icon.png","sizes":"512x512","type":"image/png"}]}'>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Zephyr Express">
@@ -535,7 +538,7 @@
             </div>
             <div class="table-responsive border rounded" style="max-height: 600px; overflow-y: auto;">
                 <table class="table table-hover align-middle mb-0 small">
-                    <thead class="bg-light sticky-top"><tr><th style="width:40px"><input type="checkbox" onchange="toggleRc(this)"></th><th>AWB</th><th>Date</th><th>Client</th><th>Dest</th><th>Wgt</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+                    <thead class="bg-light sticky-top"><tr><th style="width:40px"><input type="checkbox" onchange="toggleRc(this)"></th><th>AWB</th><th>Date</th><th>Client</th><th>Dest</th><th>Wgt</th><th>Status</th><th>Entry By</th><th class="text-end">Action</th></tr></thead>
                     <tbody id="rcList"></tbody>
                 </table>
             </div>
@@ -549,6 +552,7 @@
                 <li class="nav-item"><button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tab-users">User & Permissions</button></li>
                 <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-reqs">Transfer Requests</button></li>
                 <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-dd">Dropdown Manager</button></li>
+                <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-bill">Billing Panel</button></li>
              </ul>
 
              <div class="tab-content">
@@ -606,6 +610,18 @@
                       </div>
                       <div class="d-flex gap-2 bg-light p-2 rounded"><select id="dd_del" class="form-select"></select><button class="btn btn-danger" onclick="delDd()">Delete</button></div>
                  </div>
+
+                 <!-- Billing Tab -->
+                 <div class="tab-pane fade" id="tab-bill">
+                      <div class="alert alert-info small"><i class="bi bi-info-circle me-1"></i> Generates report from latest Booking Report data.</div>
+                      <div class="row g-3 align-items-end mb-4">
+                          <div class="col-md-3"><label class="small fw-bold">From Date</label><input type="date" id="bill_from" class="form-control"></div>
+                          <div class="col-md-3"><label class="small fw-bold">To Date</label><input type="date" id="bill_to" class="form-control"></div>
+                          <div class="col-md-3"><label class="small fw-bold">Network</label><select id="bill_net" class="form-select"><option value="">All Networks</option></select></div>
+                          <div class="col-md-3"><label class="small fw-bold">Client</label><select id="bill_client" class="form-select"><option value="">All Clients</option></select></div>
+                          <div class="col-12"><button class="btn btn-primary w-100 fw-bold" onclick="getBillingData()">Generate & Export</button></div>
+                      </div>
+                 </div>
              </div>
          </div>
       </div>
@@ -640,8 +656,8 @@
              <div class="alert alert-warning small border-warning"><i class="bi bi-exclamation-triangle me-2"></i>Edits are logged with your username and timestamp.</div>
              <input type="hidden" id="e_awb_hidden">
              <div class="row g-3 mb-3">
-                 <div class="col-md-6"><label class="small fw-bold">AWB</label><input id="e_awb" class="form-control bg-light" readonly></div>
-                 <div class="col-md-6"><label class="small fw-bold">Date</label><input id="e_date" class="form-control bg-light" readonly></div>
+                 <div class="col-md-6"><label class="small fw-bold">AWB</label><input id="e_awb" class="form-control"></div>
+                 <div class="col-md-6"><label class="small fw-bold">Date</label><input id="e_date" type="date" class="form-control"></div>
                  <div class="col-md-6"><label class="small fw-bold">Client</label><select id="e_client" class="form-select"></select></div>
                  <div class="col-md-6"><label class="small fw-bold">Network</label><select id="e_net" class="form-select"></select></div>
                  <div class="col-md-6"><label class="small fw-bold">Destination</label><select id="e_dest" class="form-select"></select></div>
@@ -649,7 +665,8 @@
                  <div class="col-md-4"><label class="small fw-bold">Act Wgt</label><input id="e_act" type="number" step="any" class="form-control"></div>
                  <div class="col-md-4"><label class="small fw-bold">Vol Wgt</label><input id="e_vol" type="number" step="any" class="form-control"></div>
                  <div class="col-md-4"><label class="small fw-bold">Chg Wgt</label><input id="e_chg" type="number" step="any" class="form-control"></div>
-                 <div class="col-12"><label class="small fw-bold">Extra Charges</label><input id="e_extra" class="form-control"></div>
+                 <div class="col-12"><label class="small fw-bold">Extra Charges</label><div id="e_extra_container" class="d-flex flex-wrap gap-2 p-2 border rounded bg-light"></div></div>
+                 <div class="col-12"><label class="small fw-bold">Extra Charges Remarks</label><textarea id="e_remarks" class="form-control" rows="2"></textarea></div>
              </div>
              <button type="button" class="btn btn-primary w-100 fw-bold" onclick="saveEditShipment()">Save Changes</button>
          </form>
@@ -859,6 +876,21 @@ async function syncData(init=false){
   try {
      const r = await fetchGet('getAllData');
      if(r.result==="success"){
+        // ⚡ Bolt Optimization: Pre-calculate formatted dates to avoid O(N) re-parsing during render loops
+        const fmt = (d) => d ? new Date(d).toLocaleDateString() : '';
+        const processList = (list) => { if(list) list.forEach(x => x.fmtDate = fmt(x.date)); };
+
+        processList(r.manifest);
+        processList(r.holdings);
+        if(r.overview) {
+            processList(r.overview.auto);
+            processList(r.overview.paper);
+        }
+        if(r.workflow) {
+            processList(r.workflow.toAssign);
+            processList(r.workflow.toDo);
+        }
+
         window.APP_DATA = r;
         if(r.role) curRole = r.role;
         curPerms = r.perms || [];
@@ -904,7 +936,13 @@ function updateNavVisibility() {
     show('nav-holdings', 'holdings');
     show('nav-taskhub', 'taskhub');
     show('nav-manifest', 'manifest');
-    document.getElementById('nav-receivers').style.display = 'flex';
+
+    // ⚡ Bolt Fix: Hide Receivers Slip from Admin/Staff
+    if(role.includes('owner')) {
+        document.getElementById('nav-receivers').style.display = 'flex';
+    } else {
+        document.getElementById('nav-receivers').style.display = 'none';
+    }
 
     const taskLabel = document.getElementById('taskLabel');
     if (taskLabel) {
@@ -1369,12 +1407,18 @@ function initForms(){
 function updDd(){
    if(!window.APP_DATA.static) return;
    const dd=window.APP_DATA.static.dropdowns; if(!dd) return;
-   fillSel('f_net', dd.networks); const mn=document.getElementById('man_net'); if(mn && mn.options.length<=1 && dd.networks){ let opts=''; dd.networks.forEach(x=>opts+=`<option value="${x}">${x}</option>`); mn.innerHTML+=opts; }
-   if(window.tomInstances.client && dd.clients){ window.tomInstances.client.clearOptions(); dd.clients.forEach(x=>window.tomInstances.client.addOption({value:x,text:x})); window.tomInstances.client.sync(); }
+   fillSel('f_net', dd.networks);
+   fillSel('bill_net', dd.networks);
+   const mn=document.getElementById('man_net'); if(mn && mn.options.length<=1 && dd.networks){ let opts=''; dd.networks.forEach(x=>opts+=`<option value="${x}">${x}</option>`); mn.innerHTML+=opts; }
+   if(window.tomInstances.client && dd.clients){
+       window.tomInstances.client.clearOptions(); dd.clients.forEach(x=>window.tomInstances.client.addOption({value:x,text:x})); window.tomInstances.client.sync();
+       const bc = document.getElementById('bill_client'); if(bc && bc.options.length<=1) { let opts=''; dd.clients.forEach(x=>opts+=`<option value="${x}">${x}</option>`); bc.innerHTML+=opts; }
+   }
    if(window.tomInstances.dest && dd.destinations){ window.tomInstances.dest.clearOptions(); dd.destinations.forEach(x=>window.tomInstances.dest.addOption({value:x,text:x})); window.tomInstances.dest.sync(); }
    const ex=document.getElementById('f_extra'); if(ex && dd.extraCharges) ex.innerHTML=dd.extraCharges.map(x=>`<div class="form-check"><input class="form-check-input" type="checkbox" value="${x}"><label class="form-check-label small">${x}</label></div>`).join('');
 
-   if(curRole==='admin' || curRole==='owner'){
+   const r = curRole.toLowerCase();
+   if(r==='admin' || r==='owner'){
      const cat=document.getElementById('dd_cat').value;
      if(cat==="hold") document.getElementById('dd_desc').style.display='block'; else document.getElementById('dd_desc').style.display='none';
      let targetList = [];
@@ -1431,6 +1475,27 @@ window.changePass=async function(u){ const p = prompt("New Password for "+u+":")
 
 window.decideTr=async function(rid,tid,typ,to,dec){ showSpin(true); await callApi({action:"approveTransfer", reqId:rid, taskId:tid, type:typ, to:to, decision:dec}); renderAdminPanel(); showSpin(false); }
 window.exportPool=function(){ const data = window.APP_DATA.adminPool.map(x=>({"AWB":x.id,"Client":x.client,"Net":x.net,"Status":x.assignee?"Assigned":"Unassigned","Assignee":x.assignee||""})); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), "Pool"); XLSX.writeFile(wb, "Pool.xlsx"); }
+
+window.getBillingData = async function() {
+    const f = document.getElementById('bill_from').value;
+    const t = document.getElementById('bill_to').value;
+    const net = document.getElementById('bill_net').value;
+    const client = document.getElementById('bill_client').value;
+    if(!f || !t) return alert("Select Date Range");
+
+    showSpin(true);
+    const r = await callApi({action: 'getBillingData', from: f, to: t, net: net, client: client});
+    showSpin(false);
+
+    if(r.result === "success") {
+        if(!r.data || !r.data.length) return alert("No data found for range.");
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.data), "Billing Report");
+        XLSX.writeFile(wb, `Billing_${f}_to_${t}.xlsx`);
+    } else {
+        alert("Error: " + r.message);
+    }
+}
 window.switchManifestView = function(view) {
    document.querySelectorAll('#manTabs .nav-link').forEach(el => el.classList.remove('active'));
    const idx = view === 'pending' ? 0 : (view === 'daily' ? 1 : 2);
@@ -1464,7 +1529,7 @@ window.renderManifest = function() {
     document.getElementById('manifestEmptyState').style.display = 'none';
     list.innerHTML = filtered.map(x => {
         const badge = x.batchNo ? `<span class="badge bg-secondary" title="In Batch: ${x.batchNo}">History</span>` : `<span class="badge bg-success">Ready</span>`;
-        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check pending-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${badge}</td></tr>`;
+        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check pending-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${x.fmtDate}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${badge}</td></tr>`;
     }).join('');
 };
 
@@ -1485,8 +1550,8 @@ window.renderDailyManifest = function() {
 
     const filtered = items.filter(x => {
         // ⚡ Bolt Fix: Show all items from today (Inbound OR Manifested)
-        const inboundDate = new Date(x.date).toLocaleDateString();
-        const isToday = (x.manifestDate === today) || (inboundDate === today);
+        // Optimization: Use pre-calculated fmtDate
+        const isToday = (x.manifestDate === today) || (x.fmtDate === today);
 
         const matchesNet = net ? x.net === net : true;
         const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
@@ -1502,7 +1567,7 @@ window.renderDailyManifest = function() {
 
     list.innerHTML = filtered.map(x => {
         const batchBadge = x.batchNo ? `<span class="badge bg-secondary">${x.batchNo}</span>` : `<span class="badge bg-success">Pending</span>`;
-        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check daily-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${new Date(x.date).toLocaleDateString()}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${batchBadge}</td></tr>`;
+        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check daily-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${x.fmtDate}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${batchBadge}</td></tr>`;
     }).join('');
 };
 
@@ -1607,7 +1672,8 @@ window.ahmAdd = async function() {
              id: s.id, date: s.date, net: s.net, client: s.client, dest: s.dest,
              details: `${s.boxes} Boxes | ${s.chgWgt} Kg`,
              chgWgt: s.chgWgt, boxes: s.boxes, netNo: s.netNo,
-             batchNo: "" 
+             batchNo: "",
+             fmtDate: new Date(s.date).toLocaleDateString() // ⚡ Bolt: Add pre-calc date
         };
 
         if(existingIdx > -1) {
@@ -1815,11 +1881,12 @@ window.renderReceivers = function() {
         <tr>
             <td><input type="checkbox" value="${x.id}"></td>
             <td class="fw-bold font-monospace">${x.id}</td>
-            <td>${new Date(x.date).toLocaleDateString()}</td>
+            <td>${x.fmtDate}</td>
             <td>${(x.client||'').slice(0,15)}</td>
             <td>${x.dest}</td>
             <td>${x.chgWgt}</td>
             <td><span class="badge bg-light text-dark border">${x.holdStatus === "On Hold" ? "Hold" : (x.batchNo ? "Manifested" : "Pending")}</span></td>
+            <td><small class="text-muted">${x.user||'-'}</small></td>
             <td class="text-end">
                 <button class="btn btn-sm btn-outline-dark" onclick="fetchAndPrintReceiver('${x.id}')" title="Print Slip"><i class="bi bi-printer"></i></button>
                 <button class="btn btn-sm btn-outline-primary ms-1" onclick="openEditModal('${x.id}')" title="Edit"><i class="bi bi-pencil"></i></button>
@@ -1944,6 +2011,12 @@ window.downloadReceiverPdf = function(data) {
 
         doc.line(pageWidth - 60, cy, pageWidth - 10, cy);
         doc.text("Receiver Signature", pageWidth - 60, cy + 5);
+
+        // Entry User
+        if(s.user) {
+            doc.setFontSize(7); doc.setFont("helvetica", "italic");
+            doc.text(`Entry By: ${s.user}`, 10, cy + 10);
+        }
 
         // Border
         doc.setLineWidth(0.2);
@@ -2070,7 +2143,16 @@ window.openEditModal = async function(id) {
     const s = r.shipment;
     document.getElementById('e_awb_hidden').value = s.id;
     document.getElementById('e_awb').value = s.id;
-    document.getElementById('e_date').value = new Date(s.date).toLocaleDateString();
+    // Format date for input type=date (YYYY-MM-DD)
+    if(s.date) {
+        const d = new Date(s.date);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        document.getElementById('e_date').value = `${y}-${m}-${day}`;
+    } else {
+        document.getElementById('e_date').value = '';
+    }
 
     // Fill dropdowns if needed (similar to initForms)
     const dd = window.APP_DATA.static.dropdowns;
@@ -2078,6 +2160,12 @@ window.openEditModal = async function(id) {
         fillSel('e_net', dd.networks);
         fillSel('e_client', dd.clients);
         fillSel('e_dest', dd.destinations);
+
+        // Generate Checkboxes for Extra Charges
+        const ecContainer = document.getElementById('e_extra_container');
+        if(ecContainer && dd.extraCharges) {
+            ecContainer.innerHTML = dd.extraCharges.map(x => `<div class="form-check"><input class="form-check-input e-extra-chk" type="checkbox" value="${x}"><label class="form-check-label small">${x}</label></div>`).join('');
+        }
     }
 
     document.getElementById('e_net').value = s.net;
@@ -2087,14 +2175,27 @@ window.openEditModal = async function(id) {
     document.getElementById('e_act').value = s.actWgt;
     document.getElementById('e_vol').value = s.volWgt;
     document.getElementById('e_chg').value = s.chgWgt;
-    document.getElementById('e_extra').value = s.extra || "";
+    document.getElementById('e_remarks').value = s.rem || "";
+
+    // Parse existing extra charges (string) to check boxes
+    const existingExtra = (s.extra || "").split(',').map(x => x.trim());
+    document.querySelectorAll('.e-extra-chk').forEach(chk => {
+        if(existingExtra.includes(chk.value)) chk.checked = true;
+    });
 
     new bootstrap.Modal(document.getElementById('editShipmentModal')).show();
 };
 
 window.saveEditShipment = async function() {
     const awb = document.getElementById('e_awb_hidden').value;
+    const newAwb = document.getElementById('e_awb').value;
+
+    let extraArr = [];
+    document.querySelectorAll('.e-extra-chk:checked').forEach(c => extraArr.push(c.value));
+
     const updates = {
+        awb: newAwb,
+        date: document.getElementById('e_date').value,
         net: document.getElementById('e_net').value,
         client: document.getElementById('e_client').value,
         dest: document.getElementById('e_dest').value,
@@ -2102,7 +2203,8 @@ window.saveEditShipment = async function() {
         actWgt: document.getElementById('e_act').value,
         volWgt: document.getElementById('e_vol').value,
         chgWgt: document.getElementById('e_chg').value,
-        extra: document.getElementById('e_extra').value
+        extra: extraArr.join(', '),
+        remarks: document.getElementById('e_remarks').value
     };
 
     if(!updates.net || !updates.client || !updates.dest) return alert("Network, Client and Destination are mandatory.");
@@ -2112,7 +2214,7 @@ window.saveEditShipment = async function() {
     showSpin(true);
     const r = await callApi({
         action: 'editShipment',
-        awb: awb,
+        awb: awb, // Original AWB for lookup
         updates: updates,
         user: curUser
     });
@@ -2124,6 +2226,94 @@ window.saveEditShipment = async function() {
         syncData(false);
     } else {
         alert('Error: ' + r.message);
+    }
+}
+
+window.submitCorrection = async function(id) {
+    const net = document.getElementById('fix_net').value;
+    const dest = document.getElementById('fix_dest').value;
+    if(!net || !dest) return alert("Select both Network and Destination");
+
+    showSpin(true);
+    const r = await callApi({action: 'updateShipmentDetails', awb: id, network: net, destination: dest});
+    if(r.result === "success") {
+        // Now clear hold
+        await callApi({action:"manageHold", subAction:"clear", awb:id, remarks:"Hold cleared after correction"});
+        toast("Correction Saved & Hold Cleared");
+        clearHoldSearch();
+        syncData(false);
+    } else {
+        alert("Error: " + r.message);
+    }
+    showSpin(false);
+}
+
+// ⚡ Bolt: Custom Enter Navigation for Inbound Form
+document.addEventListener('keydown', function(e) {
+    if(e.key !== 'Enter') return;
+
+    const active = document.activeElement;
+    if(!active) return;
+
+    // Must be inside #shipForm or specific inputs
+    const form = active.closest('#shipForm');
+    if(!form) return;
+
+    // Ignore textareas (let them insert newlines) and Submit Buttons
+    if(active.tagName === 'TEXTAREA' || (active.tagName === 'BUTTON' && active.type === 'submit')) return;
+
+    // Special Handling for TomSelect
+    const tsWrapper = active.closest('.ts-wrapper');
+    if(tsWrapper) {
+        // If dropdown is open, let TomSelect handle it (Select item)
+        // Check if .ts-dropdown is visible (TomSelect adds .dropdown-active to wrapper)
+        if(tsWrapper.classList.contains('dropdown-active')) {
+            // Allow default behavior (selection).
+            // We might want to move focus AFTER selection, but TomSelect's event handling is complex.
+            // For now, let TomSelect consume Enter to select. User can press Enter again to move?
+            // Actually, request says "select current one and move".
+            // If we don't preventDefault, TomSelect selects.
+            // We can try to move focus on the NEXT tick.
+            setTimeout(() => moveFocusNext(form, active), 50);
+            return;
+        }
+    }
+
+    e.preventDefault();
+    moveFocusNext(form, active);
+});
+
+function moveFocusNext(form, currentEl) {
+    // Get all focusable elements in logical order
+    // Exclude hidden, disabled, and non-tabbable
+    const candidates = Array.from(form.querySelectorAll('input, select, textarea, button, .ts-control'));
+
+    const visibleCandidates = candidates.filter(el => {
+        return !el.disabled &&
+               el.type !== 'hidden' &&
+               el.offsetParent !== null && // visible
+               el.tabIndex !== -1 &&
+               !el.classList.contains('ts-hidden-accessible'); // Skip TomSelect hidden inputs
+    });
+
+    // Find current index
+    // If current is inside TomSelect, the active element is the input inside .ts-control
+    // But .ts-control itself might be the candidate we found?
+    // TomSelect structure: .ts-wrapper > .ts-control > input
+
+    let currentIndex = visibleCandidates.indexOf(currentEl);
+
+    if(currentIndex === -1) {
+        // Fallback for nested inputs
+        currentIndex = visibleCandidates.findIndex(c => c.contains(currentEl) || c === currentEl);
+    }
+
+    if(currentIndex > -1 && currentIndex < visibleCandidates.length - 1) {
+        const next = visibleCandidates[currentIndex + 1];
+        next.focus();
+        if(next.tagName === 'INPUT' && typeof next.select === 'function') {
+            next.select();
+        }
     }
 }
 </script></body></html>
