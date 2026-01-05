@@ -666,6 +666,7 @@ function handleBulkAssign(b) {
     const idMap = {};
     ids.forEach((id, i) => { idMap[String(id).replace(/'/g, "").trim().toLowerCase()] = i + 2; });
 
+    // ⚡ Bolt Fix: Explicitly EXCLUDE 'user' column (9) from updates
     // We can't use RangeList easily for different values, so we iterate
     // But we can optimize by reading existing data if needed, though here we just write.
     // For max speed in GAS, fewer calls is better. But random access writes are slow.
@@ -717,6 +718,7 @@ function handleEditShipment(b) {
 
     // Mapping fields to columns (1-based)
     // 4: Net, 5: Client, 6: Dest, 7: Boxes, 8: Extra, 11: ActWgt, 12: VolWgt, 13: ChgWgt
+    // ⚡ Bolt Fix: Explicitly EXCLUDE 'user' column (9) from edits. Column 9 is 'user' (Entry User).
     const colMap = {
         'net': 4, 'client': 5, 'dest': 6, 'boxes': 7,
         'actWgt': 11, 'volWgt': 12, 'chgWgt': 13, 'extra': 8, 'details': 14
