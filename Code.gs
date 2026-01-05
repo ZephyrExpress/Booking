@@ -402,12 +402,16 @@ function getAllData(username) {
   let myToDo = [];
   let completedManifest = [];
   let holdings = [];
+  let allAwbs = []; // ⚡ Bolt: Lightweight list for instant duplicate checks
 
   let inboundTodayCount = 0;
   const getNormDate = (d) => new Date(d).setHours(0,0,0,0);
   const todayTime = getNormDate(new Date());
 
   data.forEach(r => {
+    const rId = String(r[0]);
+    if(rId) allAwbs.push(rId);
+
     if(getNormDate(r[1]) === todayTime) inboundTodayCount++;
 
     const item = {
@@ -462,6 +466,7 @@ function getAllData(username) {
     workflow: { toAssign: toAssign, toDo: myToDo },
     manifest: completedManifest,
     holdings: holdings,
+    allAwbs: allAwbs,
     adminPool: pendingPaper.filter(x => !x.assignee)
   });
 }
