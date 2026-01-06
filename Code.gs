@@ -350,7 +350,7 @@ function getAllData(username) {
                   ch(10, br.act); // Col K (Act) index 10
                   ch(11, br.vol); // Col L (Vol) index 11
                   ch(12, br.chg); // Col M (Chg) index 12
-                  ch(8, br.user); // Col I (User) index 8
+                  // ch(8, br.user); // Col I (User) index 8 - ⚡ Bolt: Removed to prevent overwriting original entry user
 
                   // For Auto Doer (Col P / 15) and Status (Col O / 14)
                   if(br.autoDoer) {
