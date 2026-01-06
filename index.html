@@ -231,7 +231,7 @@
                  <div class="col-md-4">
                     <label class="fun-label">Airway Bill Number *</label>
                     <div class="input-group">
-                        <input id="f_awb" class="form-control fun-input font-monospace" required placeholder="000-00000000">
+                        <input id="f_awb" class="form-control fun-input font-monospace" required placeholder="000-00000000" onblur="checkDuplicateAwb(this)">
                         <button class="btn btn-warning" id="btnAutoAwb" type="button" onclick="generateAwb()" title="Auto Generate"><i class="bi bi-magic"></i></button>
                         <button class="btn btn-dark" type="button" onclick="startScanner('f_awb')" title="Scan Barcode"><i class="bi bi-qr-code-scan"></i></button>
                     </div>
@@ -769,6 +769,21 @@ function debounce(func, wait) {
     };
 }
 
+// ⚡ Bolt New Feature: Client-side Duplicate Check
+window.checkDuplicateAwb = function(el) {
+    const val = el.value.trim();
+    if(!val) return;
+
+    // Check against cached list of all AWBs
+    const exists = (window.APP_DATA.allAwbs || []).some(x => x.toLowerCase() === val.toLowerCase());
+
+    if(exists) {
+        alert("⚠️ DUPLICATE AWB DETECTED!\n\nThis shipment ID already exists in the system.");
+        el.value = ""; // Clear the input
+        setTimeout(() => el.focus(), 100); // Refocus
+    }
+}
+
 // Debounced wrappers
 window.d_renderManifest = debounce(() => renderManifest(), 300);
 window.d_renderDailyManifest = debounce(() => renderDailyManifest(), 300);
@@ -1228,6 +1243,7 @@ function onScanSuccess(decodedText, decodedResult) {
     if(el) {
         el.value = decodedText;
         if(scanTargetId === 'holdSearchAwb') searchHoldings();
+        if(scanTargetId === 'f_awb') checkDuplicateAwb(el);
     }
     stopScanner();
     // Beep sound

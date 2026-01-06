@@ -36,11 +36,17 @@ function doPost(e) {
     }
 
     if (!body) body = {};
-    const act = body.action;
+
+    // ⚡ Bolt Fix: Robust Action Parsing & Normalization
+    let act = body.action;
+    if (!act && e.parameter && e.parameter.action) act = e.parameter.action; // Fallback
+    act = String(act || "").trim();
 
     // ⚡ Bolt Optimization: Only lock for Write operations to prevent 'System Busy' on concurrent reads
     const READ_ACTIONS = ['login', 'getAllData', 'getAdminRequests', 'getUsers', 'getRecent', 'getShipmentDetails', 'getBillingData'];
     if (!READ_ACTIONS.includes(act)) {
+        // Only try to lock if it's NOT a read action.
+        // If action is unknown or empty, we lock to be safe (prevent concurrent writes).
         if (!lock.tryLock(10000)) return jsonResponse("error", "System Busy");
         hasLock = true;
     }
