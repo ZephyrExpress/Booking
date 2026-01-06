@@ -384,9 +384,16 @@ function getAllData(username) {
               // ⚡ Bolt Fix: Shift +2 (N=14 -> P=16)
               const range = fms.getRange(7, 16, numRows, 1);
               const doerData = range.getValues();
+
+              // ⚡ Bolt: Also sync Auto Status to Col N (14)
+              const statusRange = fms.getRange(7, 14, numRows, 1);
+              const statusData = statusRange.getValues();
+
               const ids = fms.getRange(7, 2, numRows, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
 
               let changed = false;
+              let statusChanged = false;
+
               fmsUpdates.forEach(u => {
                   const idx = ids.indexOf(u.awb);
                   if(idx > -1) {
@@ -394,10 +401,17 @@ function getAllData(username) {
                           doerData[idx][0] = u.autoDoer;
                           changed = true;
                       }
+                      // Only write 'Done' if not already done/completed
+                      const currentStatus = String(statusData[idx][0]).toLowerCase();
+                      if(currentStatus !== 'done' && currentStatus !== 'completed') {
+                          statusData[idx][0] = "Done";
+                          statusChanged = true;
+                      }
                   }
               });
 
               if(changed) range.setValues(doerData);
+              if(statusChanged) statusRange.setValues(statusData);
           }
       } catch(e) { console.error("FMS Sync Error", e); }
   }
