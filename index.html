@@ -893,7 +893,19 @@ async function syncData(init=false){
      if(r.result==="success"){
         // ⚡ Bolt Optimization: Pre-calculate formatted dates to avoid O(N) re-parsing during render loops
         const fmt = (d) => d ? new Date(d).toLocaleDateString() : '';
-        const processList = (list) => { if(list) list.forEach(x => x.fmtDate = fmt(x.date)); };
+        // ⚡ Bolt Optimization: Pre-calculate search strings for O(1) filtering
+        const processList = (list) => {
+            if(list) list.forEach(x => {
+                x.fmtDate = fmt(x.date);
+                // Pre-calc for Manifest/Daily: ID + NetNo + Net
+                x.searchStr = (x.id + ' ' + (x.netNo||'') + ' ' + (x.net||'')).toLowerCase();
+                // Pre-calc for Receivers: ID + Client + NetNo
+                x.searchRc = (x.id + ' ' + (x.client||'') + ' ' + (x.netNo||'')).toLowerCase();
+                // Pre-calc specific fields for Holdings search
+                x.idLower = x.id.toLowerCase();
+                x.netNoLower = (x.netNo||'').toLowerCase();
+            });
+        };
 
         processList(r.manifest);
         processList(r.holdings);
@@ -1090,7 +1102,17 @@ window.searchHoldings = function() {
     const sources = [window.APP_DATA.overview.auto, window.APP_DATA.overview.paper, window.APP_DATA.holdings, window.APP_DATA.manifest];
     for(const source of sources) {
         if(!source) continue;
-        match = source.find(x => (awb && x.id.toLowerCase().includes(awb)) || (netSearch && x.netNo && x.netNo.toLowerCase().includes(netSearch)));
+        // ⚡ Bolt Optimization: Use pre-calc fields if available
+        match = source.find(x => {
+            // Logic: (AWB Match) OR (Network Match)
+            const idMatch = awb ? (x.idLower ? x.idLower.includes(awb) : x.id.toLowerCase().includes(awb)) : false;
+            const netMatch = netSearch ? (x.netNoLower ? x.netNoLower.includes(netSearch) : (x.netNo||'').toLowerCase().includes(netSearch)) : false;
+
+            // If both terms are provided, EITHER can match (based on original logic: "(awb && match) || (net && match)")
+            // But wait, original code was: match = find(x => (awb && match) || (net && match))
+            // This means if I type BOTH, and ONE matches, it returns true.
+            return (awb && idMatch) || (netSearch && netMatch);
+        });
         if(match) break;
     }
 
@@ -1532,7 +1554,8 @@ window.renderManifest = function() {
 
     const filtered = items.filter(x => {
         const matchesNet = net ? x.net === net : true;
-        const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
+        // ⚡ Bolt Optimization: Use pre-calculated search string
+        const matchesTerm = term ? (x.searchStr || '').includes(term) : false;
         const shouldShow = (!x.batchNo) || (term && matchesTerm);
         return matchesNet && shouldShow && (!term || matchesTerm);
     });
@@ -1570,7 +1593,8 @@ window.renderDailyManifest = function() {
         const isToday = (x.manifestDate === today) || (x.fmtDate === today);
 
         const matchesNet = net ? x.net === net : true;
-        const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
+        // ⚡ Bolt Optimization: Use pre-calculated search string
+        const matchesTerm = term ? (x.searchStr || '').includes(term) : false;
         return isToday && matchesNet && (!term || matchesTerm);
     });
 
@@ -1618,7 +1642,8 @@ window.printDailyManifest = function() {
             const isToday = x.manifestDate === today;
             const hasBatch = !!x.batchNo;
             const matchesNet = manNet ? x.net === manNet : true;
-            const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
+            // ⚡ Bolt Optimization: Use pre-calculated search string
+            const matchesTerm = term ? (x.searchStr || '').includes(term) : false;
             return isToday && hasBatch && matchesNet && (!term || matchesTerm);
         }));
     }
@@ -1883,9 +1908,8 @@ window.renderReceivers = function() {
     // ⚡ Bolt Fix: Implement filtering for searchbar
     const filtered = uniqueItems.filter(x => {
         if(!term) return true;
-        return x.id.toLowerCase().includes(term) ||
-               (x.client||'').toLowerCase().includes(term) ||
-               (x.netNo||'').toLowerCase().includes(term);
+        // ⚡ Bolt Optimization: Use pre-calculated searchRc
+        return (x.searchRc || '').includes(term) || x.id.toLowerCase().includes(term) || (x.client||'').toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term);
     });
 
     if(!filtered.length) {
