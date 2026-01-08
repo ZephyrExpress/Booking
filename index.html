@@ -968,6 +968,7 @@ async function syncData(init=false){
 
         processList(r.manifest);
         processList(r.holdings);
+        processList(r.advance); // ⚡ Bolt: Format date for Advance tab
         if(r.overview) {
             processList(r.overview.auto);
             processList(r.overview.paper);
