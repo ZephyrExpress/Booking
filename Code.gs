@@ -101,6 +101,7 @@ function doPost(e) {
     if (act === "bulkAssign") return handleBulkAssign(body);
     if (act === "editShipment") return handleEditShipment(body);
     if (act === "getBillingData") return getBillingData(body.from, body.to, body.net, body.client);
+    if (act === "moveAdvance") return handleMoveAdvance(body);
 
     return jsonResponse("error", "Unknown Action: " + act);
 
@@ -245,7 +246,7 @@ function getAllData(username) {
   }
 
   const lastRow = sh.getLastRow();
-  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 31).getDisplayValues() : [];
+  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 32).getDisplayValues() : []; // ⚡ Bolt: Read Col 32 (Category)
 
   let updates = [];
   let fmsUpdates = [];
@@ -317,7 +318,7 @@ function getAllData(username) {
               }
           }
 
-          const range = sh.getRange(2, 1, lastRow-1, 31);
+          const range = sh.getRange(2, 1, lastRow-1, 32); // ⚡ Bolt: Expand range
           const sData = range.getValues();
           let hasChange = false;
 
@@ -424,6 +425,11 @@ function getAllData(username) {
   let holdings = [];
   let allAwbs = []; // ⚡ Bolt: Lightweight list for instant duplicate checks
 
+  // ⚡ Bolt: New Categories
+  let advance = [];
+  let directPaper = [];
+  let directSkip = [];
+
   let inboundTodayCount = 0;
   const getNormDate = (d) => new Date(d).setHours(0,0,0,0);
   const todayTime = getNormDate(new Date());
@@ -432,7 +438,9 @@ function getAllData(username) {
     const rId = String(r[0]).replace(/'/g, "").trim();
     if(rId) allAwbs.push(rId);
 
-    if(getNormDate(r[1]) === todayTime) inboundTodayCount++;
+    const category = r[31] ? String(r[31]).trim() : "Normal"; // Col 32 is Index 31
+
+    if(category === "Normal" && getNormDate(r[1]) === todayTime) inboundTodayCount++;
 
     const item = {
       id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
@@ -441,8 +449,31 @@ function getAllData(username) {
       actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
       netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
       batchNo: r[24], manifestDate: r[25], paperwork: r[26],
-      holdStatus: r[27], holdReason: r[28], holdRem: r[29], heldBy: r[30]
+      holdStatus: r[27], holdReason: r[28], holdRem: r[29], heldBy: r[30],
+      category: category
     };
+
+    // Filter Logic
+    if (category === "Advance") {
+        advance.push(item);
+        return; // Exclude from main flow
+    }
+
+    if (category === "Direct_Skip") {
+        directSkip.push(item);
+        return; // Exclude from main flow
+    }
+
+    if (category === "Direct_Paperwork") {
+        directPaper.push(item);
+        // Direct Paperwork needs to appear in Overview but NOT in standard "Shipments" lists usually.
+        // However, if it needs paperwork, we might want to track it.
+        // User said: "shown in Overview as a card".
+        // We will return it in `directPaper` and exclude from `pendingPaper` to avoid clutter if desired,
+        // OR include it if it fits the workflow.
+        // Given "should not be shown in shipments tab", let's separate it completely.
+        return;
+    }
 
     if (item.holdStatus === "On Hold") {
         holdings.push(item);
@@ -482,13 +513,33 @@ function getAllData(username) {
     perms: perms,
     static: staticData,
     stats: { inbound: inboundTodayCount, auto: pendingAuto.length, paper: pendingPaper.length, requests: reqList.length, holdings: holdings.length },
-    overview: { auto: pendingAuto, paper: pendingPaper },
+    overview: { auto: pendingAuto, paper: pendingPaper, directPaper: directPaper },
     workflow: { toAssign: toAssign, toDo: myToDo },
     manifest: completedManifest,
     holdings: holdings,
     allAwbs: allAwbs,
+    advance: advance,
     adminPool: pendingPaper.filter(x => !x.assignee)
   });
+}
+
+function handleMoveAdvance(b) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
+    const row = findRow(ss, b.awb);
+    if(row === -1) return jsonResponse("error", "AWB Not Found");
+
+    // Update Category to "Normal" and Date to Today
+    // Col 32 (AF) -> "Normal"
+    // Col 2 (B) -> Today
+
+    ss.getRange(row, 32).setValue("Normal");
+    ss.getRange(row, 2).setValue(new Date()); // Update Inbound Date
+
+    // Log
+    const oldLog = ss.getRange(row, 20).getValue();
+    ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Moved from Advance to Inbound]`);
+
+    return jsonResponse("success", "Moved to Inbound");
 }
 
 function getRecentShipments() {
@@ -723,14 +774,26 @@ function handleSubmit(body){
       holdReason = "Invalid Data";
   }
 
-  sh.appendRow([
+  // ⚡ Bolt: Handle Categories (Col 32/AF)
+  // Indices: 0-30 = Cols A-AE. Append logic needs to align.
+  // Original appendRow had 28 items explicitly + payee (30, 31).
+  // Let's ensure we map cleanly to the Sheet structure.
+  // Col 1 (A) to Col 31 (AE).
+  // New Category column is 32 (AF).
+
+  const category = body.category || "Normal";
+
+  const rowData = [
       "'"+body.awb, body.date, body.type, body.network, body.client, body.destination,
       body.totalBoxes, body.extraCharges, body.username, new Date(),
       tA.toFixed(2), tV.toFixed(2), tC.toFixed(2), body.extraRemarks,
       "Pending", "", "", "", "", "", "",
       body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
-      holdStatus, holdReason, "", body.payeeName, body.payeeContact
-  ]);
+      holdStatus, holdReason, "", body.payeeName, body.payeeContact,
+      category // Col 32 (AF)
+  ];
+
+  sh.appendRow(rowData);
 
   if(br.length) bx.getRange(bx.getLastRow()+1,1,br.length,8).setValues(br);
 
