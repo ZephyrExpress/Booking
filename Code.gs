@@ -268,8 +268,12 @@ function getAllData(username) {
 
   let updates = [];
   let fmsUpdates = [];
+
+  // ⚡ Bolt Optimization: Single Booking Report Read
+  // Consolidated reading of Booking_Report to avoid double API calls.
+  // We read once and build a comprehensive map for both 'updates' logic and 'sync' logic.
+  let brMap = null;
   try {
-      // Priority: Check Local Sheet first, then Remote (Task SS)
       let brSheet = ss.getSheetByName("Booking_Report");
       if (!brSheet) {
           const remoteSS = getTaskSS();
@@ -279,13 +283,24 @@ function getAllData(username) {
       if(brSheet) {
           const brLast = brSheet.getLastRow();
           if(brLast > 1) {
-              const brData = brSheet.getRange(2, 1, brLast-1, 41).getValues();
-              const brMap = {};
+              // Read all necessary columns (max 42 based on usage)
+              const brData = brSheet.getRange(2, 1, brLast-1, 42).getValues();
+              brMap = {};
+
               brData.forEach(r => {
                  const k = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-                 if(k) brMap[k] = { netNo: r[20], user: r[40] };
+                 // Use first occurrence (Top-Down Latest) logic from original Block 2
+                 if(k && !brMap[k]) {
+                     brMap[k] = {
+                        netNo: r[20], user: r[40], // Used by Block 1
+                        dest: r[3], clientCode: r[4], clientName: r[5], net: r[19],
+                        type: r[22], boxes: r[23], act: r[24], vol: r[25], chg: r[26],
+                        autoDoer: r[41] // AO=40, AP=41
+                     };
+                 }
               });
 
+              // --- Block 1: Update Auto Status (Legacy Logic) ---
               data.forEach((r, i) => {
                   const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
                   const autoStatus = r[14];
@@ -301,42 +316,12 @@ function getAllData(username) {
               });
           }
       }
-  } catch(e) {}
+  } catch(e) { console.error("Booking Report Read Error", e); }
 
   // ⚡ Bolt: Booking Report Sync (Latest Data Top-Down)
-  // Fields to update from Booking Report:
-  // D(Dest)->Col 6(F), E(ClientCode), F(ClientName)->Col 5(E), T(Net)->Col 4(D), U(NetNo)->Col 21(U)
-  // W(Content)->Col 3(C), X(Box)->Col 7(G), Y(Act)->Col 11(K), Z(Vol)->Col 12(L), AA(Chg)->Col 13(M)
-  // AO(User)->Col 9(I), AP(AutoDoer)->Col 16(P)
   try {
-      const brSheet = ss.getSheetByName("Booking_Report") || (taskSS ? taskSS.getSheetByName("Booking_Report") : null);
-      if(brSheet) {
-          const brData = brSheet.getDataRange().getValues();
-          // Create map of AWB -> First Row (Latest)
-          const brMap = {};
-          // Assuming Header Row 1
-          for(let i=1; i<brData.length; i++) {
-              const r = brData[i];
-              const awbKey = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-              if(awbKey && !brMap[awbKey]) {
-                  brMap[awbKey] = {
-                      dest: r[3], // D
-                      clientCode: r[4], // E
-                      clientName: r[5], // F
-                      net: r[19], // T
-                      netNo: r[20], // U
-                      type: r[22], // W
-                      boxes: r[23], // X
-                      act: r[24], // Y
-                      vol: r[25], // Z
-                      chg: r[26], // AA
-                      user: r[40], // AO
-                      autoDoer: r[41] // AP
-                  };
-              }
-          }
-
-          const range = sh.getRange(2, 1, lastRow-1, 33); // ⚡ Bolt: Expand range to 33 just in case
+      if(brMap) {
+          const range = sh.getRange(2, 1, lastRow-1, 33);
           const sData = range.getValues();
           let hasChange = false;
 
