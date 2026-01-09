@@ -3,6 +3,7 @@
    ========================================= */
 
 const TASK_SHEET_ID = "1_8VSzZdn8rKrzvXpzIfY_oz3XT9gi30jgzdxzQP4Bac";
+const ADVANCE_SHEET_NAME = "Advance_Records";
 
 function doGet(e) {
   // Serves the HTML page
@@ -101,6 +102,7 @@ function doPost(e) {
     if (act === "bulkAssign") return handleBulkAssign(body);
     if (act === "editShipment") return handleEditShipment(body);
     if (act === "getBillingData") return getBillingData(body.from, body.to, body.net, body.client);
+    if (act === "moveAdvance") return handleMoveAdvance(body);
 
     return jsonResponse("error", "Unknown Action: " + act);
 
@@ -162,7 +164,6 @@ function clearUserCache() {
 function getAllData(username) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let taskSS = null;
-  // FMS ACCESS ON HOLD: Wrap in strict try-catch to prevent timeouts or crashes
   const getTaskSS = () => {
       if(!taskSS) {
           try { taskSS = SpreadsheetApp.openById(TASK_SHEET_ID); }
@@ -173,6 +174,18 @@ function getAllData(username) {
 
   const sh = ss.getSheetByName("Shipments");
   if (!sh) return jsonResponse("error", "Shipments Sheet Missing");
+
+  // ⚡ Bolt: Ensure Sheet Columns (need 33 for Category - Index 32)
+  if (sh.getMaxColumns() < 33) sh.insertColumnsAfter(sh.getMaxColumns(), 33 - sh.getMaxColumns());
+
+  // ⚡ Bolt: Get Advance Sheet (Create if missing)
+  let advSh = ss.getSheetByName(ADVANCE_SHEET_NAME);
+  if (!advSh) {
+      advSh = ss.insertSheet(ADVANCE_SHEET_NAME);
+      // Copy header from Shipments
+      const h = sh.getRange(1,1,1,33).getValues();
+      advSh.getRange(1,1,1,33).setValues(h);
+  }
 
   const targetUser = String(username).trim().toLowerCase();
 
@@ -245,7 +258,13 @@ function getAllData(username) {
   }
 
   const lastRow = sh.getLastRow();
-  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 31).getDisplayValues() : [];
+  // ⚡ Bolt: Read 33 columns to include Category
+  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 33).getDisplayValues() : [];
+
+  // ⚡ Bolt: Read Advance Data
+  const advLast = advSh.getLastRow();
+  // ⚡ Bolt: Read 33 columns from Advance sheet too
+  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 33).getDisplayValues() : [];
 
   let updates = [];
   let fmsUpdates = [];
@@ -317,7 +336,7 @@ function getAllData(username) {
               }
           }
 
-          const range = sh.getRange(2, 1, lastRow-1, 31);
+          const range = sh.getRange(2, 1, lastRow-1, 33); // ⚡ Bolt: Expand range to 33 just in case
           const sData = range.getValues();
           let hasChange = false;
 
@@ -337,9 +356,7 @@ function getAllData(username) {
 
                   // Update Columns (Index = Col - 1)
                   ch(5, br.dest); // Col F (Dest) index 5
-                  ch(4, `${br.clientName}-${br.clientCode}`.slice(-4) === br.clientCode ? `${br.clientName}-${br.clientCode}` : br.clientName); // Simplified Client Logic?
-                  // User said: "In our system we uses a pattern like "Client Name","-","Client Code") and because of that pattern we uses =Right(4) system to get only client codes."
-                  // So we should construct "Name-Code".
+                  ch(4, `${br.clientName}-${br.clientCode}`.slice(-4) === br.clientCode ? `${br.clientName}-${br.clientCode}` : br.clientName);
                   const clientStr = `${br.clientName}-${br.clientCode}`;
                   ch(4, clientStr); // Col E (Client) index 4
 
@@ -424,13 +441,21 @@ function getAllData(username) {
   let holdings = [];
   let allAwbs = []; // ⚡ Bolt: Lightweight list for instant duplicate checks
 
+  // ⚡ Bolt: New Categories
+  let advance = [];
+  let directPaper = [];
+  let directSkip = [];
+
   let inboundTodayCount = 0;
   const getNormDate = (d) => new Date(d).setHours(0,0,0,0);
   const todayTime = getNormDate(new Date());
 
+  // Process Normal Data (Shipments Sheet)
   data.forEach(r => {
     const rId = String(r[0]).replace(/'/g, "").trim();
     if(rId) allAwbs.push(rId);
+
+    const category = "Normal"; // Items in Shipments are implicitly Normal now
 
     if(getNormDate(r[1]) === todayTime) inboundTodayCount++;
 
@@ -441,7 +466,8 @@ function getAllData(username) {
       actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
       netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
       batchNo: r[24], manifestDate: r[25], paperwork: r[26],
-      holdStatus: r[27], holdReason: r[28], holdRem: r[29], heldBy: r[30]
+      holdStatus: r[27], holdReason: r[28], holdRem: r[29], heldBy: r[30],
+      category: category
     };
 
     if (item.holdStatus === "On Hold") {
@@ -468,6 +494,29 @@ function getAllData(username) {
     }
   });
 
+  // Process Advance/Direct Data (Advance_Records Sheet)
+  advData.forEach(r => {
+      const rId = String(r[0]).replace(/'/g, "").trim();
+      if(rId) allAwbs.push(rId); // Add to global duplicate check list
+
+      // ⚡ Bolt Fix: Category is at Index 32 (Col 33/AG)
+      const category = r[32] ? String(r[32]).trim() : "Advance";
+
+      const item = {
+        id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
+        details: `${r[6]} Boxes | ${r[12]} Kg`,
+        user: r[8],
+        actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
+        netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
+        batchNo: r[24], manifestDate: r[25], paperwork: r[26],
+        holdStatus: r[27], category: category
+      };
+
+      if (category === "Advance") advance.push(item);
+      else if (category === "Direct_Paperwork") directPaper.push(item);
+      else if (category === "Direct_Skip") directSkip.push(item);
+  });
+
   let reqList = [];
   try {
       const rs = ss.getSheetByName("Requests");
@@ -482,13 +531,40 @@ function getAllData(username) {
     perms: perms,
     static: staticData,
     stats: { inbound: inboundTodayCount, auto: pendingAuto.length, paper: pendingPaper.length, requests: reqList.length, holdings: holdings.length },
-    overview: { auto: pendingAuto, paper: pendingPaper },
+    overview: { auto: pendingAuto, paper: pendingPaper, directPaper: directPaper },
     workflow: { toAssign: toAssign, toDo: myToDo },
     manifest: completedManifest,
     holdings: holdings,
     allAwbs: allAwbs,
+    advance: advance,
     adminPool: pendingPaper.filter(x => !x.assignee)
   });
+}
+
+function handleMoveAdvance(b) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const advSh = ss.getSheetByName(ADVANCE_SHEET_NAME);
+    if(!advSh) return jsonResponse("error", "Advance Sheet Missing");
+
+    const row = findRow(advSh, b.awb);
+    if(row === -1) return jsonResponse("error", "AWB Not Found in Advance Records");
+
+    // Get Data
+    // ⚡ Bolt Fix: Read 33 columns
+    const data = advSh.getRange(row, 1, 1, 33).getValues()[0];
+
+    // Modify for Transfer
+    data[1] = new Date(); // Update Date to Today (Received)
+    data[32] = "Normal";  // Update Category to Normal (Index 32)
+
+    // Append to Shipments
+    const sh = ss.getSheetByName("Shipments");
+    sh.appendRow(data);
+
+    // Delete from Advance
+    advSh.deleteRow(row);
+
+    return jsonResponse("success", "Moved to Inbound");
 }
 
 function getRecentShipments() {
@@ -695,14 +771,25 @@ function handleManifestBatch(b) {
 
 function handleSubmit(body){
   if(!body.awb) return jsonResponse("error","Missing Fields");
-  const ss=SpreadsheetApp.getActiveSpreadsheet(), sh=ss.getSheetByName("Shipments"), bx=ss.getSheetByName("BoxDetails");
-  // ⚡ Bolt Fix: Check ALL rows for duplicates, not just the last 100.
-  // Reading a single column is fast enough (approx 100ms for 5000 rows).
+  const ss=SpreadsheetApp.getActiveSpreadsheet();
+  const sh=ss.getSheetByName("Shipments");
+  const bx=ss.getSheetByName("BoxDetails");
+
+  // ⚡ Bolt: Check BOTH sheets for duplicates
   const lastRow = sh.getLastRow();
-  const allIds = lastRow > 1 ? sh.getRange(2, 1, lastRow - 1, 1).getValues().flat() : [];
+  const shipIds = lastRow > 1 ? sh.getRange(2, 1, lastRow - 1, 1).getValues().flat() : [];
+
+  let advIds = [];
+  const advSh = ss.getSheetByName(ADVANCE_SHEET_NAME);
+  if(advSh && advSh.getLastRow() > 1) {
+      advIds = advSh.getRange(2, 1, advSh.getLastRow() - 1, 1).getValues().flat();
+  }
+
   const targetAwb = String(body.awb).trim().toLowerCase();
-  const exists = allIds.some(existing => String(existing).replace(/'/g, "").trim().toLowerCase() === targetAwb);
-  if(exists) return jsonResponse("error","AWB Exists");
+  const existsShip = shipIds.some(x => String(x).replace(/'/g, "").trim().toLowerCase() === targetAwb);
+  const existsAdv = advIds.some(x => String(x).replace(/'/g, "").trim().toLowerCase() === targetAwb);
+
+  if(existsShip || existsAdv) return jsonResponse("error","AWB Exists");
 
   let tA=0,tV=0,tC=0,br=[];
   if(body.boxes) br=body.boxes.map(b=>{
@@ -723,14 +810,27 @@ function handleSubmit(body){
       holdReason = "Invalid Data";
   }
 
-  sh.appendRow([
+  // ⚡ Bolt: Handle Categories (Col 32/AF)
+  const category = body.category || "Normal";
+
+  const rowData = [
       "'"+body.awb, body.date, body.type, body.network, body.client, body.destination,
       body.totalBoxes, body.extraCharges, body.username, new Date(),
       tA.toFixed(2), tV.toFixed(2), tC.toFixed(2), body.extraRemarks,
       "Pending", "", "", "", "", "", "",
       body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
-      holdStatus, holdReason, "", body.payeeName, body.payeeContact
-  ]);
+      holdStatus, holdReason, "", body.payeeName, body.payeeContact,
+      category // Col 32 (AF)
+  ];
+
+  if(category === "Normal") {
+      sh.appendRow(rowData);
+  } else {
+      // Write to Advance Sheet
+      let targetSh = ss.getSheetByName(ADVANCE_SHEET_NAME);
+      if(!targetSh) targetSh = ss.insertSheet(ADVANCE_SHEET_NAME);
+      targetSh.appendRow(rowData);
+  }
 
   if(br.length) bx.getRange(bx.getLastRow()+1,1,br.length,8).setValues(br);
 

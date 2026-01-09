@@ -182,6 +182,7 @@
       <div class="nav-label">Main Menu</div>
       <a class="nav-item-custom active" id="nav-overview" onclick="switchTab('overview')" style="display:none"><i class="bi bi-grid-1x2 me-2"></i> Overview</a>
       <a class="nav-item-custom" id="nav-inbound" onclick="switchTab('inbound')" style="display:none"><i class="bi bi-box-seam me-2"></i> Inbound</a>
+      <a class="nav-item-custom" id="nav-advance" onclick="switchTab('advance')" style="display:none"><i class="bi bi-calendar-plus me-2"></i> Advance Records</a>
       <a class="nav-item-custom" id="nav-taskhub" onclick="switchTab('taskhub')" style="display:none"><i class="bi bi-check-circle me-2"></i> <span id="taskLabel">My Tasks</span></a>
       <a class="nav-item-custom" id="nav-manifest" onclick="switchTab('manifest')" style="display:none"><i class="bi bi-file-earmark-spreadsheet me-2"></i> Manifest</a>
       <a class="nav-item-custom" id="nav-receivers" onclick="switchTab('receivers')" style="display:none"><i class="bi bi-printer me-2"></i> Receivers Slip</a>
@@ -218,6 +219,31 @@
 
     <div class="main-container p-4">
 
+      <!-- ADVANCE TAB -->
+      <div id="advance-tab" class="tab-view" style="display:none;">
+         <div class="panel-card p-4">
+             <div class="d-flex justify-content-between align-items-center mb-4">
+                 <div>
+                     <h5 class="m-0 fw-bold text-primary"><i class="bi bi-calendar-plus me-2"></i>Advance Shipments</h5>
+                     <p class="text-muted small m-0">Pre-entered records pending physical receipt.</p>
+                 </div>
+                 <div class="input-group input-group-sm" style="width:200px;">
+                     <span class="input-group-text"><i class="bi bi-search"></i></span>
+                     <input id="adv_search" class="form-control" placeholder="Search..." oninput="renderAdvance()">
+                 </div>
+             </div>
+             <div class="table-responsive border rounded" style="max-height: 600px; overflow-y: auto;">
+                 <table class="table table-hover align-middle mb-0 small">
+                     <thead class="bg-light sticky-top"><tr><th>AWB</th><th>Date (Entry)</th><th>Client</th><th>Network</th><th>Boxes</th><th>Wgt</th><th>Dest</th><th class="text-end">Action</th></tr></thead>
+                     <tbody id="advanceList"></tbody>
+                 </table>
+             </div>
+             <div id="advanceEmpty" class="text-center py-5" style="display:none">
+                 <div class="text-muted"><i class="bi bi-inbox fs-1 opacity-50"></i><div class="mt-2 fw-bold">No Advance Records</div></div>
+             </div>
+         </div>
+      </div>
+
       <!-- INBOUND TAB -->
       <div id="inbound-tab" class="tab-view" style="display:none;">
          <div class="panel-card mx-auto shadow-sm" style="max-width:1100px; border:none;">
@@ -228,6 +254,17 @@
            <div class="p-4">
              <form id="shipForm">
                <div class="row g-4 mb-4">
+                 <div class="col-12">
+                    <div class="p-3 bg-light rounded border border-primary border-opacity-25 d-flex align-items-center justify-content-between">
+                        <label class="fun-label m-0 text-primary"><i class="bi bi-hdd-network me-2"></i>Entry Mode</label>
+                        <select id="f_category" class="form-select fw-bold text-primary" style="max-width:300px;">
+                            <option value="Normal">Normal Inbound</option>
+                            <option value="Advance">Advance Record</option>
+                            <option value="Direct_Skip">Direct (Client ➔ Network)</option>
+                            <option value="Direct_Paperwork">Direct (Client ➔ Us ➔ Network)</option>
+                        </select>
+                    </div>
+                 </div>
                  <div class="col-md-4">
                     <label class="fun-label">Airway Bill Number *</label>
                     <div class="input-group">
@@ -313,6 +350,32 @@
            <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">PENDING AUTOMATION</div><div class="stat-value text-danger" id="ovAuto">0</div></div><i class="bi bi-robot fs-1 text-danger opacity-25"></i></div></div>
            <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">PENDING PAPERWORK</div><div class="stat-value text-warning" id="ovPaper">0</div></div><i class="bi bi-files fs-1 text-warning opacity-25"></i></div></div>
            <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">TOTAL HOLDINGS</div><div class="stat-value text-secondary" id="ovHoldings">0</div></div><i class="bi bi-pause-circle fs-1 text-secondary opacity-25"></i></div></div>
+        </div>
+
+        <!-- ⚡ Bolt: New Direct & Advance Overview Section -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="panel-card border-start border-4 border-info h-100">
+                    <div class="panel-header bg-white border-bottom-0 pb-0">
+                        <span class="text-info"><i class="bi bi-send-check me-2"></i>Direct Shipments (Processing)</span>
+                        <span class="badge bg-info text-white" id="badgeDirect">0</span>
+                    </div>
+                    <div class="p-3">
+                        <div id="listDirect" style="max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="panel-card border-start border-4 border-primary h-100">
+                    <div class="panel-header bg-white border-bottom-0 pb-0">
+                        <span class="text-primary"><i class="bi bi-calendar-check me-2"></i>Advance Shipments</span>
+                        <span class="badge bg-primary" id="badgeAdv">0</span>
+                    </div>
+                    <div class="p-3">
+                        <div class="text-muted small">Manage these in the <strong>Advance Records</strong> tab.</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="row g-4">
@@ -517,6 +580,14 @@
         </div>
 
         <div id="man-history-view" style="display:none;">
+           <div class="panel-card p-3 mb-4">
+               <div class="d-flex align-items-end gap-3 flex-wrap">
+                   <div><label class="small fw-bold">From Date</label><input type="date" id="hist_from" class="form-control form-control-sm"></div>
+                   <div><label class="small fw-bold">To Date</label><input type="date" id="hist_to" class="form-control form-control-sm"></div>
+                   <button class="btn btn-sm btn-primary" onclick="renderManifestHistory()">Filter History</button>
+                   <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('hist_from').value='';document.getElementById('hist_to').value='';renderManifestHistory()">Reset</button>
+               </div>
+           </div>
            <div class="row g-4" id="batchContainer"></div>
            <div id="batchEmptyState" class="text-center py-5" style="display:none"><div class="mb-3 text-muted"><i class="bi bi-clock-history fs-1"></i></div><h6 class="text-muted fw-bold">No History</h6><p class="text-muted small">Generated batches appear here.</p></div>
         </div>
@@ -897,6 +968,7 @@ async function syncData(init=false){
 
         processList(r.manifest);
         processList(r.holdings);
+        processList(r.advance); // ⚡ Bolt: Format date for Advance tab
         if(r.overview) {
             processList(r.overview.auto);
             processList(r.overview.paper);
@@ -947,6 +1019,7 @@ function updateNavVisibility() {
     };
 
     show('nav-inbound', 'inbound');
+    show('nav-advance', 'inbound'); // Same perm as inbound
     show('nav-overview', 'overview');
     show('nav-holdings', 'holdings');
     show('nav-taskhub', 'taskhub');
@@ -981,6 +1054,26 @@ function renderUI(){
   document.getElementById('badgePaper').textContent=d.paper.length;
   document.getElementById('totalHoldings').textContent=s.holdings;
   document.getElementById('ovHoldings').textContent=s.holdings;
+
+  // ⚡ Bolt: Update New Badges
+  document.getElementById('badgeDirect').textContent = (d.directPaper || []).length;
+  document.getElementById('badgeAdv').textContent = (window.APP_DATA.advance || []).length;
+
+  // Render Direct List
+  const ld = document.getElementById('listDirect');
+  const directItems = d.directPaper || [];
+  if(!directItems.length) ld.innerHTML = '<div class="text-center text-muted small py-3">No Direct Shipments Pending</div>';
+  else {
+      ld.innerHTML = directItems.map(x => `
+        <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <div>
+                <div class="fw-bold small">${x.id}</div>
+                <div class="text-muted" style="font-size:0.75rem">${x.client} ➔ ${x.net}</div>
+            </div>
+            <span class="badge bg-light text-dark border">Wait Paperwork</span>
+        </div>
+      `).join('');
+  }
 
   const la=document.getElementById('listAuto');
   if(!d.auto.length) la.innerHTML='<div class="text-center p-5 text-muted small">No Pending Automation</div>';
@@ -1033,6 +1126,59 @@ function renderUI(){
   if(document.getElementById('holdings-tab').style.display==='block') renderHoldings();
   if(document.getElementById('receivers-tab').style.display==='block') renderReceivers();
   if(document.getElementById('admin-tab').style.display==='block') renderAdminPanel();
+  if(document.getElementById('advance-tab').style.display==='block') renderAdvance();
+}
+
+window.renderAdvance = function() {
+    const list = document.getElementById('advanceList');
+    const term = document.getElementById('adv_search').value.toLowerCase().trim();
+    const items = window.APP_DATA.advance || [];
+
+    const filtered = items.filter(x =>
+        !term ||
+        x.id.toLowerCase().includes(term) ||
+        (x.client||'').toLowerCase().includes(term) ||
+        (x.net||'').toLowerCase().includes(term)
+    );
+
+    if(!filtered.length) {
+        list.innerHTML = '';
+        document.getElementById('advanceEmpty').style.display='block';
+        return;
+    }
+    document.getElementById('advanceEmpty').style.display='none';
+
+    list.innerHTML = filtered.map(x => `
+        <tr>
+            <td class="fw-bold font-monospace text-primary">${x.id}</td>
+            <td>${x.fmtDate}</td>
+            <td>${(x.client||'').slice(0,15)}</td>
+            <td>${x.net}</td>
+            <td>${x.boxes}</td>
+            <td>${x.chgWgt}</td>
+            <td>${x.dest}</td>
+            <td class="text-end">
+                <button class="btn btn-sm btn-success fw-bold rounded-pill px-3" onclick="actReceiveAdvance('${x.id}')">
+                    <i class="bi bi-box-seam me-1"></i> Receive
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+window.actReceiveAdvance = async function(id) {
+    if(!confirm(`Mark shipment ${id} as Received?\nThis will move it to the active Inbound list with today's date.`)) return;
+
+    showSpin(true);
+    const r = await callApi({ action: 'moveAdvance', awb: id });
+    showSpin(false);
+
+    if(r.result === 'success') {
+        toast("Shipment Received & Moved to Inbound");
+        syncData(false);
+    } else {
+        alert("Error: " + r.message);
+    }
 }
 
 function renderTaskHub(){
@@ -1415,6 +1561,7 @@ window.switchTab=function(t){
    if(t==='admin') renderAdminPanel();
    if(t==='holdings') renderHoldings();
    if(t==='receivers') renderReceivers();
+   if(t==='advance') renderAdvance();
 }
 function initForms(){
    const dd=window.APP_DATA.static.dropdowns;
@@ -1460,12 +1607,14 @@ document.getElementById('shipForm').onsubmit = async (e)=>{
 
    const payeeName = document.getElementById('f_payeeName').value || "";
    const payeeContact = document.getElementById('f_payeeContact').value || "";
+   const cat = document.getElementById('f_category').value || "Normal";
 
-   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', ') });
+   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', '), category: cat });
    showSpin(false); if(r.result==='success') { toast("Entry Saved"); resetForm(); syncData(false); } else alert(r.message);
 };
 function resetForm(){
     document.getElementById('shipForm').reset();
+    document.getElementById('f_category').value = "Normal";
     document.getElementById('boxTable').innerHTML='';
     document.getElementById('f_payeeName').value = "";
     document.getElementById('f_payeeContact').value = "";
@@ -1629,23 +1778,34 @@ window.printDailyManifest = function() {
 
 window.renderManifestHistory = function() {
     const list = document.getElementById('batchContainer');
+    const fromVal = document.getElementById('hist_from').value;
+    const toVal = document.getElementById('hist_to').value;
+    const fromDate = fromVal ? new Date(fromVal).setHours(0,0,0,0) : 0;
+    const toDate = toVal ? new Date(toVal).setHours(23,59,59,999) : 9999999999999;
+
     const batches = {};
     (window.APP_DATA.manifest || []).forEach(x => {
         if(x.batchNo) {
-            if(!batches[x.batchNo]) batches[x.batchNo] = {date: x.manifestDate, count: 0, net: x.net, items: []};
-            batches[x.batchNo].count++;
-            batches[x.batchNo].items.push(x);
+            // Check Date Range
+            const mDate = new Date(x.manifestDate).getTime();
+            if (mDate >= fromDate && mDate <= toDate) {
+                if(!batches[x.batchNo]) batches[x.batchNo] = {date: x.manifestDate, count: 0, net: x.net, items: []};
+                batches[x.batchNo].count++;
+                batches[x.batchNo].items.push(x);
+            }
         }
     });
 
-    if(Object.keys(batches).length === 0) {
+    const keys = Object.keys(batches).reverse(); // Show newest first
+
+    if(keys.length === 0) {
         document.getElementById('batchEmptyState').style.display = 'block';
         list.innerHTML = '';
         return;
     }
     document.getElementById('batchEmptyState').style.display = 'none';
 
-    list.innerHTML = Object.keys(batches).map(b => {
+    list.innerHTML = keys.map(b => {
          const batch = batches[b];
          return `
            <div class="col-md-6 col-lg-4">
