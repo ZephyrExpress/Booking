@@ -182,9 +182,17 @@ function getAllData(username) {
   let advSh = ss.getSheetByName(ADVANCE_SHEET_NAME);
   if (!advSh) {
       advSh = ss.insertSheet(ADVANCE_SHEET_NAME);
-      // Copy header from Shipments
-      const h = sh.getRange(1,1,1,33).getValues();
-      advSh.getRange(1,1,1,33).setValues(h);
+  }
+
+  // ⚡ Bolt: Ensure Advance Sheet Columns (need 33)
+  if (advSh.getMaxColumns() < 33) advSh.insertColumnsAfter(advSh.getMaxColumns(), 33 - advSh.getMaxColumns());
+
+  // Copy header if empty
+  if (advSh.getLastRow() < 1 || advSh.getRange(1,1).getValue() === "") {
+      try {
+          const h = sh.getRange(1,1,1,33).getValues();
+          advSh.getRange(1,1,1,33).setValues(h);
+      } catch(e) {}
   }
 
   const targetUser = String(username).trim().toLowerCase();
