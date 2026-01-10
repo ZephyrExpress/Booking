@@ -266,13 +266,14 @@ function getAllData(username) {
   }
 
   const lastRow = sh.getLastRow();
+  // ⚡ Bolt Optimization: Use getValues() for performance. We must handle type conversion (IDs to String) manually.
   // ⚡ Bolt: Read 33 columns to include Category
-  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 33).getDisplayValues() : [];
+  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 33).getValues() : [];
 
   // ⚡ Bolt: Read Advance Data
   const advLast = advSh.getLastRow();
   // ⚡ Bolt: Read 33 columns from Advance sheet too
-  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 33).getDisplayValues() : [];
+  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 33).getValues() : [];
 
   let updates = [];
   let fmsUpdates = [];
@@ -344,8 +345,8 @@ function getAllData(username) {
               }
           }
 
-          const range = sh.getRange(2, 1, lastRow-1, 33); // ⚡ Bolt: Expand range to 33 just in case
-          const sData = range.getValues();
+          // ⚡ Bolt Optimization: Reuse 'data' (Values) to avoid reading Sheet again
+          const sData = data;
           let hasChange = false;
 
           for(let i=0; i<sData.length; i++) {
@@ -386,7 +387,7 @@ function getAllData(username) {
           }
 
           if(hasChange) {
-              range.setValues(sData);
+              sh.getRange(2, 1, lastRow-1, 33).setValues(sData);
           }
       }
   } catch(e) { console.error("Sync BR Error", e); }
@@ -467,8 +468,11 @@ function getAllData(username) {
 
     if(getNormDate(r[1]) === todayTime) inboundTodayCount++;
 
+    let safeId = String(r[0]);
+    if(safeId.startsWith("'")) safeId = safeId.slice(1);
+
     const item = {
-      id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
+      id: safeId, date: r[1], net: r[3], client: r[4], dest: r[5],
       details: `${r[6]} Boxes | ${r[12]} Kg`,
       user: r[8], autoDoer: r[15], assignee: r[17],
       actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
@@ -510,8 +514,11 @@ function getAllData(username) {
       // ⚡ Bolt Fix: Category is at Index 32 (Col 33/AG)
       const category = r[32] ? String(r[32]).trim() : "Advance";
 
+      let safeId = String(r[0]);
+      if(safeId.startsWith("'")) safeId = safeId.slice(1);
+
       const item = {
-        id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
+        id: safeId, date: r[1], net: r[3], client: r[4], dest: r[5],
         details: `${r[6]} Boxes | ${r[12]} Kg`,
         user: r[8],
         actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
