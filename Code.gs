@@ -266,13 +266,18 @@ function getAllData(username) {
   }
 
   const lastRow = sh.getLastRow();
-  // ⚡ Bolt: Read 33 columns to include Category
-  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 33).getDisplayValues() : [];
+  // ⚡ Bolt Optimization: Use getValues for single read source + sync + response
+  let range = null;
+  let data = [];
+  if (lastRow > 1) {
+      range = sh.getRange(2, 1, lastRow - 1, 33);
+      data = range.getValues();
+  }
 
   // ⚡ Bolt: Read Advance Data
   const advLast = advSh.getLastRow();
   // ⚡ Bolt: Read 33 columns from Advance sheet too
-  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 33).getDisplayValues() : [];
+  const advData = advLast > 1 ? advSh.getRange(2, 1, advLast - 1, 33).getDisplayValues() : [];
 
   let updates = [];
   let fmsUpdates = [];
@@ -344,12 +349,11 @@ function getAllData(username) {
               }
           }
 
-          const range = sh.getRange(2, 1, lastRow-1, 33); // ⚡ Bolt: Expand range to 33 just in case
-          const sData = range.getValues();
+          // ⚡ Bolt Optimization: Reuse 'data' from initial read instead of reading again
           let hasChange = false;
 
-          for(let i=0; i<sData.length; i++) {
-              const r = sData[i]; // Row data
+          for(let i=0; i<data.length; i++) {
+              const r = data[i]; // Row data (Directly modifying 'data' array)
               const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
 
               if(brMap[awb]) {
@@ -385,8 +389,8 @@ function getAllData(username) {
               }
           }
 
-          if(hasChange) {
-              range.setValues(sData);
+          if(hasChange && range) {
+              range.setValues(data);
           }
       }
   } catch(e) { console.error("Sync BR Error", e); }
@@ -469,7 +473,8 @@ function getAllData(username) {
 
     const item = {
       id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
-      details: `${r[6]} Boxes | ${r[12]} Kg`,
+      // ⚡ Bolt Fix: Format boxes and weight to match getDisplayValues visual contract
+      details: `${r[6]} Boxes | ${typeof r[12] === 'number' ? r[12].toFixed(2) : r[12]} Kg`,
       user: r[8], autoDoer: r[15], assignee: r[17],
       actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
       netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
