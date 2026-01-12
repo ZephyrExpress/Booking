@@ -275,10 +275,9 @@ function getAllData(username) {
   // ⚡ Bolt: Read 35 columns from Advance sheet too
   const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 35).getDisplayValues() : [];
 
-  let updates = [];
-  let fmsUpdates = [];
+  // ⚡ Bolt Optimization: Single Read of Booking Report (Shared by logic blocks)
+  let brDataValues = null;
   try {
-      // Priority: Check Local Sheet first, then Remote (Task SS)
       let brSheet = ss.getSheetByName("Booking_Report");
       if (!brSheet) {
           const remoteSS = getTaskSS();
@@ -288,17 +287,27 @@ function getAllData(username) {
       if(brSheet) {
           const brLast = brSheet.getLastRow();
           if(brLast > 1) {
-              const brData = brSheet.getRange(2, 1, brLast-1, 41).getValues();
-              const brMap = {};
-              brData.forEach(r => {
-                 const k = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-                 if(k) brMap[k] = { netNo: r[20], user: r[40] };
-              });
+              // Read 42 columns (0 to 41) to cover all needed fields (up to AutoDoer at 41)
+              brDataValues = brSheet.getRange(2, 1, brLast-1, 42).getValues();
+          }
+      }
+  } catch(e) { console.error("BR Fetch Error", e); }
 
-              data.forEach((r, i) => {
-                  const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-                  const autoStatus = r[14];
-                  if((autoStatus === "Pending" || autoStatus === "") && r[27] !== "On Hold" && brMap[awb]) {
+  let updates = [];
+  let fmsUpdates = [];
+
+  // Block 1: Update In-Memory Data & Prepare FMS Updates
+  if(brDataValues) {
+      const brMap = {};
+      brDataValues.forEach(r => {
+         const k = String(r[0]).replace(/'/g,"").trim().toLowerCase();
+         if(k) brMap[k] = { netNo: r[20], user: r[40] }; // 20=U, 40=AO
+      });
+
+      data.forEach((r, i) => {
+          const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
+          const autoStatus = r[14];
+          if((autoStatus === "Pending" || autoStatus === "") && r[27] !== "On Hold" && brMap[awb]) {
                       const match = brMap[awb];
                       const user = match.user || "System";
                       const netNo = match.netNo || "";
@@ -306,11 +315,9 @@ function getAllData(username) {
                       updates.push({ row: i+2, vals: [["Done", user]] });
                       updates.push({ row: i+2, col: 21, val: [[netNo]] });
                       fmsUpdates.push({ awb: awb, autoDoer: user });
-                  }
-              });
           }
-      }
-  } catch(e) {}
+      });
+  }
 
   // ⚡ Bolt: Booking Report Sync (Latest Data Top-Down)
   // Fields to update from Booking Report:
@@ -318,14 +325,12 @@ function getAllData(username) {
   // W(Content)->Col 3(C), X(Box)->Col 7(G), Y(Act)->Col 11(K), Z(Vol)->Col 12(L), AA(Chg)->Col 13(M)
   // AO(User)->Col 9(I), AP(AutoDoer)->Col 16(P)
   try {
-      const brSheet = ss.getSheetByName("Booking_Report") || (taskSS ? taskSS.getSheetByName("Booking_Report") : null);
-      if(brSheet) {
-          const brData = brSheet.getDataRange().getValues();
+      if(brDataValues) {
           // Create map of AWB -> First Row (Latest)
           const brMap = {};
-          // Assuming Header Row 1
-          for(let i=1; i<brData.length; i++) {
-              const r = brData[i];
+          // brDataValues already excludes header (Row 2 start)
+          for(let i=0; i<brDataValues.length; i++) {
+              const r = brDataValues[i];
               const awbKey = String(r[0]).replace(/'/g,"").trim().toLowerCase();
               if(awbKey && !brMap[awbKey]) {
                   brMap[awbKey] = {
