@@ -191,8 +191,8 @@ function getAllData(username) {
   // Copy header if empty
   if (advSh.getLastRow() < 1 || advSh.getRange(1,1).getValue() === "") {
       try {
-          const h = sh.getRange(1,1,1,33).getValues();
-          advSh.getRange(1,1,1,33).setValues(h);
+          const h = sh.getRange(1,1,1,34).getValues();
+          advSh.getRange(1,1,1,34).setValues(h);
       } catch(e) {}
   }
 
@@ -345,7 +345,7 @@ function getAllData(username) {
               }
           }
 
-          const range = sh.getRange(2, 1, lastRow-1, 33); // ⚡ Bolt: Expand range to 33 just in case
+          const range = sh.getRange(2, 1, lastRow-1, 34); // ⚡ Bolt: Expand range to 34
           const sData = range.getValues();
           let hasChange = false;
 
@@ -362,6 +362,10 @@ function getAllData(username) {
                           hasChange = true;
                       }
                   };
+
+                  // Check if 'Direct' mode (Category = r[32])
+                  const cat = r[32] ? String(r[32]).trim() : "Normal";
+                  const isDirect = cat === "Connected by Client" || cat === "Automation by Client";
 
                   // Update Columns (Index = Col - 1)
                   ch(5, br.dest); // Col F (Dest) index 5
@@ -525,7 +529,7 @@ function getAllData(username) {
         actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
         netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
         batchNo: r[24], manifestDate: r[25], paperwork: r[26],
-        holdStatus: r[27], category: category
+        holdStatus: r[27], category: category, holdDate: r[33]
       };
 
       if (category === "Advance") advance.push(item);
@@ -833,6 +837,17 @@ function handleSubmit(body){
   // ⚡ Bolt: Handle Categories (Col 32/AF)
   const category = body.category || "Normal";
 
+  // Direct/Automation Logic
+  let autoStatus = "Pending";
+  let autoDoer = "";
+  let netNo = "";
+
+  if (category === "Connected by Client" || category === "Automation by Client") {
+      autoStatus = "Done";
+      autoDoer = body.client; // "Doer as Client Name"
+      netNo = body.netNo || "";
+  }
+
   const rowData = [
       "'"+body.awb, body.date, body.type, body.network, body.client, body.destination,
       body.totalBoxes, body.extraCharges, body.username, new Date(),
@@ -843,21 +858,21 @@ function handleSubmit(body){
       category, "" // Col 33 (AH) = Category, 34 (AI) = Hold Date (Empty initially)
   ];
 
-  if(category === "Normal") {
-      sh.appendRow(rowData);
-  } else {
-      // Write to Advance Sheet
-      let targetSh = ss.getSheetByName(ADVANCE_SHEET_NAME);
+  // Route to Sheet
+  let targetSh = sh;
+  if(category === "Advance" || category === "Connected by Client" || category === "Automation by Client") {
+      targetSh = ss.getSheetByName(ADVANCE_SHEET_NAME);
       if(!targetSh) targetSh = ss.insertSheet(ADVANCE_SHEET_NAME);
-      targetSh.appendRow(rowData);
   }
+  targetSh.appendRow(rowData);
 
   if(br.length) bx.getRange(bx.getLastRow()+1,1,br.length,8).setValues(br);
 
   addToFMS({
       awb: body.awb, date: body.date, type: body.type, net: body.network,
       client: body.client, dest: body.destination, boxes: body.totalBoxes,
-      wgt: tC.toFixed(2), user: body.username
+      wgt: tC.toFixed(2), user: body.username,
+      autoStatus: autoStatus, autoDoer: autoDoer
   });
 
   return jsonResponse("success","Saved");
@@ -898,6 +913,55 @@ function syncFMS(id, data) {
             if(data.paperStatus) fms.getRange(row, 19).setValue(data.paperStatus); // S (was Q/17)
         }
     } catch(e){}
+}
+
+function handleBulkImport(b) {
+    // ⚡ Bolt: Bulk Import for Manifest
+    const items = typeof b.items === 'string' ? JSON.parse(b.items) : b.items;
+    if(!items || !items.length) return jsonResponse("error", "No items");
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sh = ss.getSheetByName("Shipments");
+
+    // Check duplicates
+    const allIds = sh.getRange(2, 1, sh.getLastRow()-1, 1).getValues().flat().map(x => String(x).replace(/'/g,"").trim().toLowerCase());
+    const newRows = [];
+
+    items.forEach(item => {
+        const awb = String(item.awb || "").trim();
+        if(!awb || allIds.includes(awb.toLowerCase())) return; // Skip duplicates or invalid
+
+        // Map Item to Row (34 cols)
+        // Defaults: Status=Completed, Paperwork=Completed
+        // Format: [AWB, Date, Type, Net, Client, Dest, Boxes, Extra, User, EntryTime, Act, Vol, Chg, Rem,
+        // AutoStat, AutoDoer, PaperStat, Assignee, Assigner, AssTime, NetNo, PayTot, PayPd, PayPen, Batch, ManDate, Paperwork,
+        // HoldStat, HoldReas, HoldRem, HeldBy, PayeeN, PayeeC, Cat, HoldDate]
+
+        const row = new Array(34).fill("");
+        row[0] = "'" + awb;
+        row[1] = item.date || new Date();
+        row[2] = item.type || "Ndox";
+        row[3] = item.net || "";
+        row[4] = item.client || "";
+        row[5] = item.dest || "";
+        row[6] = item.boxes || 1;
+        row[8] = b.user || "Import";
+        row[9] = new Date();
+        row[12] = item.wgt || 0; // Chargeable Weight
+        row[14] = "Done"; // Auto Status
+        row[16] = "Completed"; // Paper Status
+        row[26] = "Completed"; // Paperwork
+        row[32] = "External"; // Category
+
+        newRows.push(row);
+        allIds.push(awb.toLowerCase());
+    });
+
+    if(newRows.length > 0) {
+        sh.getRange(sh.getLastRow()+1, 1, newRows.length, 34).setValues(newRows);
+        return jsonResponse("success", `Imported ${newRows.length} items`);
+    }
+    return jsonResponse("success", "No new items to import");
 }
 
 function handleAssignTask(b) {
