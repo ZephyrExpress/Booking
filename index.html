@@ -257,13 +257,17 @@
                  <div class="col-12">
                     <div class="p-3 bg-light rounded border border-primary border-opacity-25 d-flex align-items-center justify-content-between">
                         <label class="fun-label m-0 text-primary"><i class="bi bi-hdd-network me-2"></i>Entry Mode</label>
-                        <select id="f_category" class="form-select fw-bold text-primary" style="max-width:300px;">
+                        <select id="f_category" class="form-select fw-bold text-primary" style="max-width:300px;" onchange="toggleNetNo()">
                             <option value="Normal">Normal Inbound</option>
                             <option value="Advance">Advance Record</option>
-                            <option value="Direct_Skip">Direct (Client ➔ Network)</option>
-                            <option value="Direct_Paperwork">Direct (Client ➔ Us ➔ Network)</option>
+                            <option value="Connected by Client">Connected by Client</option>
+                            <option value="Automation by Client">Automation by Client</option>
                         </select>
                     </div>
+                 </div>
+                 <div class="col-md-12" id="div_net_no" style="display:none;">
+                    <label class="fun-label text-danger">Network Number (Client Provided) *</label>
+                    <input id="f_net_no" class="form-control fun-input border-danger text-danger fw-bold" placeholder="Enter Network AWB...">
                  </div>
                  <div class="col-md-4">
                     <label class="fun-label">Airway Bill Number *</label>
@@ -272,6 +276,10 @@
                         <button class="btn btn-warning" id="btnAutoAwb" type="button" onclick="generateAwb()" title="Auto Generate"><i class="bi bi-magic"></i></button>
                         <button class="btn btn-dark" type="button" onclick="startScanner('f_awb')" title="Scan Barcode"><i class="bi bi-qr-code-scan"></i></button>
                     </div>
+                 </div>
+                 <div class="col-md-12" id="div_net_no" style="display:none;">
+                    <label class="fun-label text-danger">Network Number (Client Provided) *</label>
+                    <input id="f_net_no" class="form-control fun-input border-danger text-danger fw-bold" placeholder="Enter Network AWB...">
                  </div>
                  <div class="col-md-4"><label class="fun-label">Date *</label><input type="date" id="f_date" class="form-control fun-input" required></div>
                  <div class="col-md-4"><label class="fun-label">Shipment Content *</label>
@@ -449,7 +457,7 @@
                  <table class="table overview-table align-middle mb-0">
                      <thead class="bg-light">
                          <tr>
-                             <th>AWB</th><th>Network No</th><th>Client</th><th>Reason</th><th>Remarks</th><th>Held By</th><th>Entry By</th>
+                             <th>AWB</th><th>Network No</th><th>Client</th><th>Reason</th><th>Remarks</th><th>Held By</th><th>Date</th><th>Entry By</th>
                          </tr>
                      </thead>
                      <tbody id="holdingsList"></tbody>
@@ -466,7 +474,7 @@
                   <span><i class="bi bi-kanban me-2"></i>Task Manager (Global Pool)</span>
                   <div class="d-flex gap-2 align-items-center">
                       <button class="btn btn-sm btn-light text-primary fw-bold" onclick="saveBulkAssignments()"><i class="bi bi-save-fill me-1"></i> Bulk Assign</button>
-                      <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-box-arrow-up-right me-1"></i> Automation Data</a>
+                      <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold" style="text-transform:none !important;"><i class="bi bi-box-arrow-up-right me-1"></i> Automation Data</a>
                       <button class="btn btn-sm btn-light text-primary fw-bold" onclick="exportPool()">Export</button>
                   </div>
               </div>
@@ -480,7 +488,7 @@
         </div>
         <div id="staffTaskView" style="display:none">
              <div class="d-flex justify-content-end mb-3">
-                  <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-box-arrow-up-right me-1"></i> Automation Data</a>
+                  <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold" style="text-transform:none !important;"><i class="bi bi-box-arrow-up-right me-1"></i> Automation Data</a>
              </div>
              <div class="row g-4">
                  <div class="col-lg-6">
@@ -511,6 +519,8 @@
                 </div>
                 <div class="d-flex gap-2 align-items-center flex-wrap justify-content-end">
                    <button class="btn btn-sm btn-outline-dark" onclick="openAddHistoryModal()"><i class="bi bi-clock-history me-1"></i> Add from History</button>
+                   <input type="file" id="man_excel_upload" accept=".xlsx" style="display:none" onchange="importManifestExcel(this)">
+                   <button class="btn btn-sm btn-success text-white shadow-sm" onclick="document.getElementById('man_excel_upload').click()"><i class="bi bi-file-earmark-excel me-1"></i> Import Excel</button>
                    <button class="btn btn-sm btn-outline-secondary" onclick="printManifest()"><i class="bi bi-printer me-1"></i> Print View</button>
                    <select id="man_net" class="form-select form-select-sm" style="width:150px" onchange="renderManifest()"><option value="">Select Network...</option></select>
                    <div class="input-group input-group-sm" style="width:200px;">
@@ -550,6 +560,8 @@
                 </div>
                 <div class="d-flex gap-2 align-items-center flex-wrap justify-content-end">
                    <button class="btn btn-sm btn-outline-dark" onclick="openAddHistoryModal()"><i class="bi bi-clock-history me-1"></i> Add from History</button>
+                   <input type="file" id="man_excel_upload" accept=".xlsx" style="display:none" onchange="importManifestExcel(this)">
+                   <button class="btn btn-sm btn-success text-white shadow-sm" onclick="document.getElementById('man_excel_upload').click()"><i class="bi bi-file-earmark-excel me-1"></i> Import Excel</button>
                    <button class="btn btn-sm btn-outline-secondary" onclick="printDailyManifest()"><i class="bi bi-printer me-1"></i> Print View</button>
                    <select id="man_daily_net" class="form-select form-select-sm" style="width:150px" onchange="renderDailyManifest()"><option value="">Select Network...</option></select>
                    <div class="input-group input-group-sm" style="width:200px;">
@@ -1219,6 +1231,7 @@ window.renderHoldings = function() {
                 <td><span class="badge bg-danger bg-opacity-10 text-danger" title="${reasonDesc}" style="cursor:help;">${x.holdReason}</span></td>
                 <td><small class="text-muted text-wrap" style="max-width:200px;">${x.holdRem}</small></td>
                 <td><span class="badge bg-light text-dark border">${x.heldBy||'-'}</span></td>
+                <td><small>${x.holdDate ? new Date(x.holdDate).toLocaleDateString() : '-'}</small></td>
                 <td><small>${x.user}</small></td>
             </tr>`;
     }).join('');
@@ -1608,8 +1621,9 @@ document.getElementById('shipForm').onsubmit = async (e)=>{
    const payeeName = document.getElementById('f_payeeName').value || "";
    const payeeContact = document.getElementById('f_payeeContact').value || "";
    const cat = document.getElementById('f_category').value || "Normal";
+   const netNo = document.getElementById('f_net_no').value || "";
 
-   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', '), category: cat });
+   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', '), category: cat, netNo: netNo });
    showSpin(false); if(r.result==='success') { toast("Entry Saved"); resetForm(); syncData(false); } else alert(r.message);
 };
 function resetForm(){
@@ -1623,6 +1637,7 @@ function resetForm(){
     document.getElementById('f_date').valueAsDate=new Date();
     document.getElementById('st_reg').checked = true; // Default
     chkStype({value:'Regular'}); // Reset -FRT
+    toggleNetNo();
 }
 window.chkDox=function(){ const t=document.getElementById('f_type').value; if(t==='Dox'){ document.getElementById('f_boxes').value=1; genBoxes(); } }
 window.genBoxes=function(){ const n=document.getElementById('f_boxes').value; const tb=document.getElementById('boxTable'); let html = ''; for(let i=1;i<=n;i++) html += `<tr><td>${i}</td><td><input type="number" step="any" class="form-control form-control-sm" required oninput="cBox(this)"></td><td><input type="number" step="any" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" step="any" class="form-control form-control-sm" oninput="cBox(this)"></td><td><input type="number" step="any" class="form-control form-control-sm" oninput="cBox(this)"></td><td class="val-chg">0</td></tr>`; tb.innerHTML = html; }
@@ -2491,5 +2506,68 @@ function moveFocusNext(form, currentEl) {
             next.select();
         }
     }
+}
+
+window.toggleNetNo = function() {
+    const cat = document.getElementById('f_category').value;
+    const div = document.getElementById('div_net_no');
+    if (cat === "Connected by Client" || cat === "Automation by Client") {
+        div.style.display = 'block';
+        document.getElementById('f_net_no').required = true;
+    } else {
+        div.style.display = 'none';
+        document.getElementById('f_net_no').required = false;
+        document.getElementById('f_net_no').value = "";
+    }
+}
+
+window.importManifestExcel = function(input) {
+    if(!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, {defval:""});
+
+        if(!jsonData.length) { alert("Empty Excel"); return; }
+
+        const mapped = jsonData.map(row => {
+            const getVal = (keys) => {
+                for(let k of keys) {
+                    const found = Object.keys(row).find(rk => rk.toLowerCase().includes(k.toLowerCase()));
+                    if(found) return row[found];
+                }
+                return "";
+            };
+
+            return {
+                awb: getVal(['awb', 'bill', 'consign']),
+                date: getVal(['date']),
+                dest: getVal(['dest', 'country']),
+                net: getVal(['network', 'service']),
+                client: getVal(['client', 'sender']),
+                boxes: getVal(['boxes', 'pcs', 'nop']),
+                wgt: getVal(['weight', 'wgt']),
+                type: getVal(['type', 'content']) || "Ndox"
+            };
+        }).filter(x => x.awb);
+
+        if(!mapped.length) { alert("No valid AWB columns found"); return; }
+        if(!confirm(`Import ${mapped.length} items to Manifest?`)) return;
+
+        showSpin(true);
+        const r = await callApi({action: 'bulkImport', items: mapped, user: curUser});
+        showSpin(false);
+        if(r.result === 'success') {
+            toast(r.message);
+            syncData(false);
+        } else {
+            alert(r.message);
+        }
+        input.value = "";
+    };
+    reader.readAsArrayBuffer(file);
 }
 </script></body></html>

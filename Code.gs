@@ -103,6 +103,7 @@ function doPost(e) {
     if (act === "editShipment") return handleEditShipment(body);
     if (act === "getBillingData") return getBillingData(body.from, body.to, body.net, body.client);
     if (act === "moveAdvance") return handleMoveAdvance(body);
+    if (act === "bulkImport") return handleBulkImport(body);
 
     return jsonResponse("error", "Unknown Action: " + act);
 
@@ -175,8 +176,8 @@ function getAllData(username) {
   const sh = ss.getSheetByName("Shipments");
   if (!sh) return jsonResponse("error", "Shipments Sheet Missing");
 
-  // ⚡ Bolt: Ensure Sheet Columns (need 33 for Category - Index 32)
-  if (sh.getMaxColumns() < 33) sh.insertColumnsAfter(sh.getMaxColumns(), 33 - sh.getMaxColumns());
+  // ⚡ Bolt: Ensure Sheet Columns (need 34 for Hold Date - Index 33)
+  if (sh.getMaxColumns() < 34) sh.insertColumnsAfter(sh.getMaxColumns(), 34 - sh.getMaxColumns());
 
   // ⚡ Bolt: Get Advance Sheet (Create if missing)
   let advSh = ss.getSheetByName(ADVANCE_SHEET_NAME);
@@ -184,14 +185,14 @@ function getAllData(username) {
       advSh = ss.insertSheet(ADVANCE_SHEET_NAME);
   }
 
-  // ⚡ Bolt: Ensure Advance Sheet Columns (need 33)
-  if (advSh.getMaxColumns() < 33) advSh.insertColumnsAfter(advSh.getMaxColumns(), 33 - advSh.getMaxColumns());
+  // ⚡ Bolt: Ensure Advance Sheet Columns (need 34)
+  if (advSh.getMaxColumns() < 34) advSh.insertColumnsAfter(advSh.getMaxColumns(), 34 - advSh.getMaxColumns());
 
   // Copy header if empty
   if (advSh.getLastRow() < 1 || advSh.getRange(1,1).getValue() === "") {
       try {
-          const h = sh.getRange(1,1,1,33).getValues();
-          advSh.getRange(1,1,1,33).setValues(h);
+          const h = sh.getRange(1,1,1,34).getValues();
+          advSh.getRange(1,1,1,34).setValues(h);
       } catch(e) {}
   }
 
@@ -266,13 +267,13 @@ function getAllData(username) {
   }
 
   const lastRow = sh.getLastRow();
-  // ⚡ Bolt: Read 33 columns to include Category
-  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 33).getDisplayValues() : [];
+  // ⚡ Bolt: Read 34 columns to include Hold Date (Index 33)
+  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 34).getDisplayValues() : [];
 
   // ⚡ Bolt: Read Advance Data
   const advLast = advSh.getLastRow();
-  // ⚡ Bolt: Read 33 columns from Advance sheet too
-  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 33).getDisplayValues() : [];
+  // ⚡ Bolt: Read 34 columns from Advance sheet too
+  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 34).getDisplayValues() : [];
 
   let updates = [];
   let fmsUpdates = [];
@@ -344,7 +345,7 @@ function getAllData(username) {
               }
           }
 
-          const range = sh.getRange(2, 1, lastRow-1, 33); // ⚡ Bolt: Expand range to 33 just in case
+          const range = sh.getRange(2, 1, lastRow-1, 34); // ⚡ Bolt: Expand range to 34
           const sData = range.getValues();
           let hasChange = false;
 
@@ -362,14 +363,22 @@ function getAllData(username) {
                       }
                   };
 
+                  // Check if 'Direct' mode (Category = r[32])
+                  const cat = r[32] ? String(r[32]).trim() : "Normal";
+                  const isDirect = cat === "Connected by Client" || cat === "Automation by Client";
+
                   // Update Columns (Index = Col - 1)
                   ch(5, br.dest); // Col F (Dest) index 5
                   ch(4, `${br.clientName}-${br.clientCode}`.slice(-4) === br.clientCode ? `${br.clientName}-${br.clientCode}` : br.clientName);
                   const clientStr = `${br.clientName}-${br.clientCode}`;
                   ch(4, clientStr); // Col E (Client) index 4
 
-                  ch(3, br.net); // Col D (Network) index 3
-                  ch(20, br.netNo); // Col U (NetNo) index 20
+                  // Skip Network/NetNo overwrite for Direct
+                  if (!isDirect) {
+                      ch(3, br.net); // Col D (Network) index 3
+                      ch(20, br.netNo); // Col U (NetNo) index 20
+                  }
+
                   ch(2, br.type); // Col C (Type) index 2
                   ch(6, br.boxes); // Col G (Boxes) index 6
                   ch(10, br.act); // Col K (Act) index 10
@@ -475,7 +484,7 @@ function getAllData(username) {
       netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
       batchNo: r[24], manifestDate: r[25], paperwork: r[26],
       holdStatus: r[27], holdReason: r[28], holdRem: r[29], heldBy: r[30],
-      category: category
+      category: category, holdDate: r[33]
     };
 
     if (item.holdStatus === "On Hold") {
@@ -517,7 +526,7 @@ function getAllData(username) {
         actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
         netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
         batchNo: r[24], manifestDate: r[25], paperwork: r[26],
-        holdStatus: r[27], category: category
+        holdStatus: r[27], category: category, holdDate: r[33]
       };
 
       if (category === "Advance") advance.push(item);
@@ -654,6 +663,7 @@ function handleManageHold(b) {
 
     if(b.subAction === "set") {
         ss.getRange(row, 28, 1, 4).setValues([["On Hold", b.reason, b.remarks, b.user || ""]]);
+        ss.getRange(row, 34).setValue(new Date()); // Col 34 (AH) = Hold Date
     } else if(b.subAction === "clear") {
         const net = String(ss.getRange(row, 4).getValue()).toUpperCase();
         const dest = String(ss.getRange(row, 6).getValue()).toUpperCase();
@@ -821,31 +831,43 @@ function handleSubmit(body){
   // ⚡ Bolt: Handle Categories (Col 32/AF)
   const category = body.category || "Normal";
 
+  // Direct/Automation Logic
+  let autoStatus = "Pending";
+  let autoDoer = "";
+  let netNo = "";
+
+  if (category === "Connected by Client" || category === "Automation by Client") {
+      autoStatus = "Done";
+      autoDoer = body.client; // "Doer as Client Name"
+      netNo = body.netNo || "";
+  }
+
   const rowData = [
       "'"+body.awb, body.date, body.type, body.network, body.client, body.destination,
       body.totalBoxes, body.extraCharges, body.username, new Date(),
       tA.toFixed(2), tV.toFixed(2), tC.toFixed(2), body.extraRemarks,
-      "Pending", "", "", "", "", "", "",
+      autoStatus, autoDoer, "", "", "", "", netNo,
       body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
       holdStatus, holdReason, "", body.payeeName, body.payeeContact,
-      category // Col 32 (AF)
+      category, // Col 32 (AF)
+      "" // Col 33 (AG) - Hold Date (Initially Empty)
   ];
 
-  if(category === "Normal") {
-      sh.appendRow(rowData);
-  } else {
-      // Write to Advance Sheet
-      let targetSh = ss.getSheetByName(ADVANCE_SHEET_NAME);
+  // Route to Sheet
+  let targetSh = sh;
+  if(category === "Advance" || category === "Connected by Client" || category === "Automation by Client") {
+      targetSh = ss.getSheetByName(ADVANCE_SHEET_NAME);
       if(!targetSh) targetSh = ss.insertSheet(ADVANCE_SHEET_NAME);
-      targetSh.appendRow(rowData);
   }
+  targetSh.appendRow(rowData);
 
   if(br.length) bx.getRange(bx.getLastRow()+1,1,br.length,8).setValues(br);
 
   addToFMS({
       awb: body.awb, date: body.date, type: body.type, net: body.network,
       client: body.client, dest: body.destination, boxes: body.totalBoxes,
-      wgt: tC.toFixed(2), user: body.username
+      wgt: tC.toFixed(2), user: body.username,
+      autoStatus: autoStatus, autoDoer: autoDoer
   });
 
   return jsonResponse("success","Saved");
@@ -886,6 +908,55 @@ function syncFMS(id, data) {
             if(data.paperStatus) fms.getRange(row, 19).setValue(data.paperStatus); // S (was Q/17)
         }
     } catch(e){}
+}
+
+function handleBulkImport(b) {
+    // ⚡ Bolt: Bulk Import for Manifest
+    const items = typeof b.items === 'string' ? JSON.parse(b.items) : b.items;
+    if(!items || !items.length) return jsonResponse("error", "No items");
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sh = ss.getSheetByName("Shipments");
+
+    // Check duplicates
+    const allIds = sh.getRange(2, 1, sh.getLastRow()-1, 1).getValues().flat().map(x => String(x).replace(/'/g,"").trim().toLowerCase());
+    const newRows = [];
+
+    items.forEach(item => {
+        const awb = String(item.awb || "").trim();
+        if(!awb || allIds.includes(awb.toLowerCase())) return; // Skip duplicates or invalid
+
+        // Map Item to Row (34 cols)
+        // Defaults: Status=Completed, Paperwork=Completed
+        // Format: [AWB, Date, Type, Net, Client, Dest, Boxes, Extra, User, EntryTime, Act, Vol, Chg, Rem,
+        // AutoStat, AutoDoer, PaperStat, Assignee, Assigner, AssTime, NetNo, PayTot, PayPd, PayPen, Batch, ManDate, Paperwork,
+        // HoldStat, HoldReas, HoldRem, HeldBy, PayeeN, PayeeC, Cat, HoldDate]
+
+        const row = new Array(34).fill("");
+        row[0] = "'" + awb;
+        row[1] = item.date || new Date();
+        row[2] = item.type || "Ndox";
+        row[3] = item.net || "";
+        row[4] = item.client || "";
+        row[5] = item.dest || "";
+        row[6] = item.boxes || 1;
+        row[8] = b.user || "Import";
+        row[9] = new Date();
+        row[12] = item.wgt || 0; // Chargeable Weight
+        row[14] = "Done"; // Auto Status
+        row[16] = "Completed"; // Paper Status
+        row[26] = "Completed"; // Paperwork
+        row[32] = "External"; // Category
+
+        newRows.push(row);
+        allIds.push(awb.toLowerCase());
+    });
+
+    if(newRows.length > 0) {
+        sh.getRange(sh.getLastRow()+1, 1, newRows.length, 34).setValues(newRows);
+        return jsonResponse("success", `Imported ${newRows.length} items`);
+    }
+    return jsonResponse("success", "No new items to import");
 }
 
 function handleAssignTask(b) {
