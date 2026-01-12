@@ -2394,12 +2394,14 @@ window.openReassign = function(id, type) {
     curReassign = {id: id, type: type};
     document.getElementById('rId').textContent = id;
     const s = document.getElementById('rStaff');
-    s.innerHTML = '<option value="">Select Staff...</option>';
+    // ⚡ Bolt Optimization: Build string in memory to avoid O(n^2) layout thrashing
+    let html = '<option value="">Select Staff...</option>';
     if (window.APP_DATA.static && window.APP_DATA.static.staff) {
         window.APP_DATA.static.staff.forEach(st => {
-            s.innerHTML += `<option value="${st}">${st}</option>`;
+            html += `<option value="${st}">${st}</option>`;
         });
     }
+    s.innerHTML = html;
     new bootstrap.Modal(document.getElementById('reassignModal')).show();
 }
 
