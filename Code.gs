@@ -345,7 +345,7 @@ function getAllData(username) {
               }
           }
 
-          const range = sh.getRange(2, 1, lastRow-1, 34); // ⚡ Bolt: Expand range to 34
+          const range = sh.getRange(2, 1, lastRow-1, 35); // ⚡ Bolt: Expand range to 35 just in case
           const sData = range.getValues();
           let hasChange = false;
 
@@ -377,8 +377,8 @@ function getAllData(username) {
 
                   // ⚡ Bolt Fix: Do NOT overwrite Net No if mode is Connected/Automation by Client
                   // Category is at 33 (AH) now, fallback to 32 (AG)
-                  const cat = r[33] || r[32] || "Normal";
-                  if (cat !== 'Direct_Skip' && cat !== 'Direct_Paperwork') {
+                  const categoryVal = r[33] || r[32] || "Normal";
+                  if (categoryVal !== 'Direct_Skip' && categoryVal !== 'Direct_Paperwork') {
                       ch(20, br.netNo); // Col U (NetNo) index 20
                   }
 
