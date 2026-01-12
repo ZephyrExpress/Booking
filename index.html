@@ -260,14 +260,14 @@
                         <select id="f_category" class="form-select fw-bold text-primary" style="max-width:300px;" onchange="toggleNetNo()">
                             <option value="Normal">Normal Inbound</option>
                             <option value="Advance">Advance Record</option>
-                            <option value="Connected by Client">Connected by Client</option>
-                            <option value="Automation by Client">Automation by Client</option>
+                            <option value="Direct_Skip">Connected by Client</option>
+                            <option value="Direct_Paperwork">Automation by Client</option>
                         </select>
                     </div>
                  </div>
-                 <div class="col-md-12" id="div_net_no" style="display:none;">
-                    <label class="fun-label text-danger">Network Number (Client Provided) *</label>
-                    <input id="f_net_no" class="form-control fun-input border-danger text-danger fw-bold" placeholder="Enter Network AWB...">
+                 <div class="col-md-4" id="div_net_no" style="display:none;">
+                    <label class="fun-label">Network No *</label>
+                    <input id="f_net_no" class="form-control fun-input" placeholder="Enter Network No">
                  </div>
                  <div class="col-md-4">
                     <label class="fun-label">Airway Bill Number *</label>
@@ -457,7 +457,7 @@
                  <table class="table overview-table align-middle mb-0">
                      <thead class="bg-light">
                          <tr>
-                             <th>AWB</th><th>Network No</th><th>Client</th><th>Reason</th><th>Remarks</th><th>Held By</th><th>Date</th><th>Entry By</th>
+                             <th>AWB</th><th>Date Held</th><th>Network No</th><th>Client</th><th>Reason</th><th>Remarks</th><th>Held By</th><th>Entry By</th>
                          </tr>
                      </thead>
                      <tbody id="holdingsList"></tbody>
@@ -474,7 +474,7 @@
                   <span><i class="bi bi-kanban me-2"></i>Task Manager (Global Pool)</span>
                   <div class="d-flex gap-2 align-items-center">
                       <button class="btn btn-sm btn-light text-primary fw-bold" onclick="saveBulkAssignments()"><i class="bi bi-save-fill me-1"></i> Bulk Assign</button>
-                      <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold" style="text-transform:none !important;"><i class="bi bi-box-arrow-up-right me-1"></i> Automation Data</a>
+                      <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold" style="text-transform:none!important"><i class="bi bi-box-arrow-up-right me-1"></i> Automation Data</a>
                       <button class="btn btn-sm btn-light text-primary fw-bold" onclick="exportPool()">Export</button>
                   </div>
               </div>
@@ -519,8 +519,7 @@
                 </div>
                 <div class="d-flex gap-2 align-items-center flex-wrap justify-content-end">
                    <button class="btn btn-sm btn-outline-dark" onclick="openAddHistoryModal()"><i class="bi bi-clock-history me-1"></i> Add from History</button>
-                   <input type="file" id="man_excel_upload" accept=".xlsx" style="display:none" onchange="importManifestExcel(this)">
-                   <button class="btn btn-sm btn-success text-white shadow-sm" onclick="document.getElementById('man_excel_upload').click()"><i class="bi bi-file-earmark-excel me-1"></i> Import Excel</button>
+                   <button class="btn btn-sm btn-outline-info" onclick="openExternalModal()"><i class="bi bi-plus-lg me-1"></i> Manual Entry</button>
                    <button class="btn btn-sm btn-outline-secondary" onclick="printManifest()"><i class="bi bi-printer me-1"></i> Print View</button>
                    <select id="man_net" class="form-select form-select-sm" style="width:150px" onchange="renderManifest()"><option value="">Select Network...</option></select>
                    <div class="input-group input-group-sm" style="width:200px;">
@@ -725,6 +724,22 @@
         <div class="mb-3"><label class="form-label small fw-bold text-muted">Reason</label><select id="modalHoldReason" class="form-select form-select-lg"></select></div>
         <div class="mb-4"><label class="form-label small fw-bold text-muted">Remarks</label><textarea id="modalHoldRem" class="form-control" rows="3" placeholder="Additional details..."></textarea></div>
         <button class="btn btn-danger w-100 btn-lg fw-bold" onclick="submitHoldFromModal()">Confirm Hold</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="externalModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white"><h5 class="modal-title fw-bold">Add Manual Shipment (External)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body p-4">
+          <div class="alert alert-light border small"><i class="bi bi-info-circle me-2"></i> Paste Excel Data or Type manually. These items are for Manifest generation only.</div>
+          <textarea id="ext_input" class="form-control font-monospace small mb-3" rows="10" placeholder="Paste from Excel (Columns: AWB | Date | Dest | Net | NetNo | Pcs | Wgt | Client)"></textarea>
+          <div class="d-flex gap-2 justify-content-end">
+              <button class="btn btn-light" onclick="document.getElementById('ext_input').value=''">Clear</button>
+              <button class="btn btn-info fw-bold text-white" onclick="processExternalInput()">Process & Add</button>
+          </div>
       </div>
     </div>
   </div>
@@ -1224,8 +1239,10 @@ window.renderHoldings = function() {
 
     list.innerHTML = items.map(x => {
             const reasonDesc = getReasonDesc(x.holdReason);
+            const holdDate = x.holdDate ? new Date(x.holdDate).toLocaleDateString() : '-';
             return `<tr>
                 <td class="clickable-cell font-monospace" onclick="openHoldAction('${x.id}')">${x.id}</td>
+                <td><small class="text-muted font-monospace">${holdDate}</small></td>
                 <td class="clickable-cell" onclick="openHoldAction('${x.id}')">${x.netNo||'-'}</td>
                 <td>${x.client}</td>
                 <td><span class="badge bg-danger bg-opacity-10 text-danger" title="${reasonDesc}" style="cursor:help;">${x.holdReason}</span></td>
@@ -1440,7 +1457,7 @@ window.submitActionFromModal = async function() {
     bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
     document.getElementById('holdResultPanel').style.display='none';
 
-    await callApi({action:"manageHold", subAction:currentActionType, awb:selectedHoldAwb, remarks:rem});
+    await callApi({action:"manageHold", subAction:currentActionType, awb:selectedHoldAwb, remarks:rem, user: curUser});
     syncData(false); toast("Action Completed");
     clearHoldSearch();
 }
@@ -1558,6 +1575,13 @@ window.switchTab=function(t){
    document.getElementById('nav-'+t).classList.add('active');
    document.querySelectorAll('.tab-view').forEach(e=>e.style.display='none');
    document.getElementById(t+'-tab').style.display='block';
+
+   // ⚡ Bolt Fix: Reset Inbound Entry Mode to Normal on Tab Switch
+   if(t === 'inbound') {
+       document.getElementById('f_category').value = "Normal";
+       toggleNetNo();
+   }
+
    let title = t.charAt(0).toUpperCase() + t.slice(1);
    if(t==='taskhub') {
        const r = curRole.toLowerCase();
@@ -1626,9 +1650,23 @@ document.getElementById('shipForm').onsubmit = async (e)=>{
    const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', '), category: cat, netNo: netNo });
    showSpin(false); if(r.result==='success') { toast("Entry Saved"); resetForm(); syncData(false); } else alert(r.message);
 };
+
+// ⚡ Bolt: Toggle Net No Field
+window.toggleNetNo = function() {
+    const val = document.getElementById('f_category').value;
+    const div = document.getElementById('div_net_no');
+    if(val === 'Direct_Skip' || val === 'Direct_Paperwork') {
+        div.style.display = 'block';
+    } else {
+        div.style.display = 'none';
+        document.getElementById('f_net_no').value = '';
+    }
+}
+
 function resetForm(){
     document.getElementById('shipForm').reset();
     document.getElementById('f_category').value = "Normal";
+    toggleNetNo();
     document.getElementById('boxTable').innerHTML='';
     document.getElementById('f_payeeName').value = "";
     document.getElementById('f_payeeContact').value = "";
@@ -1848,6 +1886,55 @@ window.downloadHistoryBatch = function(batchId, net) {
 }
 
 window.openAddHistoryModal = function() { new bootstrap.Modal(document.getElementById('addHistoryModal')).show(); }
+window.openExternalModal = function() { new bootstrap.Modal(document.getElementById('externalModal')).show(); }
+
+window.processExternalInput = async function() {
+    const txt = document.getElementById('ext_input').value;
+    if(!txt.trim()) return alert("No data entered");
+
+    // Parse CSV/TSV
+    const rows = txt.trim().split('\n');
+    const items = [];
+    rows.forEach(r => {
+        // Handle Tab or Pipe or Comma
+        let cols = r.split(/\t|\|/);
+        if(cols.length < 2) cols = r.split(',');
+
+        // Expected: AWB, Date, Dest, Net, NetNo, Pcs, Wgt, Client
+        if(cols.length >= 1) {
+             const awb = cols[0].trim();
+             if(awb) {
+                 items.push({
+                     awb: awb,
+                     date: cols[1] ? cols[1].trim() : new Date().toLocaleDateString(),
+                     dest: cols[2] ? cols[2].trim() : "",
+                     net: cols[3] ? cols[3].trim() : "",
+                     netNo: cols[4] ? cols[4].trim() : "",
+                     boxes: cols[5] ? cols[5].trim() : "1",
+                     wgt: cols[6] ? cols[6].trim() : "0.5",
+                     client: cols[7] ? cols[7].trim() : ""
+                 });
+             }
+        }
+    });
+
+    if(items.length === 0) return alert("No valid items parsed");
+    if(!confirm(`Add ${items.length} manual items to Manifest List?`)) return;
+
+    bootstrap.Modal.getInstance(document.getElementById('externalModal')).hide();
+    showSpin(true);
+    const r = await callApi({action: 'submitExternalManifest', items: items, user: curUser});
+    showSpin(false);
+
+    if(r.result === "success") {
+        toast(`${items.length} Items Added`);
+        document.getElementById('ext_input').value = '';
+        syncData(false);
+    } else {
+        alert("Error: " + r.message);
+    }
+}
+
 window.ahmAdd = async function() {
     const awb = document.getElementById('ahm_input').value.trim();
     if(!awb) return;
