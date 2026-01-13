@@ -269,50 +269,17 @@ function getAllData(username) {
   }
 
   const lastRow = sh.getLastRow();
-  // ⚡ Bolt: Read 35 columns to include Category (33) and Hold Date (34)
-  const data = lastRow>1 ? sh.getRange(2, 1, lastRow-1, 35).getDisplayValues() : [];
+  // ⚡ Bolt Optimization: Use getValues() for speed. Single read.
+  const range = lastRow > 1 ? sh.getRange(2, 1, lastRow-1, 35) : null;
+  const data = range ? range.getValues() : [];
 
   // ⚡ Bolt: Read Advance Data
   const advLast = advSh.getLastRow();
   // ⚡ Bolt: Read 35 columns from Advance sheet too
   const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 35).getDisplayValues() : [];
 
-  let updates = [];
+  // ⚡ Bolt Optimization: FMS updates aggregation
   let fmsUpdates = [];
-  try {
-      // Priority: Check Local Sheet first, then Remote (Task SS)
-      let brSheet = ss.getSheetByName("Booking_Report");
-      if (!brSheet) {
-          const remoteSS = getTaskSS();
-          brSheet = remoteSS ? remoteSS.getSheetByName("Booking_Report") : null;
-      }
-
-      if(brSheet) {
-          const brLast = brSheet.getLastRow();
-          if(brLast > 1) {
-              const brData = brSheet.getRange(2, 1, brLast-1, 41).getValues();
-              const brMap = {};
-              brData.forEach(r => {
-                 const k = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-                 if(k) brMap[k] = { netNo: r[20], user: r[40] };
-              });
-
-              data.forEach((r, i) => {
-                  const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-                  const autoStatus = r[14];
-                  if((autoStatus === "Pending" || autoStatus === "") && r[27] !== "On Hold" && brMap[awb]) {
-                      const match = brMap[awb];
-                      const user = match.user || "System";
-                      const netNo = match.netNo || "";
-                      r[14] = "Done"; r[15] = user; r[20] = netNo;
-                      updates.push({ row: i+2, vals: [["Done", user]] });
-                      updates.push({ row: i+2, col: 21, val: [[netNo]] });
-                      fmsUpdates.push({ awb: awb, autoDoer: user });
-                  }
-              });
-          }
-      }
-  } catch(e) {}
 
   // ⚡ Bolt: Booking Report Sync (Latest Data Top-Down)
   // Fields to update from Booking Report:
@@ -347,12 +314,10 @@ function getAllData(username) {
               }
           }
 
-          const range = sh.getRange(2, 1, lastRow-1, 35); // ⚡ Bolt: Expand range to 35 just in case
-          const sData = range.getValues();
           let hasChange = false;
 
-          for(let i=0; i<sData.length; i++) {
-              const r = sData[i]; // Row data
+          for(let i=0; i<data.length; i++) {
+              const r = data[i]; // Row data
               const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
 
               if(brMap[awb]) {
@@ -368,8 +333,8 @@ function getAllData(username) {
                   // Update Columns (Index = Col - 1)
                   ch(5, br.dest); // Col F (Dest) index 5
                   ch(4, `${br.clientName}-${br.clientCode}`.slice(-4) === br.clientCode ? `${br.clientName}-${br.clientCode}` : br.clientName);
-                  const clientStr = `${br.clientName}-${br.clientCode}`;
-                  ch(4, clientStr); // Col E (Client) index 4
+                  // const clientStr = `${br.clientName}-${br.clientCode}`; // Unused var
+                  // ch(4, clientStr); // Col E (Client) index 4 - Already covered above
 
                   ch(3, br.net); // Col D (Network) index 3
 
@@ -392,23 +357,16 @@ function getAllData(username) {
                   if(br.autoDoer) {
                       ch(15, br.autoDoer);
                       if(r[14] !== 'Done' && r[14] !== 'Completed') ch(14, 'Done');
+                      fmsUpdates.push({ awb: awb, autoDoer: br.autoDoer });
                   }
               }
           }
 
-          if(hasChange) {
-              range.setValues(sData);
+          if(hasChange && range) {
+              range.setValues(data);
           }
       }
   } catch(e) { console.error("Sync BR Error", e); }
-
-  // ⚡ Bolt Optimization: Batch write local updates to reduce API calls
-  if(updates.length > 0) {
-      const updatesOP = data.map(r => [r[14], r[15]]); // Columns O, P (Auto Status, Doer)
-      const updatesU = data.map(r => [r[20]]);         // Column U (Net No)
-      sh.getRange(2, 15, updatesOP.length, 2).setValues(updatesOP);
-      sh.getRange(2, 21, updatesU.length, 1).setValues(updatesU);
-  }
 
   // ⚡ Bolt Optimization: Batch write FMS updates
   if(fmsUpdates.length > 0) {
@@ -469,6 +427,9 @@ function getAllData(username) {
   const getNormDate = (d) => new Date(d).setHours(0,0,0,0);
   const todayTime = getNormDate(new Date());
 
+  // ⚡ Bolt Helper: Format raw numbers to fixed decimals (simulate getDisplayValues)
+  const num = (v) => { const n = parseFloat(v); return isNaN(n) ? v : n.toFixed(2); };
+
   // Process Normal Data (Shipments Sheet)
   data.forEach(r => {
     const rId = String(r[0]).replace(/'/g, "").trim();
@@ -480,10 +441,10 @@ function getAllData(username) {
 
     const item = {
       id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
-      details: `${r[6]} Boxes | ${r[12]} Kg`,
+      details: `${r[6]} Boxes | ${num(r[12])} Kg`,
       user: r[8], autoDoer: r[15], assignee: r[17],
-      actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
-      netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
+      actWgt: num(r[10]), volWgt: num(r[11]), chgWgt: num(r[12]), type: r[2], boxes: r[6], extra: r[7], rem: r[13],
+      netNo: r[20], payTotal: num(r[21]), payPaid: num(r[22]), payPending: num(r[23]),
       batchNo: r[24], manifestDate: r[25], paperwork: r[26],
       holdStatus: r[27], holdReason: r[28], holdRem: r[29], heldBy: r[30],
       category: category, holdDate: r[34]
