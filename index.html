@@ -523,7 +523,16 @@
                      <div id="contAssign" class="row g-3"></div>
                  </div>
                  <div class="col-lg-6">
-                     <div class="alert alert-warning py-3 shadow-sm border-0 border-start border-4 border-warning"><h5 class="alert-heading fw-bold m-0"><i class="bi bi-list-check me-2"></i>My To-Do List</h5></div>
+                     <div class="alert alert-warning py-3 shadow-sm border-0 border-start border-4 border-warning d-flex justify-content-between align-items-center">
+                         <h5 class="alert-heading fw-bold m-0"><i class="bi bi-list-check me-2"></i>My To-Do List</h5>
+                         <div class="form-check form-check-inline m-0">
+                             <input class="form-check-input" type="checkbox" id="checkAllTodo" onchange="toggleAllTodo(this)">
+                             <label class="form-check-label small fw-bold">Select All</label>
+                         </div>
+                     </div>
+                     <div class="d-flex justify-content-end mb-3">
+                         <button class="btn btn-success btn-sm fw-bold shadow-sm" onclick="markSelectedDone()"><i class="bi bi-check-all me-1"></i> Mark Selected Done</button>
+                     </div>
                      <div id="contTodo" class="row g-3"></div>
                  </div>
              </div>
@@ -1245,8 +1254,53 @@ function renderTaskHub(){
       else { let opts=`<option value="">Transfer To...</option>`; if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`); ca.innerHTML = wf.toAssign.map(x => `<div class="col-12"><div class="panel-card p-3 border-info border-start border-4"><div class="fw-bold">${x.id}</div><div class="small text-muted mb-2">${x.client} • ${x.net}</div><div class="input-group input-group-sm"><select id="direct_tr_${x.id}" class="form-select">${opts}</select><button class="btn btn-primary" onclick="actDirectTransfer('${x.id}')">Transfer</button></div></div></div>`).join(''); }
       const ct=document.getElementById('contTodo');
       if(!wf.toDo.length) ct.innerHTML='<div class="col-12 text-center text-muted small py-4">No tasks assigned to you</div>';
-      else { ct.innerHTML = wf.toDo.map(x => `<div class="col-12"><div class="panel-card p-3 border-warning border-start border-4"><div class="d-flex justify-content-between"><div><div class="fw-bold">${x.id}</div><div class="small text-muted">${x.subtitle}</div></div><button class="btn btn-sm btn-light" onclick="openReassign('${x.id}','Paperwork')"><i class="bi bi-arrow-left-right"></i></button></div><div class="small text-primary my-2">${x.details}</div><button class="btn btn-success w-100 btn-sm rounded-pill" onclick="actComplete('${x.id}')">Mark Complete</button></div></div>`).join(''); }
+      else { ct.innerHTML = wf.toDo.map(x => `
+      <div class="col-12">
+        <div class="panel-card p-3 border-warning border-start border-4">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="d-flex gap-2">
+                    <input type="checkbox" class="form-check-input todo-chk mt-1" value="${x.id}">
+                    <div>
+                        <div class="fw-bold">${x.id}</div>
+                        <div class="small text-muted">${x.subtitle}</div>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-light" onclick="openReassign('${x.id}','Paperwork')"><i class="bi bi-arrow-left-right"></i></button>
+            </div>
+            <div class="small text-primary my-2 ps-4">${x.details}</div>
+            <button class="btn btn-success w-100 btn-sm rounded-pill mt-2" onclick="actComplete('${x.id}')">Mark Complete</button>
+        </div>
+      </div>`).join(''); }
    }
+}
+
+window.toggleAllTodo = function(el) {
+    document.querySelectorAll('.todo-chk').forEach(c => c.checked = el.checked);
+}
+
+window.markSelectedDone = async function() {
+    const chks = document.querySelectorAll('.todo-chk:checked');
+    if(chks.length === 0) return alert("Select at least one task");
+
+    if(!confirm(`Mark ${chks.length} tasks as Completed?`)) return;
+
+    const ids = Array.from(chks).map(c => c.value);
+
+    showSpin(true);
+    const r = await callApi({
+        action: 'bulkPaperDone',
+        ids: ids,
+        user: curUser
+    });
+    showSpin(false);
+
+    if(r.result === "success") {
+        toast("Marked " + ids.length + " items as Done");
+        syncData(false);
+        if(document.getElementById('checkAllTodo')) document.getElementById('checkAllTodo').checked = false;
+    } else {
+        alert("Error: " + r.message);
+    }
 }
 
 // --- HOLDINGS UI & LOGIC ---
