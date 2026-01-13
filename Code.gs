@@ -107,6 +107,8 @@ function doPost(e) {
     if (act === "handleConnectedScan") return handleConnectedScan(body);
     if (act === "handleAutomationScan") return handleAutomationScan(body);
 
+    if (act === "bulkPaperDone") return handleBulkPaperDone(body);
+
     return jsonResponse("error", "Unknown Action: " + act);
 
   } catch (err) {
@@ -1138,6 +1140,57 @@ function handlePaperDone(b) {
   ss.getRange(row, 17).setValue("Completed");
   syncFMS(b.id, { paperStatus: "Completed" });
   return jsonResponse("success", "Completed");
+}
+
+// ⚡ Bolt: Bulk Paperwork Done
+function handleBulkPaperDone(b) {
+    if (typeof b.ids === 'string') {
+        try { b.ids = JSON.parse(b.ids); } catch(e){}
+    }
+    const ids = b.ids;
+    if (!ids || !Array.isArray(ids) || !ids.length) return jsonResponse("error", "No IDs provided");
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
+    const lr = ss.getLastRow();
+    if (lr < 2) return jsonResponse("error", "No data");
+
+    const allAwbs = ss.getRange(2, 1, lr - 1, 1).getValues().flat();
+    const idMap = {};
+    allAwbs.forEach((id, i) => { idMap[String(id).replace(/'/g, "").trim().toLowerCase()] = i + 2; });
+
+    const rangesToUpdate = [];
+    const fmsSyncIds = [];
+
+    ids.forEach(id => {
+        const key = String(id).replace(/'/g, "").trim().toLowerCase();
+        if (idMap[key]) {
+            const r = idMap[key];
+            rangesToUpdate.push(`Q${r}`); // Col 17 is Q
+            fmsSyncIds.push(id);
+        }
+    });
+
+    if (rangesToUpdate.length > 0) {
+        ss.getRangeList(rangesToUpdate).setValue("Completed");
+
+        // FMS Sync
+        try {
+            const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
+            if (fms && fms.getLastRow() >= 7) {
+                const fmsIds = fms.getRange(7, 2, fms.getLastRow() - 6, 1).getValues().flat().map(x => String(x).replace(/'/g, "").trim().toLowerCase());
+                const fmsRanges = [];
+                fmsSyncIds.forEach(id => {
+                    const idx = fmsIds.indexOf(String(id).trim().toLowerCase());
+                    if (idx > -1) {
+                        fmsRanges.push(`S${idx + 7}`); // Paperwork Status is Col S (19)
+                    }
+                });
+                if(fmsRanges.length > 0) fms.getRangeList(fmsRanges).setValue("Completed");
+            }
+        } catch (e) { console.error("FMS Bulk Sync Error", e); }
+    }
+
+    return jsonResponse("success", "Bulk Update Complete");
 }
 
 function handleApproveTransfer(b) {

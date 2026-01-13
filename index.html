@@ -507,7 +507,7 @@
               </div>
               <div class="table-responsive" style="max-height: 70vh;">
                   <table class="table table-hover align-middle mb-0 excel-table">
-                      <thead class="bg-light sticky-top" style="top:0; z-index:5;"><tr><th>AWB</th><th>Net No</th><th>Network</th><th>Weight</th><th>Details</th><th>Client</th><th class="text-center">Assigned To</th><th>Action</th></tr></thead>
+                      <thead class="bg-light sticky-top" style="top:0; z-index:5;"><tr><th>AWB</th><th>Net No</th><th>Network</th><th>Weight</th><th>Details</th><th>Client</th><th class="text-center">Automated by</th><th>Action</th></tr></thead>
                       <tbody id="poolBody"></tbody>
                   </table>
               </div>
@@ -1246,7 +1246,7 @@ function renderTaskHub(){
    if(role === 'admin' || role === 'owner') {
       document.getElementById('adminTaskView').style.display = 'block'; document.getElementById('staffTaskView').style.display = 'none';
       const pt=document.getElementById('poolBody'); let opts=`<option value="">Select Staff...</option>`; if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`);
-      pt.innerHTML = window.APP_DATA.adminPool.map(x => { let assignVal = x.assignee || ""; return `<tr><td class="fw-bold font-monospace">${x.id}</td><td>${x.netNo||'-'}</td><td>${x.net}</td><td>${x.chgWgt}</td><td><small class="text-muted">${x.details}</small></td><td>${x.client.slice(-4)}</td><td class="text-center">${assignVal}</td><td><div class="d-flex gap-2 align-items-center"><select id="adm_as_${x.id}" class="form-select form-select-sm" style="width:120px">${opts}</select></div></td></tr>`; }).join('');
+      pt.innerHTML = window.APP_DATA.adminPool.map(x => { let assignVal = x.autoDoer || ""; return `<tr><td class="fw-bold font-monospace">${x.id}</td><td>${x.netNo||'-'}</td><td>${x.net}</td><td>${x.chgWgt}</td><td><small class="text-muted">${x.details}</small></td><td>${x.client.slice(-4)}</td><td class="text-center">${assignVal}</td><td><div class="d-flex gap-2 align-items-center"><select id="adm_as_${x.id}" class="form-select form-select-sm" style="width:120px">${opts}</select></div></td></tr>`; }).join('');
    } else {
       document.getElementById('adminTaskView').style.display = 'none'; document.getElementById('staffTaskView').style.display = 'block';
       const wf=window.APP_DATA.workflow; const ca=document.getElementById('contAssign');
