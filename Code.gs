@@ -1290,30 +1290,65 @@ function searchBulkData(netNo) {
     const headers = data[0].map(h => String(h).trim().toLowerCase());
 
     // Find Columns
-    const cNetNo = headers.findIndex(h => h.includes("net no"));
-    if (cNetNo === -1) return null; // Net No col mandatory
+    // Try dynamic search first, else fallback to Col U (Index 20) if headers are ambiguous
+    let cNetNo = headers.findIndex(h => h.includes("net no") || h.includes("network no"));
+    let useStandardMap = false;
+
+    if (cNetNo === -1) {
+        if (headers.length > 20) {
+             cNetNo = 20;
+             useStandardMap = true;
+        } else {
+             return null; // Can't find and not enough columns for standard
+        }
+    }
 
     const target = String(netNo).trim().toLowerCase();
 
     for(let i=1; i<data.length; i++) {
-        if(String(data[i][cNetNo]).trim().toLowerCase() === target) {
-            // Map Data based on headers
-            const row = data[i];
-            const getVal = (k) => {
-                const idx = headers.findIndex(h => h.includes(k));
-                return idx > -1 ? row[idx] : "";
-            };
+        // Safe check for undefined if row is short
+        const cellVal = data[i][cNetNo] ? String(data[i][cNetNo]).trim().toLowerCase() : "";
 
-            return {
-                awb: getVal("awb"),
-                date: getVal("date"),
-                dest: getVal("dest"),
-                net: "DHL", // Default or extract? User didn't specify, assuming DHL or derived
-                netNo: row[cNetNo],
-                boxes: getVal("pcs"),
-                wgt: getVal("wgt"),
-                client: getVal("client")
-            };
+        if(cellVal === target) {
+            const row = data[i];
+
+            if (useStandardMap) {
+                // Standard Booking Report Map
+                // AWB:0, Date:1, Dest:3, Client:5, Net:19, NetNo:20, Boxes:23, Wgt:26(Chg)
+                return {
+                    awb: row[0],
+                    date: row[1],
+                    dest: row[3],
+                    net: row[19],
+                    netNo: row[20],
+                    boxes: row[23],
+                    wgt: row[26],
+                    client: row[5]
+                };
+            } else {
+                // Dynamic Header Map
+                const getVal = (k) => {
+                    // Try multiple variations
+                    const idx = headers.findIndex(h => h.includes(k));
+                    return idx > -1 ? row[idx] : "";
+                };
+
+                // Enhanced Dynamic Lookup
+                const netVal = getVal("network") || getVal("net") || "DHL";
+                const pcsVal = getVal("pcs") || getVal("box");
+                const wgtVal = getVal("wgt") || getVal("weight") || getVal("chg");
+
+                return {
+                    awb: getVal("awb"),
+                    date: getVal("date"),
+                    dest: getVal("dest"),
+                    net: netVal,
+                    netNo: row[cNetNo],
+                    boxes: pcsVal,
+                    wgt: wgtVal,
+                    client: getVal("client")
+                };
+            }
         }
     }
     return null;
