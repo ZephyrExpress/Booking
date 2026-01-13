@@ -247,28 +247,58 @@
       <!-- INBOUND TAB -->
       <div id="inbound-tab" class="tab-view" style="display:none;">
          <div class="panel-card mx-auto shadow-sm" style="max-width:1100px; border:none;">
+
+           <!-- Inbound Mode Tabs -->
+           <ul class="nav nav-pills nav-fill mb-3 p-2 bg-light rounded" id="inboundModeTabs">
+               <li class="nav-item"><button class="nav-link active fw-bold" onclick="switchInboundMode('Normal')">Normal</button></li>
+               <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Advance')">Advance</button></li>
+               <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Connected')">Connected by Client</button></li>
+               <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Automation')">Automation by Client</button></li>
+           </ul>
+
            <div class="fun-header">
-              <h5 class="fw-bold m-0"><i class="bi bi-plus-circle-fill me-2"></i>New Shipment Entry</h5>
-              <div class="small opacity-75">Please fill all details accurately</div>
+              <h5 class="fw-bold m-0"><i class="bi bi-plus-circle-fill me-2"></i><span id="inboundTitle">Normal Inbound</span></h5>
+              <div class="small opacity-75">Please fill details below</div>
            </div>
+
            <div class="p-4">
+             <!-- Normal / Advance Form -->
              <form id="shipForm">
+               <input type="hidden" id="f_active_mode" value="Normal">
+               <input type="hidden" id="f_category" value="Normal">
+
+               <!-- Connected Mode View -->
+               <div id="view_connected" style="display:none;" class="text-center py-5">
+                   <h4 class="text-primary fw-bold mb-4">Scan Network Number</h4>
+                   <div class="input-group input-group-lg mx-auto" style="max-width:500px;">
+                       <input id="conn_net_no" class="form-control" placeholder="Scan or Enter Network No..." onchange="handleConnectedScan(this)">
+                       <button type="button" class="btn btn-dark" onclick="startScanner('conn_net_no')"><i class="bi bi-qr-code-scan"></i></button>
+                   </div>
+                   <div id="conn_result" class="mt-4"></div>
+               </div>
+
+               <!-- Automation Mode Search -->
+               <div id="view_automation_search" style="display:none;" class="text-center py-4 border-bottom mb-4">
+                   <h5 class="text-info fw-bold mb-3">Lookup Shipment</h5>
+                   <div class="input-group input-group-lg mx-auto" style="max-width:500px;">
+                       <input id="auto_net_no" class="form-control" placeholder="Scan Network No..." onchange="handleAutomationScan(this)">
+                       <button type="button" class="btn btn-dark" onclick="startScanner('auto_net_no')"><i class="bi bi-qr-code-scan"></i></button>
+                   </div>
+               </div>
+
+               <!-- Main Form Fields (Hidden for Connected) -->
+               <div id="form_main_fields">
                <div class="row g-4 mb-4">
-                 <div class="col-12">
-                    <div class="p-3 bg-light rounded border border-primary border-opacity-25 d-flex align-items-center justify-content-between">
-                        <label class="fun-label m-0 text-primary"><i class="bi bi-hdd-network me-2"></i>Entry Mode</label>
-                        <select id="f_category" class="form-select fw-bold text-primary" style="max-width:300px;" onchange="toggleNetNo()">
-                            <option value="Normal">Normal Inbound</option>
-                            <option value="Advance">Advance Record</option>
-                            <option value="Direct_Skip">Connected by Client</option>
-                            <option value="Direct_Paperwork">Automation by Client</option>
-                        </select>
-                    </div>
+
+                 <!-- Network No Field (Only for Automation Mode logic injection) -->
+                 <input type="hidden" id="f_net_no_hidden">
+
+                 <!-- Network No Field For Direct/Advance (Legacy) -->
+                 <div class="col-12" id="div_net_no" style="display:none;">
+                    <label class="fun-label">Network Number (Direct/Advance) *</label>
+                    <input id="f_net_no" class="form-control fun-input" placeholder="Enter Carrier AWB No">
                  </div>
-                 <div class="col-md-4" id="div_net_no" style="display:none;">
-                    <label class="fun-label">Network No *</label>
-                    <input id="f_net_no" class="form-control fun-input" placeholder="Enter Network No">
-                 </div>
+
                  <div class="col-md-4">
                     <label class="fun-label">Airway Bill Number *</label>
                     <div class="input-group">
@@ -278,7 +308,7 @@
                     </div>
                  </div>
                  <div class="col-md-4"><label class="fun-label">Date *</label><input type="date" id="f_date" class="form-control fun-input" required></div>
-                 <div class="col-md-4"><label class="fun-label">Shipment Content *</label>
+                 <div class="col-md-4"><label class="fun-label">Dox/Ndox *</label>
                     <select id="f_type" class="form-select fun-input" onchange="chkDox()" required><option value="" selected disabled>Select...</option><option>Dox</option><option>Ndox</option></select>
                  </div>
                  <div class="col-md-4"><label class="fun-label">Network *</label>
@@ -342,6 +372,7 @@
                  <button type="button" class="btn btn-light rounded-pill px-4" onclick="resetForm()">Reset</button>
                  <button class="btn btn-primary px-5 rounded-pill fw-bold py-2 shadow-sm">Submit Entry</button>
                </div>
+               </div> <!-- End form_main_fields -->
              </form>
            </div>
          </div>
@@ -470,7 +501,7 @@
                   <span><i class="bi bi-kanban me-2"></i>Task Manager (Global Pool)</span>
                   <div class="d-flex gap-2 align-items-center">
                       <button class="btn btn-sm btn-light text-primary fw-bold" onclick="saveBulkAssignments()"><i class="bi bi-save-fill me-1"></i> Bulk Assign</button>
-                      <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold" style="text-transform:none!important"><i class="bi bi-box-arrow-up-right me-1"></i> Automation Data</a>
+                      <button class="btn btn-sm btn-light text-primary fw-bold" onclick="openBulkUpload()"><i class="bi bi-cloud-upload me-1"></i> Upload Bulk Data</button>
                       <button class="btn btn-sm btn-light text-primary fw-bold" onclick="exportPool()">Export</button>
                   </div>
               </div>
@@ -484,7 +515,7 @@
         </div>
         <div id="staffTaskView" style="display:none">
              <div class="d-flex justify-content-end mb-3">
-                  <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-box-arrow-up-right me-1"></i> Automation Data</a>
+                  <button class="btn btn-sm btn-light text-primary fw-bold" onclick="openBulkUpload()"><i class="bi bi-cloud-upload me-1"></i> Upload Bulk Data</button>
              </div>
              <div class="row g-4">
                  <div class="col-lg-6">
@@ -515,7 +546,6 @@
                 </div>
                 <div class="d-flex gap-2 align-items-center flex-wrap justify-content-end">
                    <button class="btn btn-sm btn-outline-dark" onclick="openAddHistoryModal()"><i class="bi bi-clock-history me-1"></i> Add from History</button>
-                   <button class="btn btn-sm btn-outline-info" onclick="openExternalModal()"><i class="bi bi-plus-lg me-1"></i> Manual Entry</button>
                    <button class="btn btn-sm btn-outline-secondary" onclick="printManifest()"><i class="bi bi-printer me-1"></i> Print View</button>
                    <select id="man_net" class="form-select form-select-sm" style="width:150px" onchange="renderManifest()"><option value="">Select Network...</option></select>
                    <div class="input-group input-group-sm" style="width:200px;">
@@ -723,27 +753,17 @@
   </div>
 </div>
 
-<div class="modal fade" id="externalModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
+<div class="modal fade" id="bulkUploadModal" tabindex="-1">
+  <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header bg-info text-white"><h5 class="modal-title fw-bold">Add Manual Shipment (External)</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Upload Bulk Data</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
       <div class="modal-body p-4">
-          <div class="alert alert-light border small mb-3"><i class="bi bi-info-circle me-2"></i> Upload Excel file. <br><strong>Required Headers (Row 1):</strong> AWB, Date, Dest, Net No, Pcs, Wgt, Client.</div>
-
-          <div class="mb-3">
-              <label class="form-label fw-bold small">Select Network for this Batch *</label>
-              <select id="ext_net_select" class="form-select"></select>
-          </div>
-
+          <div class="alert alert-light border small mb-3"><i class="bi bi-info-circle me-2"></i> Upload the Excel file exported from company software. This will populate the system reference data.</div>
           <div class="mb-4">
               <label class="form-label fw-bold small">Upload Excel File (.xlsx, .xls)</label>
-              <input type="file" id="ext_file" class="form-control" accept=".xlsx, .xls">
+              <input type="file" id="bulk_file" class="form-control" accept=".xlsx, .xls">
           </div>
-
-          <div class="d-flex gap-2 justify-content-end">
-              <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-              <button class="btn btn-info fw-bold text-white" onclick="processExternalFile()">Upload & Process</button>
-          </div>
+          <button class="btn btn-primary w-100 fw-bold py-2" onclick="processBulkUpload()">Upload & Update</button>
       </div>
     </div>
   </div>
@@ -1648,9 +1668,21 @@ document.getElementById('shipForm').onsubmit = async (e)=>{
    const payeeName = document.getElementById('f_payeeName').value || "";
    const payeeContact = document.getElementById('f_payeeContact').value || "";
    const cat = document.getElementById('f_category').value || "Normal";
-   const netNo = document.getElementById('f_net_no').value || "";
+   const activeMode = document.getElementById('f_active_mode').value;
+   let netNo = document.getElementById('f_net_no').value || "";
 
-   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', '), category: cat, netNo: netNo });
+   let isAuto = false;
+   if(activeMode === 'Automation') {
+       isAuto = true;
+       // In automation mode, netNo comes from hidden field or can be inferred
+       // The user said "search on it, it will show all the details... giving us a option to fill the right weight... hit enter. it will be recored as inbound"
+       // We should ensure netNo is preserved.
+       // In Automation mode, we filled f_net_no_hidden
+       const hiddenNet = document.getElementById('f_net_no_hidden').value;
+       if(hiddenNet) netNo = hiddenNet;
+   }
+
+   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', '), category: cat, netNo: netNo, isAutomationMode: isAuto });
    showSpin(false); if(r.result==='success') { toast("Entry Saved"); resetForm(); syncData(false); } else alert(r.message);
 };
 
@@ -1888,24 +1920,10 @@ window.downloadHistoryBatch = function(batchId, net) {
 }
 
 window.openAddHistoryModal = function() { new bootstrap.Modal(document.getElementById('addHistoryModal')).show(); }
-window.openExternalModal = function() {
-    // Populate Network Dropdown
-    const sel = document.getElementById('ext_net_select');
-    sel.innerHTML = '<option value="">Select Network...</option>';
-    if (window.APP_DATA && window.APP_DATA.static && window.APP_DATA.static.dropdowns && window.APP_DATA.static.dropdowns.networks) {
-        window.APP_DATA.static.dropdowns.networks.forEach(n => {
-            sel.innerHTML += `<option value="${n}">${n}</option>`;
-        });
-    }
-    document.getElementById('ext_file').value = ''; // Reset file input
-    new bootstrap.Modal(document.getElementById('externalModal')).show();
-}
+window.openBulkUpload = function() { new bootstrap.Modal(document.getElementById('bulkUploadModal')).show(); }
 
-window.processExternalFile = function() {
-    const net = document.getElementById('ext_net_select').value;
-    if (!net) return alert("Please select a Network.");
-
-    const fileInput = document.getElementById('ext_file');
+window.processBulkUpload = function() {
+    const fileInput = document.getElementById('bulk_file');
     if (!fileInput.files || fileInput.files.length === 0) return alert("Please upload an Excel file.");
 
     const file = fileInput.files[0];
@@ -1916,60 +1934,24 @@ window.processExternalFile = function() {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
+            // Get raw JSON array of arrays
+            const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
 
-            if (jsonData.length < 2) return alert("File appears empty or missing headers.");
+            if (rows.length < 2) return alert("File appears empty.");
 
-            // Validate Header (Row 1)
-            const headers = jsonData[0].map(h => String(h).trim().toLowerCase());
-            // Expected: AWB, Date, Dest, Net No, Pcs, Wgt, Client
-            const required = ['awb', 'date', 'dest', 'net no', 'pcs', 'wgt', 'client'];
-
-            // Allow loose matching (contains)
-            const map = {};
-            required.forEach(req => {
-                const idx = headers.findIndex(h => h.includes(req));
-                if (idx > -1) map[req] = idx;
-            });
-
-            if (Object.keys(map).length < required.length) {
-                const missing = required.filter(r => !map[r]);
-                return alert("Invalid Excel Format.\nMissing Columns: " + missing.join(', '));
-            }
-
-            const items = [];
-            // Parse Data (Row 2 onwards)
-            for(let i = 1; i < jsonData.length; i++) {
-                const row = jsonData[i];
-                // Skip empty rows
-                if (!row || !row[map['awb']]) continue;
-
-                const awb = String(row[map['awb']]).trim();
-                if (awb) {
-                    items.push({
-                        awb: awb,
-                        date: row[map['date']] || new Date().toLocaleDateString(),
-                        dest: row[map['dest']],
-                        net: net, // Use Selected Network
-                        netNo: row[map['net no']],
-                        boxes: row[map['pcs']],
-                        wgt: row[map['wgt']],
-                        client: row[map['client']]
-                    });
-                }
-            }
-
-            if(items.length === 0) return alert("No valid data found in file.");
-            if(!confirm(`Found ${items.length} items. Add to Manifest?`)) return;
-
-            bootstrap.Modal.getInstance(document.getElementById('externalModal')).hide();
             showSpin(true);
-            const r = await callApi({action: 'submitExternalManifest', items: items, user: curUser});
+            bootstrap.Modal.getInstance(document.getElementById('bulkUploadModal')).hide();
+
+            // Send raw rows to backend for processing
+            const r = await callApi({
+                action: 'handleBulkDataUpload',
+                data: JSON.stringify(rows),
+                user: curUser
+            });
             showSpin(false);
 
             if(r.result === "success") {
-                toast(`${items.length} Items Added Successfully`);
-                syncData(false);
+                toast("Bulk Data Updated Successfully");
             } else {
                 alert("Error: " + r.message);
             }
@@ -1977,9 +1959,106 @@ window.processExternalFile = function() {
         } catch(err) {
             console.error(err);
             alert("Error parsing file: " + err.message);
+            showSpin(false);
         }
     };
     reader.readAsArrayBuffer(file);
+}
+
+// ⚡ Bolt: Inbound Mode Switcher
+window.switchInboundMode = function(mode) {
+    document.querySelectorAll('#inboundModeTabs .nav-link').forEach(b => b.classList.remove('active'));
+    document.querySelector(`#inboundModeTabs button[onclick="switchInboundMode('${mode}')"]`).classList.add('active');
+
+    document.getElementById('inboundTitle').textContent = mode + " Inbound";
+    document.getElementById('f_active_mode').value = mode;
+
+    // Reset Views
+    document.getElementById('form_main_fields').style.display = 'none';
+    document.getElementById('view_connected').style.display = 'none';
+    document.getElementById('view_automation_search').style.display = 'none';
+
+    // Reset Form
+    document.getElementById('shipForm').reset();
+    document.getElementById('f_active_mode').value = mode; // Re-set after reset()
+    document.getElementById('boxTable').innerHTML='';
+    document.getElementById('f_category').value = "Normal"; // Default backend category placeholder
+
+    if(mode === 'Normal' || mode === 'Advance') {
+        document.getElementById('form_main_fields').style.display = 'block';
+        if(mode === 'Advance') document.getElementById('f_category').value = "Advance";
+    }
+    else if(mode === 'Connected') {
+        document.getElementById('view_connected').style.display = 'block';
+        setTimeout(()=>document.getElementById('conn_net_no').focus(), 100);
+    }
+    else if(mode === 'Automation') {
+        document.getElementById('view_automation_search').style.display = 'block';
+        // Show main form but hide/disable some parts? No, show form ONLY after search found
+        // Logic: Scan -> Fill Form -> Show Form for Edit -> Submit
+        setTimeout(()=>document.getElementById('auto_net_no').focus(), 100);
+    }
+}
+
+// ⚡ Bolt: Handle Connected Scan
+window.handleConnectedScan = async function(el) {
+    const val = el.value.trim();
+    if(!val) return;
+
+    showSpin(true);
+    const r = await callApi({action: 'handleConnectedScan', netNo: val, user: curUser});
+    showSpin(false);
+
+    const resDiv = document.getElementById('conn_result');
+    if(r.result === 'success') {
+        resDiv.innerHTML = `<div class="alert alert-success fw-bold"><i class="bi bi-check-circle-fill me-2"></i>Shipment Created!<br>AWB: ${r.awb}</div>`;
+        el.value = '';
+        toast("Connected Shipment Created");
+        syncData(false);
+        setTimeout(()=>el.focus(), 100);
+    } else {
+        resDiv.innerHTML = `<div class="alert alert-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>${r.message}</div>`;
+        el.select();
+    }
+}
+
+// ⚡ Bolt: Handle Automation Scan
+window.handleAutomationScan = async function(el) {
+    const val = el.value.trim();
+    if(!val) return;
+
+    showSpin(true);
+    const r = await callApi({action: 'handleAutomationScan', netNo: val});
+    showSpin(false);
+
+    if(r.result === 'success') {
+        // Populate Form
+        const d = r.data;
+        document.getElementById('f_net_no_hidden').value = val; // Store for submit
+
+        // Unhide form
+        document.getElementById('view_automation_search').style.display = 'none';
+        document.getElementById('form_main_fields').style.display = 'block';
+
+        // Fill details
+        if(d.awb) document.getElementById('f_awb').value = d.awb;
+        if(d.net) {
+             const netSel = document.getElementById('f_net');
+             if(netSel) netSel.value = d.net;
+        }
+        if(d.client && window.tomInstances.client) window.tomInstances.client.setValue(d.client);
+        if(d.dest && window.tomInstances.dest) window.tomInstances.dest.setValue(d.dest);
+
+        document.getElementById('f_type').value = d.type || "Ndox";
+        chkDox();
+
+        // Focus on Weight for editing
+        toast("Details Found. Please verify Weight/Boxes.");
+
+    } else {
+        alert(r.message);
+        el.select();
+    }
 }
 
 window.ahmAdd = async function() {

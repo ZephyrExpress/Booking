@@ -103,7 +103,9 @@ function doPost(e) {
     if (act === "editShipment") return handleEditShipment(body);
     if (act === "getBillingData") return getBillingData(body.from, body.to, body.net, body.client);
     if (act === "moveAdvance") return handleMoveAdvance(body);
-    if (act === "submitExternalManifest") return handleExternalManifest(body);
+    if (act === "handleBulkDataUpload") return handleBulkDataUpload(body);
+    if (act === "handleConnectedScan") return handleConnectedScan(body);
+    if (act === "handleAutomationScan") return handleAutomationScan(body);
 
     return jsonResponse("error", "Unknown Action: " + act);
 
@@ -374,7 +376,8 @@ function getAllData(username) {
                   // ⚡ Bolt Fix: Do NOT overwrite Net No if mode is Connected/Automation by Client
                   // Category is at 33 (AH) now, fallback to 32 (AG)
                   const categoryVal = r[33] || r[32] || "Normal";
-                  if (categoryVal !== 'Direct_Skip' && categoryVal !== 'Direct_Paperwork') {
+                  // Protect Net No for Connected/Automation modes
+                  if (categoryVal !== 'Direct_Skip' && categoryVal !== 'Direct_Paperwork' && categoryVal !== 'Connected' && categoryVal !== 'Automation') {
                       ch(20, br.netNo); // Col U (NetNo) index 20
                   }
 
@@ -833,11 +836,29 @@ function handleSubmit(body){
   // ⚡ Bolt: Handle Categories (Col 32/AF)
   const category = body.category || "Normal";
 
+  // ⚡ Bolt Fix: Automation Mode Status
+  // If mode is Automation, status should be Done, Doer is client name?
+  // User said: "its automaton should be marked done in FMS by the Doer as 'client Name'." for Direct (Connected).
+  // For Automation by Client: "Automation by Client... it will be recored as imbound".
+  // Assuming "Automation by Client" also implies Automation is DONE.
+  // We check if body.isAutomationMode is true.
+
+  let autoStatus = "Pending";
+  let autoDoer = "";
+
+  // If explicitly flagged as Automation Mode OR Connected Mode (though Connected usually goes via scan handler)
+  if(body.isAutomationMode === true || body.isAutomationMode === "true") {
+      autoStatus = "Done";
+      // Use Client Name as Doer, or explicit user if needed.
+      // User said "Doer as 'client Name'" for Connected. Let's assume same for Automation by Client.
+      autoDoer = body.client;
+  }
+
   const rowData = [
       "'"+body.awb, body.date, body.type, body.network, body.client, body.destination,
       body.totalBoxes, body.extraCharges, body.username, new Date(),
       tA.toFixed(2), tV.toFixed(2), tC.toFixed(2), body.extraRemarks,
-      "Pending", "", "", "", "", "", body.netNo,
+      autoStatus, autoDoer, "", "", "", "", body.netNo,
       body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
       holdStatus, holdReason, "", (holdStatus==="On Hold" ? body.username : ""), body.payeeName, body.payeeContact,
       category, "" // Col 33 (AH) = Category, 34 (AI) = Hold Date (Empty initially)
@@ -854,10 +875,13 @@ function handleSubmit(body){
 
   if(br.length) bx.getRange(bx.getLastRow()+1,1,br.length,8).setValues(br);
 
+  // ⚡ Bolt: Single Unified FMS Write
+  // If autoStatus is "Done", we pass that. Else default (Pending, No Doer).
   addToFMS({
       awb: body.awb, date: body.date, type: body.type, net: body.network,
       client: body.client, dest: body.destination, boxes: body.totalBoxes,
-      wgt: tC.toFixed(2), user: body.username
+      wgt: tC.toFixed(2), user: body.username,
+      status: autoStatus, doer: autoDoer
   });
 
   return jsonResponse("success","Saved");
@@ -865,12 +889,21 @@ function handleSubmit(body){
 
 function addToFMS(d) {
     try {
-        // const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
-        // if(fms) {
-        //     const lr = fms.getLastRow();
-        //     const row = lr + 1;
-        //     // fms.getRange(row, 2).setValue("'"+d.awb);
-        // }
+        const remoteSS = SpreadsheetApp.openById(TASK_SHEET_ID);
+        const fms = remoteSS.getSheetByName("FMS");
+        if(fms) {
+            // Status: Col 14 (N), Doer: Col 16 (P)
+            // Default Status: "Pending" (or from d.status)
+            // Default Doer: "" (or from d.doer)
+            const stat = d.status || "Pending";
+            const doer = d.doer || "";
+
+            fms.appendRow([
+                 "", "'"+d.awb, d.date, d.type, d.net, d.client, d.dest,
+                 d.boxes, "", "", d.wgt, d.wgt, d.wgt,
+                 stat, "", doer, "", "", "Pending", "", "", "" // Paperwork Status (S/19) default Pending
+            ]);
+        }
     } catch(e) { console.error("FMS Add Error", e); }
 }
 
@@ -1231,52 +1264,101 @@ function handleAddUser(b){
 function handleDeleteUser(u){clearUserCache(); const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users"),d=s.getDataRange().getValues();for(let i=1;i<d.length;i++)if(String(d[i][0]).toLowerCase()==String(u).toLowerCase()){s.deleteRow(i+1);return jsonResponse("success","Deleted");}return jsonResponse("error","Not Found");}
 function handleSetConfig(b) { PropertiesService.getScriptProperties().setProperty(b.key, b.value); return jsonResponse("success", "Config Saved"); }
 function jsonResponse(s,m,d){return ContentService.createTextOutput(JSON.stringify({result:s,message:m,...d})).setMimeType(ContentService.MimeType.JSON);}
-function handleExternalManifest(b) {
-    const items = b.items;
-    if(!items || !items.length) return jsonResponse("error", "No Items");
+// ⚡ Bolt: Bulk Data Upload
+function handleBulkDataUpload(b) {
+    try {
+        const rows = JSON.parse(b.data);
+        if (!rows || !rows.length) return jsonResponse("error", "No Data");
 
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        let sh = ss.getSheetByName("Bulk_Data");
+        if (!sh) sh = ss.insertSheet("Bulk_Data");
+
+        sh.clear();
+        sh.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
+        return jsonResponse("success", "Bulk Data Uploaded");
+    } catch(e) { return jsonResponse("error", e.toString()); }
+}
+
+// ⚡ Bolt: Helper to search Bulk Data
+function searchBulkData(netNo) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sh = ss.getSheetByName("Bulk_Data");
+    if (!sh || sh.getLastRow() < 2) return null;
+
+    const data = sh.getDataRange().getValues();
+    const headers = data[0].map(h => String(h).trim().toLowerCase());
+
+    // Find Columns
+    const cNetNo = headers.findIndex(h => h.includes("net no"));
+    if (cNetNo === -1) return null; // Net No col mandatory
+
+    const target = String(netNo).trim().toLowerCase();
+
+    for(let i=1; i<data.length; i++) {
+        if(String(data[i][cNetNo]).trim().toLowerCase() === target) {
+            // Map Data based on headers
+            const row = data[i];
+            const getVal = (k) => {
+                const idx = headers.findIndex(h => h.includes(k));
+                return idx > -1 ? row[idx] : "";
+            };
+
+            return {
+                awb: getVal("awb"),
+                date: getVal("date"),
+                dest: getVal("dest"),
+                net: "DHL", // Default or extract? User didn't specify, assuming DHL or derived
+                netNo: row[cNetNo],
+                boxes: getVal("pcs"),
+                wgt: getVal("wgt"),
+                client: getVal("client")
+            };
+        }
+    }
+    return null;
+}
+
+function handleConnectedScan(b) {
+    const res = searchBulkData(b.netNo);
+    if(!res) return jsonResponse("error", "Network No not found in Bulk Data");
+
+    // Check Duplicates
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sh = ss.getSheetByName("Shipments");
+    if(findRow(sh, res.awb) !== -1) return jsonResponse("error", "AWB already exists");
 
-    // Check duplicates in Shipments
-    const lastRow = sh.getLastRow();
-    const existingIds = lastRow > 1 ? sh.getRange(2, 1, lastRow-1, 1).getValues().flat().map(x => String(x).replace(/'/g,"").trim().toLowerCase()) : [];
+    // Create Shipment
+    // Category: "Connected"
+    // FMS Doer: Client Name (res.client)
 
-    const rowsToAdd = [];
-    const skipped = [];
+    const rowData = [
+        "'"+res.awb, new Date(), "Ndox", "DHL", res.client, res.dest, // Assuming Net=DHL default if missing
+        res.boxes, "", b.user, new Date(),
+        res.wgt, res.wgt, res.wgt, "Connected Scan",
+        "Done", res.client, "Pending", "", // Auto Done (by Client), Paper Pending
+        "", "", res.netNo, "0", "0", "0",
+        "", "", "N/A",
+        "", "", "", "", "", "",
+        "Connected", ""
+    ];
 
-    items.forEach(item => {
-        const id = String(item.awb).trim();
-        if(existingIds.includes(id.toLowerCase())) {
-            skipped.push(id);
-        } else {
-            // Map to Shipment Columns
-            // 0: AWB, 1: Date, 2: Type, 3: Net, 4: Client, 5: Dest
-            // 6: Boxes, 7: Extra, 8: User, 9: Timestamp
-            // 10: Act, 11: Vol, 12: Chg
-            // 13: Rem, 14: AutoStat, 15: AutoDoer, 16: PaperStat, 17: Assignee
-            // 18: Assigner, 19: Log, 20: NetNo, 21: PayTotal...
-            // 24: BatchNo, 25: ManDate, 26: Paperwork
-            // 32: Category (External)
+    sh.appendRow(rowData);
 
-            rowsToAdd.push([
-                "'"+id, item.date, "Ndox", item.net, item.client, item.dest,
-                item.boxes, "", b.user, new Date(),
-                item.wgt, item.wgt, item.wgt, "Manual Entry",
-                "Pending", "", "Completed", "", // Auto Pending, Paper Completed (Ready for Manifest)
-                "", "", item.netNo, "0", "0", "0",
-                "", "", "N/A", // Batch, ManDate, Paperwork
-                "", "", "", "", "", "", // Hold Status, Reason, Rem, HeldBy, Payee, Contact
-                "External", "" // Category, HoldDate
-            ]);
-        }
+    // Add to FMS
+    // Status: Done, Doer: Client Name
+    addToFMS({
+        awb: res.awb, date: new Date(), type: "Ndox", net: "DHL",
+        client: res.client, dest: res.dest, boxes: res.boxes,
+        wgt: res.wgt, user: b.user,
+        status: "Done", doer: res.client
     });
 
-    if(rowsToAdd.length > 0) {
-        // Ensure cols
-        if (sh.getMaxColumns() < 35) sh.insertColumnsAfter(sh.getMaxColumns(), 35 - sh.getMaxColumns());
-        sh.getRange(sh.getLastRow() + 1, 1, rowsToAdd.length, 35).setValues(rowsToAdd);
-    }
+    return jsonResponse("success", "Created", { awb: res.awb });
+}
 
-    return jsonResponse("success", `Added ${rowsToAdd.length} items. Skipped ${skipped.length}.`);
+function handleAutomationScan(b) {
+    const res = searchBulkData(b.netNo);
+    if(!res) return jsonResponse("error", "Network No not found in Bulk Data");
+    return jsonResponse("success", "Found", { data: res });
 }
