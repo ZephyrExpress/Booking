@@ -8,7 +8,7 @@ const ADVANCE_SHEET_NAME = "Advance_Records";
 function doGet(e) {
   // Serves the test page if ?page=test param is present
   if (e.parameter && e.parameter.page === 'test') {
-      return HtmlService.createTemplateFromFile('test')
+      return HtmlService.createTemplateFromFile('Test')
           .evaluate()
           .setTitle('TiDB Speed Test')
           .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
@@ -322,7 +322,7 @@ function getAllData(username) {
                           vol: r[25], // Z
                           chg: r[26], // AA
                           user: r[40], // AO
-                          autoDoer: r[41] // AP
+                      autoDoer: r[40] // ⚡ Bolt Fix: Use Col AO (40) for AutoDoer as per request
                       };
                   }
               }

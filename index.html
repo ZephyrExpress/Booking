@@ -1771,7 +1771,14 @@ function resetForm(){
     document.getElementById('f_payeeContact').value = "";
     if(window.tomInstances.client) window.tomInstances.client.clear();
     if(window.tomInstances.dest) window.tomInstances.dest.clear();
-    document.getElementById('f_date').valueAsDate=new Date();
+
+    // ⚡ Bolt Fix: Robust Date Setting (YYYY-MM-DD)
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    document.getElementById('f_date').value = `${y}-${m}-${d}`;
+
     document.getElementById('st_reg').checked = true; // Default
     chkStype({value:'Regular'}); // Reset -FRT
 }
