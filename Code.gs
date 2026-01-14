@@ -356,10 +356,19 @@ function getAllData(username) {
                   // ch(8, br.user); // Col I (User) index 8 - ⚡ Bolt: Removed to prevent overwriting original entry user
 
                   // For Auto Doer (Col P / 15) and Status (Col O / 14)
+                  // ⚡ Bolt Fix: Mark Done if in Booking Report, even if doer missing
+                  if(r[14] !== 'Done' && r[14] !== 'Completed') ch(14, 'Done');
+
                   if(br.autoDoer) {
                       ch(15, br.autoDoer);
-                      if(r[14] !== 'Done' && r[14] !== 'Completed') ch(14, 'Done');
                       fmsUpdates.push({ awb: awb, autoDoer: br.autoDoer });
+                  } else {
+                      // If BR has no doer, fallback to Entry User if currently empty
+                      // This ensures it appears in the Entry User's "My Tasks"
+                      if(!r[15] && r[8]) {
+                          ch(15, r[8]);
+                          fmsUpdates.push({ awb: awb, autoDoer: r[8] });
+                      }
                   }
               }
           }
