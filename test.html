@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      body { padding: 2rem; font-family: sans-serif; background-color: #f8f9fa; }
+      .card { max-width: 600px; margin: 0 auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+      #console { background: #1e1e1e; color: #00ff00; font-family: monospace; padding: 1rem; height: 300px; overflow-y: auto; border-radius: 4px; margin-top: 1rem; font-size: 0.9rem; }
+      .status-dot { height: 10px; width: 10px; background-color: #bbb; border-radius: 50%; display: inline-block; margin-right: 5px; }
+      .status-ok { background-color: #28a745; }
+      .status-err { background-color: #dc3545; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="card-header bg-dark text-white">
+        <h5 class="mb-0">TiDB Connection & Speed Test</h5>
+      </div>
+      <div class="card-body">
+        <p class="text-muted small">Host: gateway01.ap-southeast-1.prod.aws.tidbcloud.com</p>
+
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary" id="btnConnect" onclick="testConnection()">
+            <i class="bi bi-plug"></i> Test Connection
+          </button>
+          <button class="btn btn-outline-dark" id="btnSpeed" onclick="runSpeedTest()">
+            <i class="bi bi-speedometer2"></i> Run Speed Benchmark
+          </button>
+        </div>
+
+        <div id="console">Ready...</div>
+      </div>
+    </div>
+
+    <script>
+      function log(msg, type='info') {
+        const c = document.getElementById('console');
+        const ts = new Date().toLocaleTimeString();
+        const color = type === 'error' ? '#ff6b6b' : (type === 'success' ? '#51cf66' : '#00ff00');
+        c.innerHTML += `<div style="color:${color}">[${ts}] ${msg}</div>`;
+        c.scrollTop = c.scrollHeight;
+      }
+
+      function testConnection() {
+        log("Attempting to connect to TiDB...", "info");
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res.success) {
+              log("SUCCESS: " + res.message, "success");
+            } else {
+              log("FAILURE: " + res.message, "error");
+            }
+          })
+          .withFailureHandler(function(err) {
+            log("RPC ERROR: " + err.message, "error");
+          })
+          .testTidbConnection();
+      }
+
+      function runSpeedTest() {
+        log("Starting Speed Test (Create, Insert 10x, Select, Drop)...", "info");
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res.success) {
+              log("BENCHMARK COMPLETE", "success");
+              log(`Total Time: ${res.data.totalTime}ms`);
+              log(`- Connect: ${res.data.connectTime}ms`);
+              log(`- Create Table: ${res.data.createTime}ms`);
+              log(`- Insert (10 rows): ${res.data.insertTime}ms`);
+              log(`- Select: ${res.data.selectTime}ms`);
+            } else {
+              log("BENCHMARK FAILED: " + res.message, "error");
+            }
+          })
+          .withFailureHandler(function(err) {
+            log("RPC ERROR: " + err.message, "error");
+          })
+          .runTidbSpeedTest();
+      }
+    </script>
+  </body>
+</html>
