@@ -1552,3 +1552,45 @@ function runTidbSpeedTest() {
     return { success: false, message: e.toString() };
   }
 }
+
+function submitToTidb(d) {
+  const tableName = 'shipments_test';
+  let conn = null;
+  try {
+    conn = getTidbConnection();
+
+    // Ensure table exists
+    const stmt = conn.createStatement();
+    stmt.execute('CREATE TABLE IF NOT EXISTS ' + tableName + ' (' +
+      'awb VARCHAR(50) PRIMARY KEY, ' +
+      'date DATE, ' +
+      'client VARCHAR(100), ' +
+      'net VARCHAR(50), ' +
+      'dest VARCHAR(100), ' +
+      'boxes INT, ' +
+      'wgt DECIMAL(10,2), ' +
+      'created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP' +
+    ')');
+    stmt.close();
+
+    // Insert
+    const ps = conn.prepareStatement('INSERT INTO ' + tableName + ' (awb, date, client, net, dest, boxes, wgt) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    ps.setString(1, d.awb);
+    ps.setString(2, d.date);
+    ps.setString(3, d.client);
+    ps.setString(4, d.net);
+    ps.setString(5, d.dest);
+    ps.setInt(6, parseInt(d.boxes));
+    ps.setBigDecimal(7, parseFloat(d.wgt)); // Use setBigDecimal or setDouble based on driver
+
+    ps.executeUpdate();
+    ps.close();
+    conn.close();
+
+    return { success: true };
+
+  } catch (e) {
+    if(conn) conn.close();
+    return { success: false, message: e.toString() };
+  }
+}
