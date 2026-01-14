@@ -437,50 +437,75 @@ function getAllData(username) {
   let inboundTodayCount = 0;
   const getNormDate = (d) => new Date(d).setHours(0,0,0,0);
   const todayTime = getNormDate(new Date());
+  const todayStr = new Date().toLocaleDateString();
 
   // ⚡ Bolt Helper: Format raw numbers to fixed decimals (simulate getDisplayValues)
   const num = (v) => { const n = parseFloat(v); return isNaN(n) ? v : n.toFixed(2); };
 
-  // Process Normal Data (Shipments Sheet)
+  // ⚡ Bolt Optimization: Filter data processing
+  // Only process rows that are ACTIVE or RECENT.
+  // Criteria:
+  // 1. On Hold
+  // 2. Pending Automation or Paperwork
+  // 3. Completed TODAY (for Daily Manifest)
+  // 4. Assigned to user (ToDo)
+  // 5. Automated by user (ToAssign)
+  // Skip old completed shipments to reduce payload size.
+
   data.forEach(r => {
     const rId = String(r[0]).replace(/'/g, "").trim();
     if(rId) allAwbs.push(rId);
 
-    const category = "Normal"; // Items in Shipments are implicitly Normal now
+    const category = "Normal";
+    const dateVal = getNormDate(r[1]);
+    if(dateVal === todayTime) inboundTodayCount++;
 
-    if(getNormDate(r[1]) === todayTime) inboundTodayCount++;
+    const holdStatus = r[27];
+    const paperStatus = r[16];
+    const autoStatus = r[14];
+    const batchNo = r[24];
+    const manifestDate = r[25] instanceof Date ? r[25].toLocaleDateString() : String(r[25]);
 
-    const item = {
-      id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
-      details: `${r[6]} Boxes | ${num(r[12])} Kg`,
-      user: r[8], autoDoer: r[15], assignee: r[17],
-      actWgt: num(r[10]), volWgt: num(r[11]), chgWgt: num(r[12]), type: r[2], boxes: r[6], extra: r[7], rem: r[13],
-      netNo: r[20], payTotal: num(r[21]), payPaid: num(r[22]), payPending: num(r[23]),
-      batchNo: r[24], manifestDate: r[25], paperwork: r[26],
-      holdStatus: r[27], holdReason: r[28], holdRem: r[29], heldBy: r[30],
-      category: category, holdDate: r[34]
-    };
+    // Check if Active
+    const isHold = holdStatus === "On Hold";
+    const isRTO = holdStatus === "RTO";
+    const isPending = (autoStatus === "Pending" || autoStatus === "") || (paperStatus !== "Completed");
+    const isTodayManifest = (paperStatus === "Completed" && (manifestDate === todayStr || dateVal === todayTime));
 
-    if (item.holdStatus === "On Hold") {
-        holdings.push(item);
-    } else if (item.holdStatus === "RTO") {
-        // Skip RTO
-    } else {
-        const paperStatus = r[16];
-        const autoStatus = r[14];
-        const assignee = String(r[17]).toLowerCase();
-        const autoBy = String(r[15]).toLowerCase();
+    // We must include if it's relevant to the user even if completed (e.g. they just did it)
+    // But mainly we rely on status.
 
-        if (paperStatus === "Completed") {
-          completedManifest.push(item);
-        }
-        else if (autoStatus === "Pending" || autoStatus === "") {
-          pendingAuto.push(item);
-        }
-        else {
-          pendingPaper.push(item);
-          if (autoBy === targetUser && assignee === "") toAssign.push(item);
-          if (assignee === targetUser) myToDo.push({...item, subtitle: `Assigned by ${r[18]}`});
+    if (isRTO) return; // Skip RTO completely from active lists
+
+    if (isHold || isPending || isTodayManifest) {
+        const item = {
+          id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
+          details: `${r[6]} Boxes | ${num(r[12])} Kg`,
+          user: r[8], autoDoer: r[15], assignee: r[17],
+          actWgt: num(r[10]), volWgt: num(r[11]), chgWgt: num(r[12]), type: r[2], boxes: r[6], extra: r[7], rem: r[13],
+          netNo: r[20], payTotal: num(r[21]), payPaid: num(r[22]), payPending: num(r[23]),
+          batchNo: batchNo, manifestDate: manifestDate, paperwork: r[26],
+          holdStatus: holdStatus, holdReason: r[28], holdRem: r[29], heldBy: r[30],
+          category: category, holdDate: r[34]
+        };
+
+        if (isHold) {
+            holdings.push(item);
+        } else {
+            const assignee = String(r[17]).toLowerCase();
+            const autoBy = String(r[15]).toLowerCase();
+
+            if (paperStatus === "Completed") {
+                completedManifest.push(item);
+            }
+            else if (autoStatus === "Pending" || autoStatus === "") {
+                pendingAuto.push(item);
+            }
+            else {
+                pendingPaper.push(item);
+                if (autoBy === targetUser && assignee === "") toAssign.push(item);
+                if (assignee === targetUser) myToDo.push({...item, subtitle: `Assigned by ${r[18]}`});
+            }
         }
     }
   });
