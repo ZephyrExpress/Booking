@@ -1581,7 +1581,7 @@ function submitToTidb(d) {
     ps.setString(4, d.net);
     ps.setString(5, d.dest);
     ps.setInt(6, parseInt(d.boxes));
-    ps.setBigDecimal(7, parseFloat(d.wgt)); // Use setBigDecimal or setDouble based on driver
+    ps.setDouble(7, parseFloat(d.wgt));
 
     ps.executeUpdate();
     ps.close();

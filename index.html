@@ -166,9 +166,6 @@
       <input type="password" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required autocomplete="new-password">
       <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm" style="background-color: var(--brand-blue); border:none;">SIGN IN</button>
     </form>
-    <div class="text-center mt-3">
-        <a href="#" onclick="window.location.search='?page=test'; return false;" class="text-muted small text-decoration-none">System Speed Test (Owner)</a>
-    </div>
     <div id="loginError" class="alert alert-danger mt-3 small text-center" style="display:none;"></div>
   </div>
 </div>
@@ -504,7 +501,7 @@
                   <span><i class="bi bi-kanban me-2"></i>Task Manager (Global Pool)</span>
                   <div class="d-flex gap-2 align-items-center">
                       <button class="btn btn-sm btn-light text-primary fw-bold" onclick="saveBulkAssignments()"><i class="bi bi-save-fill me-1"></i> Bulk Assign</button>
-                      <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-table me-1"></i> Automation Data</a>
+                      <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-table me-1"></i> Automation data</a>
                       <button class="btn btn-sm btn-light text-primary fw-bold" onclick="exportPool()">Export</button>
                   </div>
               </div>
@@ -518,7 +515,7 @@
         </div>
         <div id="staffTaskView" style="display:none">
              <div class="d-flex justify-content-end mb-3">
-                  <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-table me-1"></i> Automation Data</a>
+                  <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-table me-1"></i> Automation data</a>
              </div>
              <div class="row g-4">
                  <div class="col-lg-6">
@@ -677,6 +674,9 @@
                  <!-- Users Tab -->
                  <div class="tab-pane fade show active" id="tab-users">
                       <div class="alert alert-light border small text-muted mb-4"><i class="bi bi-info-circle me-2"></i>Owners can promote/demote. Admins can manage data. Staff access is restricted by permissions.</div>
+
+                      <!-- Owner Only: Speed Test -->
+                      <button id="btnOwnerTest" class="btn btn-dark w-100 mb-4 fw-bold shadow-sm" style="display:none" onclick="openSpeedTest()"><i class="bi bi-speedometer2 me-2"></i>System Speed Test</button>
 
                       <!-- Auto AWB Toggle -->
                       <div class="d-flex align-items-center justify-content-between p-3 border rounded mb-4 bg-light">
@@ -1560,7 +1560,14 @@ window.savePerms = async function(target) {
 }
 
 async function renderAdminPanel(){
-   if(curRole.toLowerCase()==='staff') return; 
+   if(curRole.toLowerCase()==='staff') return;
+
+   // Show Owner Features
+   if(curRole === 'Owner') {
+       const btn = document.getElementById('btnOwnerTest');
+       if(btn) btn.style.display = 'block';
+   }
+
    const r=await fetchGet('getUsers'); const t=document.getElementById('userList');
    if(r.users) t.innerHTML = r.users.map(u => {
        const isMe = u.user === curUser;
@@ -2707,6 +2714,11 @@ window.submitCorrection = async function(id) {
         alert("Error: " + r.message);
     }
     showSpin(false);
+}
+
+window.openSpeedTest = function() {
+    if(curRole !== 'Owner') return;
+    window.open(API_URL + '?page=test', '_blank');
 }
 
 // ⚡ Bolt: Custom Enter Navigation for Inbound Form
