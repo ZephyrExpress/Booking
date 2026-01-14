@@ -6,6 +6,15 @@ const TASK_SHEET_ID = "1_8VSzZdn8rKrzvXpzIfY_oz3XT9gi30jgzdxzQP4Bac";
 const ADVANCE_SHEET_NAME = "Advance_Records";
 
 function doGet(e) {
+  // Serves the test page if ?page=test param is present
+  if (e.parameter && e.parameter.page === 'test') {
+      return HtmlService.createTemplateFromFile('test')
+          .evaluate()
+          .setTitle('TiDB Speed Test')
+          .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+          .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
   // Serves the HTML page
   return HtmlService.createTemplateFromFile('Index')
       .evaluate()
@@ -283,101 +292,105 @@ function getAllData(username) {
   // ⚡ Bolt Optimization: FMS updates aggregation
   let fmsUpdates = [];
 
-  // ⚡ Bolt: Booking Report Sync (Latest Data Top-Down)
-  // Fields to update from Booking Report:
-  // D(Dest)->Col 6(F), E(ClientCode), F(ClientName)->Col 5(E), T(Net)->Col 4(D), U(NetNo)->Col 21(U)
-  // W(Content)->Col 3(C), X(Box)->Col 7(G), Y(Act)->Col 11(K), Z(Vol)->Col 12(L), AA(Chg)->Col 13(M)
-  // AO(User)->Col 9(I), AP(AutoDoer)->Col 16(P)
-  try {
-      const brSheet = ss.getSheetByName("Booking_Report") || (taskSS ? taskSS.getSheetByName("Booking_Report") : null);
-      if(brSheet) {
-          const brData = brSheet.getDataRange().getValues();
-          // Create map of AWB -> First Row (Latest)
-          const brMap = {};
-          // Assuming Header Row 1
-          for(let i=1; i<brData.length; i++) {
-              const r = brData[i];
-              const awbKey = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-              if(awbKey && !brMap[awbKey]) {
-                  brMap[awbKey] = {
-                      dest: r[3], // D
-                      clientCode: r[4], // E
-                      clientName: r[5], // F
-                      net: r[19], // T
-                      netNo: r[20], // U
-                      type: r[22], // W
-                      boxes: r[23], // X
-                      act: r[24], // Y
-                      vol: r[25], // Z
-                      chg: r[26], // AA
-                      user: r[40], // AO
-                      autoDoer: r[41] // AP
-                  };
-              }
-          }
+  // ⚡ Bolt Optimization: Debounce Booking Report Sync
+  // Only sync if cache key expired (every 5 mins) to prevent massive slow-down on every read
+  const SYNC_CACHE_KEY = 'last_br_sync_time';
+  const lastSync = cache.get(SYNC_CACHE_KEY);
+  const shouldSync = !lastSync;
 
-          let hasChange = false;
-
-          for(let i=0; i<data.length; i++) {
-              const r = data[i]; // Row data
-              const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
-
-              if(brMap[awb]) {
-                  const br = brMap[awb];
-                  // Helper to check diff
-                  const ch = (idx, val) => {
-                      if(String(r[idx]) !== String(val)) {
-                          r[idx] = val;
-                          hasChange = true;
-                      }
-                  };
-
-                  // Update Columns (Index = Col - 1)
-                  ch(5, br.dest); // Col F (Dest) index 5
-                  ch(4, `${br.clientName}-${br.clientCode}`.slice(-4) === br.clientCode ? `${br.clientName}-${br.clientCode}` : br.clientName);
-                  // const clientStr = `${br.clientName}-${br.clientCode}`; // Unused var
-                  // ch(4, clientStr); // Col E (Client) index 4 - Already covered above
-
-                  ch(3, br.net); // Col D (Network) index 3
-
-                  // ⚡ Bolt Fix: Do NOT overwrite Net No if mode is Connected/Automation by Client
-                  // Category is at 33 (AH) now, fallback to 32 (AG)
-                  const categoryVal = r[33] || r[32] || "Normal";
-                  // Protect Net No for Connected/Automation modes
-                  if (categoryVal !== 'Direct_Skip' && categoryVal !== 'Direct_Paperwork' && categoryVal !== 'Connected' && categoryVal !== 'Automation') {
-                      ch(20, br.netNo); // Col U (NetNo) index 20
-                  }
-
-                  ch(2, br.type); // Col C (Type) index 2
-                  ch(6, br.boxes); // Col G (Boxes) index 6
-                  ch(10, br.act); // Col K (Act) index 10
-                  ch(11, br.vol); // Col L (Vol) index 11
-                  ch(12, br.chg); // Col M (Chg) index 12
-                  // ch(8, br.user); // Col I (User) index 8 - ⚡ Bolt: Removed to prevent overwriting original entry user
-
-                  // For Auto Doer (Col P / 15) and Status (Col O / 14)
-                  // ⚡ Bolt Fix: Mark Done if in Booking Report, even if doer missing
-                  if(r[14] !== 'Done' && r[14] !== 'Completed') ch(14, 'Done');
-
-                  if(br.autoDoer) {
-                      ch(15, br.autoDoer);
-                      fmsUpdates.push({ awb: awb, autoDoer: br.autoDoer });
-                  } else {
-                      // If BR has no doer, fallback to Entry User if currently empty
-                      // This ensures it appears in the Entry User's "My Tasks"
-                      if(!r[15] && r[8]) {
-                          ch(15, r[8]);
-                          fmsUpdates.push({ awb: awb, autoDoer: r[8] });
-                      }
+  if (shouldSync) {
+      try {
+          const brSheet = ss.getSheetByName("Booking_Report") || (taskSS ? taskSS.getSheetByName("Booking_Report") : null);
+          if(brSheet) {
+              const brData = brSheet.getDataRange().getValues();
+              // Create map of AWB -> First Row (Latest)
+              const brMap = {};
+              // Assuming Header Row 1
+              for(let i=1; i<brData.length; i++) {
+                  const r = brData[i];
+                  const awbKey = String(r[0]).replace(/'/g,"").trim().toLowerCase();
+                  if(awbKey && !brMap[awbKey]) {
+                      brMap[awbKey] = {
+                          dest: r[3], // D
+                          clientCode: r[4], // E
+                          clientName: r[5], // F
+                          net: r[19], // T
+                          netNo: r[20], // U
+                          type: r[22], // W
+                          boxes: r[23], // X
+                          act: r[24], // Y
+                          vol: r[25], // Z
+                          chg: r[26], // AA
+                          user: r[40], // AO
+                          autoDoer: r[41] // AP
+                      };
                   }
               }
-          }
 
-          if(hasChange && range) {
-              range.setValues(data);
+              let hasChange = false;
+
+              for(let i=0; i<data.length; i++) {
+                  const r = data[i]; // Row data
+                  const awb = String(r[0]).replace(/'/g,"").trim().toLowerCase();
+
+                  // ⚡ Bolt Optimization: Skip sync for old completed/manifested items to save time
+                  // If status is Completed and manifest date is not empty, skip unless very recent
+                  const pStat = r[16]; // PaperStatus (Col Q/17)
+                  if(pStat === 'Completed' && r[24] && r[25]) { // Has Batch & Manifest Date
+                      continue;
+                  }
+
+                  if(brMap[awb]) {
+                      const br = brMap[awb];
+                      // Helper to check diff
+                      const ch = (idx, val) => {
+                          if(String(r[idx]) !== String(val)) {
+                              r[idx] = val;
+                              hasChange = true;
+                          }
+                      };
+
+                      // Update Columns (Index = Col - 1)
+                      ch(5, br.dest); // Col F (Dest) index 5
+                      ch(4, `${br.clientName}-${br.clientCode}`.slice(-4) === br.clientCode ? `${br.clientName}-${br.clientCode}` : br.clientName);
+
+                      ch(3, br.net); // Col D (Network) index 3
+
+                      const categoryVal = r[33] || r[32] || "Normal";
+                      if (categoryVal !== 'Direct_Skip' && categoryVal !== 'Direct_Paperwork' && categoryVal !== 'Connected' && categoryVal !== 'Automation') {
+                          ch(20, br.netNo); // Col U (NetNo) index 20
+                      }
+
+                      ch(2, br.type); // Col C (Type) index 2
+                      ch(6, br.boxes); // Col G (Boxes) index 6
+                      ch(10, br.act); // Col K (Act) index 10
+                      ch(11, br.vol); // Col L (Vol) index 11
+                      ch(12, br.chg); // Col M (Chg) index 12
+
+                      // For Auto Doer (Col P / 15) and Status (Col O / 14)
+                      if(r[14] !== 'Done' && r[14] !== 'Completed') ch(14, 'Done');
+
+                      if(br.autoDoer) {
+                          ch(15, br.autoDoer);
+                          fmsUpdates.push({ awb: awb, autoDoer: br.autoDoer });
+                      } else {
+                          // Fallback to Entry User if BR has no doer
+                          if(!r[15] && r[8]) {
+                              ch(15, r[8]);
+                              fmsUpdates.push({ awb: awb, autoDoer: r[8] });
+                          }
+                      }
+                  }
+              }
+
+              if(hasChange && range) {
+                  range.setValues(data);
+              }
+              // Set Cache (5 mins)
+              try { cache.put(SYNC_CACHE_KEY, 'true', 300); } catch(e){}
           }
-      }
-  } catch(e) { console.error("Sync BR Error", e); }
+      } catch(e) { console.error("Sync BR Error", e); }
+  }
 
   // ⚡ Bolt Optimization: Batch write FMS updates
   if(fmsUpdates.length > 0) {
@@ -1444,4 +1457,98 @@ function handleAutomationScan(b) {
     const res = searchBulkData(b.netNo);
     if(!res) return jsonResponse("error", "Network No not found in Bulk Data");
     return jsonResponse("success", "Found", { data: res });
+}
+
+// --- TIDB TEST FUNCTIONS ---
+
+function getTidbConnection() {
+  const HOST = 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com';
+  const PORT = '4000';
+  const USER = 'ZttLfxkkv4BLmJK.root';
+  const PASS = 'YVH5qRRBayZU9y2M';
+  const DB = 'test';
+
+  // TiDB Cloud requires SSL
+  const connectionUrl = 'jdbc:mysql://' + HOST + ':' + PORT + '/' + DB + '?user=' + USER + '&password=' + PASS + '&sslMode=REQUIRED';
+
+  return Jdbc.getConnection(connectionUrl);
+}
+
+function testTidbConnection() {
+  try {
+    const conn = getTidbConnection();
+    const stmt = conn.createStatement();
+    const rs = stmt.executeQuery('SELECT 1');
+    let val = 0;
+    while (rs.next()) {
+      val = rs.getInt(1);
+    }
+    rs.close();
+    stmt.close();
+    conn.close();
+
+    if (val === 1) {
+      return { success: true, message: "Connection Successful! (SELECT 1 returned 1)" };
+    } else {
+      return { success: false, message: "Connection made but unexpected result." };
+    }
+  } catch (e) {
+    return { success: false, message: e.toString() };
+  }
+}
+
+function runTidbSpeedTest() {
+  const results = {};
+  const tableName = 'gas_speed_test_' + new Date().getTime();
+
+  try {
+    const startTotal = new Date().getTime();
+
+    // 1. Connect
+    const t1 = new Date().getTime();
+    const conn = getTidbConnection();
+    results.connectTime = new Date().getTime() - t1;
+
+    // 2. Create Table
+    const t2 = new Date().getTime();
+    const stmt = conn.createStatement();
+    stmt.execute('CREATE TABLE ' + tableName + ' (id INT PRIMARY KEY, val VARCHAR(255))');
+    results.createTime = new Date().getTime() - t2;
+    stmt.close();
+
+    // 3. Insert (Batch)
+    const t3 = new Date().getTime();
+    const ps = conn.prepareStatement('INSERT INTO ' + tableName + ' VALUES (?, ?)');
+    for (let i = 0; i < 10; i++) {
+      ps.setInt(1, i);
+      ps.setString(2, 'Test Row ' + i);
+      ps.addBatch();
+    }
+    ps.executeBatch();
+    ps.close();
+    results.insertTime = new Date().getTime() - t3;
+
+    // 4. Select
+    const t4 = new Date().getTime();
+    const stmt2 = conn.createStatement();
+    const rs = stmt2.executeQuery('SELECT * FROM ' + tableName);
+    let count = 0;
+    while (rs.next()) { count++; }
+    rs.close();
+    stmt2.close();
+    results.selectTime = new Date().getTime() - t4;
+
+    // 5. Cleanup
+    const stmt3 = conn.createStatement();
+    stmt3.execute('DROP TABLE ' + tableName);
+    stmt3.close();
+
+    conn.close();
+    results.totalTime = new Date().getTime() - startTotal;
+
+    return { success: true, data: results };
+
+  } catch (e) {
+    return { success: false, message: e.toString() };
+  }
 }
