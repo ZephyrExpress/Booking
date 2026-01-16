@@ -1168,7 +1168,8 @@ function handleDirectTransfer(b) {
   if(holdStatus === "On Hold") return jsonResponse("error", "Shipment is On Hold");
   const oldLog = ss.getRange(row, 20).getValue();
   ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Direct Transfer by ${b.by} to ${b.to}]`);
-  ss.getRange(row, 18).setValue(b.to);
+  // ⚡ Bolt Fix: Update Status (17), Assignee (18), Assigner (19) atomically
+  ss.getRange(row, 17, 1, 3).setValues([["Assigned", b.to, b.by]]);
   syncFMS(b.taskId, { assignee: b.to, assigner: b.by });
   return jsonResponse("success", "Transferred");
 }
