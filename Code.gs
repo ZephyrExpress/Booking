@@ -505,8 +505,9 @@ function getAllData(username) {
         if (isHold) {
             holdings.push(item);
         } else {
-            const assignee = String(r[17]).toLowerCase();
-            const autoBy = String(r[15]).toLowerCase();
+            // ⚡ Bolt Fix: Trim inputs to prevent "invisible" tasks due to whitespace
+            const assignee = String(r[17]).trim().toLowerCase();
+            const autoBy = String(r[15]).trim().toLowerCase();
 
             if (paperStatus === "Completed") {
                 completedManifest.push(item);
@@ -567,7 +568,8 @@ function getAllData(username) {
     holdings: holdings,
     allAwbs: allAwbs,
     advance: advance,
-    adminPool: pendingPaper.filter(x => !x.assignee)
+    // ⚡ Bolt Fix: Robust empty check for admin pool
+    adminPool: pendingPaper.filter(x => !x.assignee || String(x.assignee).trim() === "")
   });
 }
 
