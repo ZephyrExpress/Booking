@@ -675,9 +675,6 @@
                  <div class="tab-pane fade show active" id="tab-users">
                       <div class="alert alert-light border small text-muted mb-4"><i class="bi bi-info-circle me-2"></i>Owners can promote/demote. Admins can manage data. Staff access is restricted by permissions.</div>
 
-                      <!-- Owner Only: Speed Test -->
-                      <button id="btnOwnerTest" class="btn btn-dark w-100 mb-4 fw-bold shadow-sm" style="display:none" onclick="openSpeedTest()"><i class="bi bi-speedometer2 me-2"></i>System Speed Test</button>
-
                       <!-- Auto AWB Toggle -->
                       <div class="d-flex align-items-center justify-content-between p-3 border rounded mb-4 bg-light">
                           <div class="fw-bold text-dark"><i class="bi bi-magic me-2"></i>Auto AWB Generation</div>
@@ -1569,11 +1566,6 @@ window.savePerms = async function(target) {
 async function renderAdminPanel(){
    if(curRole.toLowerCase()==='staff') return;
 
-   // Show Owner Features
-   if(curRole === 'Owner') {
-       const btn = document.getElementById('btnOwnerTest');
-       if(btn) btn.style.display = 'block';
-   }
 
    const r=await fetchGet('getUsers'); const t=document.getElementById('userList');
    if(r.users) t.innerHTML = r.users.map(u => {
@@ -2730,10 +2722,6 @@ window.submitCorrection = async function(id) {
     showSpin(false);
 }
 
-window.openSpeedTest = function() {
-    if(curRole !== 'Owner') return;
-    window.open(API_URL + '?page=test', '_blank');
-}
 
 // ⚡ Bolt: Custom Enter Navigation for Inbound Form
 document.addEventListener('keydown', function(e) {
