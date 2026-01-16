@@ -568,8 +568,9 @@ function getAllData(username) {
     holdings: holdings,
     allAwbs: allAwbs,
     advance: advance,
-    // ⚡ Bolt Fix: Robust empty check for admin pool
-    adminPool: pendingPaper.filter(x => !x.assignee || String(x.assignee).trim() === "")
+    // ⚡ Bolt Fix: Admin Pool now shows ALL pending paperwork (assigned or unassigned)
+    // This allows Admins to re-assign tasks if needed.
+    adminPool: pendingPaper
   });
 }
 
