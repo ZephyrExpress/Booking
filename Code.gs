@@ -517,7 +517,9 @@ function getAllData(username) {
 
                 // ⚡ Bolt Fix: Staff see only tasks they Automated (Col P). Unassigned check uses PaperStatus (Col Q).
                 // If PaperStatus is empty or Pending (not Assigned), show in pool.
-                const isUnassigned = (paperStatus !== "Assigned");
+                // Robust check: trim and lowercase
+                const paperStatusNorm = String(paperStatus || "").trim().toLowerCase();
+                const isUnassigned = (paperStatusNorm !== "assigned");
 
                 if (isMyAuto && isUnassigned) toAssign.push(item);
                 if (assignee === targetUser) myToDo.push({...item, subtitle: `Assigned by ${r[18]}`});
