@@ -518,9 +518,9 @@ function getAllData(username) {
 
                 // ⚡ Bolt Fix: Staff see only tasks they Automated (Col P). Unassigned check uses PaperStatus (Col Q).
                 // If PaperStatus is empty or Pending (not Assigned), show in pool.
-                // Robust check: trim and lowercase
+                // Robust check: trim and lowercase. Also check if assignee is empty (fallback for inconsistent data).
                 const paperStatusNorm = String(paperStatus || "").trim().toLowerCase();
-                const isUnassigned = (paperStatusNorm !== "assigned");
+                const isUnassigned = (paperStatusNorm !== "assigned") || (assignee === "");
 
                 if (isMyAuto && isUnassigned) toAssign.push(item);
                 if (assignee === targetUser) myToDo.push({...item, subtitle: `Assigned by ${r[18]}`});
@@ -573,8 +573,8 @@ function getAllData(username) {
     allAwbs: allAwbs,
     advance: advance,
     // ⚡ Bolt Fix: Admin Pool now shows ONLY UNASSIGNED pending paperwork.
-    // User Requirement: "i just wanted to see entries which are not assigned and still pending"
-    adminPool: pendingPaper.filter(x => String(x.paperStatus||"").trim().toLowerCase() !== "assigned")
+    // Logic matches toAssign: Status != assigned OR Assignee is empty.
+    adminPool: pendingPaper.filter(x => String(x.paperStatus||"").trim().toLowerCase() !== "assigned" || !x.assignee)
   });
 }
 
