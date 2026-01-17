@@ -492,7 +492,8 @@ function getAllData(username) {
           netNo: r[20], payTotal: num(r[21]), payPaid: num(r[22]), payPending: num(r[23]),
           batchNo: batchNo, manifestDate: manifestDate, paperwork: r[26],
           holdStatus: holdStatus, holdReason: r[28], holdRem: r[29], heldBy: r[30],
-          category: category, holdDate: r[34]
+          category: category, holdDate: r[34],
+          paperStatus: r[16] // ⚡ Bolt Fix: Explicitly store paperStatus for filtering
         };
 
         if (isHold) {
@@ -571,9 +572,9 @@ function getAllData(username) {
     holdings: holdings,
     allAwbs: allAwbs,
     advance: advance,
-    // ⚡ Bolt Fix: Admin Pool now shows ALL pending paperwork (assigned or unassigned)
-    // This allows Admins to re-assign tasks if needed.
-    adminPool: pendingPaper
+    // ⚡ Bolt Fix: Admin Pool now shows ONLY UNASSIGNED pending paperwork.
+    // User Requirement: "i just wanted to see entries which are not assigned and still pending"
+    adminPool: pendingPaper.filter(x => String(x.paperStatus||"").trim().toLowerCase() !== "assigned")
   });
 }
 
