@@ -519,7 +519,7 @@
              </div>
              <div class="row g-4">
                  <div class="col-lg-6">
-                     <div class="alert alert-info py-3 shadow-sm border-0 border-start border-4 border-info"><h5 class="alert-heading fw-bold m-0"><i class="bi bi-robot me-2"></i>Unassigned Tasks</h5></div>
+                     <div class="alert alert-info py-3 shadow-sm border-0 border-start border-4 border-info"><h5 class="alert-heading fw-bold m-0"><i class="bi bi-robot me-2"></i>Tasks to Assign</h5></div>
                      <div id="contAssign" class="row g-3"></div>
                  </div>
                  <div class="col-lg-6">
@@ -1257,8 +1257,8 @@ function renderTaskHub(){
    } else {
       document.getElementById('adminTaskView').style.display = 'none'; document.getElementById('staffTaskView').style.display = 'block';
       const wf=window.APP_DATA.workflow; const ca=document.getElementById('contAssign');
-      if(!wf.toAssign.length) ca.innerHTML='<div class="col-12 text-center text-muted small py-4">No unassigned tasks</div>';
-      else { let opts=`<option value="">Transfer To...</option>`; if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`); ca.innerHTML = wf.toAssign.map(x => `<div class="col-12"><div class="panel-card p-3 border-info border-start border-4"><div class="fw-bold">${x.id}</div><div class="small text-muted mb-2">${x.client} • ${x.net}</div><div class="d-flex justify-content-between align-items-center mb-2"><span class="badge bg-light text-dark border">By: ${x.autoDoer||'-'}</span></div><div class="input-group input-group-sm"><select id="direct_tr_${x.id}" class="form-select">${opts}</select><button class="btn btn-primary" onclick="actDirectTransfer('${x.id}')">Assign</button></div></div></div>`).join(''); }
+      if(!wf.toAssign.length) ca.innerHTML='<div class="col-12 text-center text-muted small py-4">No tasks to assign</div>';
+      else { let opts=`<option value="">Assign To...</option>`; if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`); ca.innerHTML = wf.toAssign.map(x => `<div class="col-12"><div class="panel-card p-3 border-info border-start border-4"><div class="fw-bold">${x.id}</div><div class="small text-muted mb-2">${x.client} • ${x.net}</div><div class="input-group input-group-sm"><select id="direct_tr_${x.id}" class="form-select">${opts}</select><button class="btn btn-primary" onclick="actDirectTransfer('${x.id}')">Assign</button></div></div></div>`).join(''); }
       const ct=document.getElementById('contTodo');
       if(!wf.toDo.length) ct.innerHTML='<div class="col-12 text-center text-muted small py-4">No tasks assigned to you</div>';
       else { ct.innerHTML = wf.toDo.map(x => `
