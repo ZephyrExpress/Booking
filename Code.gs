@@ -516,6 +516,7 @@ function getAllData(username) {
             }
             else {
                 pendingPaper.push(item);
+                // ⚡ Bolt Logic: Staff see ONLY tasks they automated. Admin see all (handled in adminPool).
                 if (autoBy === targetUser && assignee === "") toAssign.push(item);
                 if (assignee === targetUser) myToDo.push({...item, subtitle: `Assigned by ${r[18]}`});
             }
