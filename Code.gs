@@ -511,12 +511,15 @@ function getAllData(username) {
             }
             else {
                 pendingPaper.push(item);
-                // ⚡ Bolt Logic: Staff see ONLY tasks they automated OR entered. Admin see all (handled in adminPool).
+                // ⚡ Bolt Logic: Staff see ONLY tasks they automated. Admin see all (handled in adminPool).
                 // Broadened check to include Name and Entry User to prevent missing tasks.
                 const isMyAuto = (autoBy === targetUser) || (targetName && autoBy === targetName);
-                const isMyEntry = (entryUser === targetUser) || (targetName && entryUser === targetName);
 
-                if ((isMyAuto || isMyEntry) && assignee === "") toAssign.push(item);
+                // ⚡ Bolt Fix: Staff see only tasks they Automated (Col P). Unassigned check uses PaperStatus (Col Q).
+                // If PaperStatus is empty or Pending (not Assigned), show in pool.
+                const isUnassigned = (paperStatus !== "Assigned");
+
+                if (isMyAuto && isUnassigned) toAssign.push(item);
                 if (assignee === targetUser) myToDo.push({...item, subtitle: `Assigned by ${r[18]}`});
             }
         }
