@@ -280,7 +280,8 @@ function getAllData(username) {
   // ⚡ Bolt: Read Advance Data
   const advLast = advSh.getLastRow();
   // ⚡ Bolt: Read 35 columns from Advance sheet too
-  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 35).getDisplayValues() : [];
+  // ⚡ Bolt Optimization: Use getValues() for speed
+  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 35).getValues() : [];
 
   // ⚡ Bolt Optimization: FMS updates aggregation
   let fmsUpdates = [];
@@ -535,16 +536,23 @@ function getAllData(username) {
       if(rId) allAwbs.push(rId); // Add to global duplicate check list
 
       // ⚡ Bolt Fix: Category is at Index 33 (Col 34/AH), fallback 32
-      const category = (r[33] || r[32]) ? String(r[33] || r[32]).trim() : "Advance";
+      // Handle 0 values correctly by checking for null/empty string explicitly
+      const val33 = r[33];
+      const val32 = r[32];
+      const hasCat33 = (val33 !== "" && val33 !== null && val33 !== undefined);
+      const hasCat32 = (val32 !== "" && val32 !== null && val32 !== undefined);
+      const category = hasCat33 ? String(val33).trim() : (hasCat32 ? String(val32).trim() : "Advance");
+
+      const manifestDate = r[25] instanceof Date ? r[25].toLocaleDateString() : String(r[25]);
 
       const item = {
         id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
-        details: `${r[6]} Boxes | ${r[12]} Kg`,
+        details: `${r[6]} Boxes | ${num(r[12])} Kg`,
         user: r[8],
-        actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
-        netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
-        batchNo: r[24], manifestDate: r[25], paperwork: r[26],
-        holdStatus: r[27], category: category
+        actWgt: num(r[10]), volWgt: num(r[11]), chgWgt: num(r[12]), type: r[2], boxes: r[6], extra: r[7], rem: r[13],
+        netNo: String(r[20]||""), payTotal: num(r[21]), payPaid: num(r[22]), payPending: num(r[23]),
+        batchNo: String(r[24]||""), manifestDate: manifestDate, paperwork: String(r[26]||""),
+        holdStatus: String(r[27]||""), category: category
       };
 
       if (category === "Advance") advance.push(item);
