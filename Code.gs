@@ -502,24 +502,27 @@ function getAllData(username) {
         } else {
             // ⚡ Bolt Fix: Trim inputs to prevent "invisible" tasks due to whitespace
             const assignee = String(r[17]).trim().toLowerCase();
-            const autoBy = String(r[15]).trim().toLowerCase();
-            const entryUser = String(r[8]).trim().toLowerCase();
+            // ⚡ Bolt Fix: Use Entry User (Col I) as fallback if Auto Doer (Col P) is empty
+            const rawAutoBy = String(r[15] || r[8] || "");
+            const autoBy = rawAutoBy.trim().toLowerCase();
+            // Update item to reflect effective doer
+            item.autoDoer = rawAutoBy;
 
             if (paperStatus === "Completed") {
                 completedManifest.push(item);
             }
             // ⚡ Bolt Fix: Prioritize Auto Doer (Col P) presence.
-            // If Auto Doer is present, treat as Done even if Status is Pending.
+            // If Auto Doer (or fallback) is present, treat as Done even if Status is Pending.
             else if ((autoStatus === "Pending" || autoStatus === "") && !autoBy) {
                 pendingAuto.push(item);
             }
             else {
                 pendingPaper.push(item);
                 // ⚡ Bolt Logic: Staff see ONLY tasks they automated. Admin see all (handled in adminPool).
-                // Broadened check to include Name and Entry User to prevent missing tasks.
+                // Broadened check to include Name to prevent missing tasks.
                 const isMyAuto = (autoBy === targetUser) || (targetName && autoBy === targetName);
 
-                // ⚡ Bolt Fix: Staff see only tasks they Automated (Col P). Unassigned check uses PaperStatus (Col Q).
+                // ⚡ Bolt Fix: Staff see only tasks they Automated (Col P/I). Unassigned check uses PaperStatus (Col Q).
                 // If PaperStatus is empty or Pending (not Assigned), show in pool.
                 // Robust check: trim and lowercase. Also check if assignee is empty (fallback for inconsistent data).
                 const paperStatusNorm = String(paperStatus || "").trim().toLowerCase();
