@@ -1173,9 +1173,10 @@ function renderUI(){
               <div><span class="list-label">Client</span><span class="list-val">${(x.client||'').slice(-4)}</span></div>
               <div><span class="list-label">Assigned To</span><span class="list-val text-primary fw-bold small">${x.assignee||'Unassigned'}</span></div>
            </div>
-           <div class="mt-1 d-flex justify-content-end gap-2">
+           <div class="mt-1 d-flex justify-content-end gap-2 flex-wrap">
               <span class="badge bg-light text-dark border">Boxes: ${x.boxes}</span>
               <span class="badge bg-light text-dark border">Auto By: ${x.autoDoer||'-'}</span>
+              <span class="badge bg-light text-dark border">Assigned By: ${x.assigner||'-'}</span>
            </div>
         </div>`).join('');
   }

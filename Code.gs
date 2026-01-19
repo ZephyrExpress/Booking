@@ -488,7 +488,7 @@ function getAllData(username) {
         const item = {
           id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
           details: `${r[6]} Boxes | ${num(r[12])} Kg`,
-          user: r[8], autoDoer: r[15], assignee: r[17],
+          user: r[8], autoDoer: r[15], assignee: r[17], assigner: r[18],
           actWgt: num(r[10]), volWgt: num(r[11]), chgWgt: num(r[12]), type: r[2], boxes: r[6], extra: r[7], rem: r[13],
           netNo: r[20], payTotal: num(r[21]), payPaid: num(r[22]), payPending: num(r[23]),
           batchNo: batchNo, manifestDate: manifestDate, paperwork: r[26],
