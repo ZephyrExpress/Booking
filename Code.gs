@@ -508,7 +508,9 @@ function getAllData(username) {
             if (paperStatus === "Completed") {
                 completedManifest.push(item);
             }
-            else if (autoStatus === "Pending" || autoStatus === "") {
+            // ⚡ Bolt Fix: Prioritize Auto Doer (Col P) presence.
+            // If Auto Doer is present, treat as Done even if Status is Pending.
+            else if ((autoStatus === "Pending" || autoStatus === "") && !autoBy) {
                 pendingAuto.push(item);
             }
             else {
