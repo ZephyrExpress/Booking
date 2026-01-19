@@ -476,14 +476,15 @@ function getAllData(username) {
     const isHold = holdStatus === "On Hold";
     const isRTO = holdStatus === "RTO";
     const isPending = (autoStatus === "Pending" || autoStatus === "") || (paperStatus !== "Completed");
-    const isTodayManifest = (paperStatus === "Completed" && (manifestDate === todayStr || dateVal === todayTime));
 
-    // We must include if it's relevant to the user even if completed (e.g. they just did it)
-    // But mainly we rely on status.
+    // ⚡ Bolt Fix: Include items that are Completed but NOT yet in a batch (Pending Manifest)
+    // Also include items manifested TODAY.
+    const isPendingManifest = (paperStatus === "Completed" && !batchNo);
+    const isTodayManifest = (paperStatus === "Completed" && (manifestDate === todayStr || dateVal === todayTime));
 
     if (isRTO) return; // Skip RTO completely from active lists
 
-    if (isHold || isPending || isTodayManifest) {
+    if (isHold || isPending || isPendingManifest || isTodayManifest) {
         const item = {
           id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
           details: `${r[6]} Boxes | ${num(r[12])} Kg`,
