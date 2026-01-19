@@ -1355,11 +1355,18 @@ window.searchHoldings = function() {
     }
 
     if(match) {
+        // ⚡ Bolt Fix: Normalize values for NA check
+        const netVal = (match.net || "").toUpperCase().trim();
+        const destVal = (match.dest || "").toUpperCase().trim();
+
         const isOnHold = match.holdStatus === "On Hold";
-        const isNA = (match.net === "NA" || match.net === "N/A" || match.dest === "NA" || match.dest === "N/A" || (match.net||'').includes("NOT KNOWN") || (match.dest||'').includes("NOT KNOWN"));
+        // Check for NA/N/A/NOT KNOWN variations
+        const isNA = (netVal === "NA" || netVal === "N/A" || netVal.includes("NOT KNOWN") ||
+                      destVal === "NA" || destVal === "N/A" || destVal.includes("NOT KNOWN"));
 
         let actionBtn = "";
 
+        // ⚡ Bolt Fix: Always provide action buttons if On Hold, defaulting to standard actions if not NA
         if(isOnHold) {
             if (isNA) {
                 const nets = window.APP_DATA.static.dropdowns.networks.map(n => `<option value="${n}">${n}</option>`).join('');
