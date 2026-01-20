@@ -1325,7 +1325,9 @@ window.renderHoldings = function() {
 
     list.innerHTML = items.map(x => {
             const reasonDesc = getReasonDesc(x.holdReason);
-            const holdDate = x.holdDate ? new Date(x.holdDate).toLocaleDateString() : '-';
+            // ⚡ Bolt Fix: Use Entry Date as fallback if Hold Date is missing
+            const rawDate = x.holdDate || x.date;
+            const holdDate = rawDate ? new Date(rawDate).toLocaleDateString() : '-';
 
             return `<tr>
                 <td class="clickable-cell font-monospace" onclick="openHoldAction('${x.id}')">${x.id}</td>

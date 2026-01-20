@@ -532,6 +532,9 @@ function getAllData(username) {
       const rId = String(r[0]).replace(/'/g, "").trim();
       if(rId) allAwbs.push(rId); // Add to global duplicate check list
 
+      const holdStatus = r[27];
+      if (holdStatus === "RTO") return; // Strictly hide RTO from active views
+
       // ⚡ Bolt Fix: Category is at Index 33 (Col 34/AH), fallback 32
       const category = (r[33] || r[32]) ? String(r[33] || r[32]).trim() : "Advance";
 
@@ -542,9 +545,13 @@ function getAllData(username) {
         actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
         netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
         batchNo: r[24], manifestDate: r[25], paperwork: r[26],
-        holdStatus: r[27], category: category,
-        holdDate: r[34], heldBy: r[30]
+        holdStatus: holdStatus, holdReason: r[28], holdRem: r[29], heldBy: r[30],
+        category: category, holdDate: r[34]
       };
+
+      if (holdStatus === "On Hold") {
+          holdings.push(item);
+      }
 
       if (category === "Advance") advance.push(item);
       else if (category === "Direct_Paperwork") directPaper.push(item);
