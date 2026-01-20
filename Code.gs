@@ -366,12 +366,6 @@ function getAllData(username) {
                       if(br.autoDoer) {
                           ch(15, br.autoDoer);
                           fmsUpdates.push({ awb: awb, autoDoer: br.autoDoer });
-                      } else {
-                          // Fallback to Entry User if BR has no doer
-                          if(!r[15] && r[8]) {
-                              ch(15, r[8]);
-                              fmsUpdates.push({ awb: awb, autoDoer: r[8] });
-                          }
                       }
                   }
               }
