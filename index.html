@@ -1369,6 +1369,7 @@ window.searchHoldings = function() {
 
         // ⚡ Bolt Fix: Always provide action buttons if On Hold, defaulting to standard actions if not NA
         if(isOnHold) {
+            // ⚡ Bolt Fix: For NA, allow direct fix. For all others, force popup with remarks.
             if (isNA) {
                 const nets = window.APP_DATA.static.dropdowns.networks.map(n => `<option value="${n}">${n}</option>`).join('');
                 const dests = window.APP_DATA.static.dropdowns.destinations.map(d => `<option value="${d}">${d}</option>`).join('');
@@ -1377,7 +1378,7 @@ window.searchHoldings = function() {
                     <div class="alert alert-warning small p-2 mb-2">Update Details to Clear Hold</div>
                     <select id="fix_net" class="form-select mb-2"><option value="" disabled selected>Select Network</option>${nets}</select>
                     <select id="fix_dest" class="form-select mb-2"><option value="" disabled selected>Select Destination</option>${dests}</select>
-                    <button class="btn btn-warning w-100 mb-2 fw-bold" onclick="submitCorrection('${match.id}')">Update & Save</button>
+                    <button class="btn btn-warning w-100 mb-2 fw-bold" onclick="submitCorrection('${match.id}')">Update & Release</button>
                 `;
             } else {
                 actionBtn = `
@@ -1464,6 +1465,8 @@ window.openHoldModal = function(id, netNo) {
     window.tomInstances.holdReason = new TomSelect("#modalHoldReason",{
         create: false,
         dropdownParent: 'body',
+        maxItems: null,
+        plugins: ['remove_button'],
         options: tsOptions,
         items: [],
         valueField: 'value',
@@ -1484,9 +1487,11 @@ window.openHoldModal = function(id, netNo) {
 }
 
 window.submitHoldFromModal = async function() {
-    const r = document.getElementById('modalHoldReason').value;
+    const r = document.getElementById('modalHoldReason').value; // TomSelect .value returns comma-separated if multiple
     const rem = document.getElementById('modalHoldRem').value;
+
     if(!r) return alert("Select Reason");
+    if(!rem.trim()) return alert("Remarks are mandatory");
 
     bootstrap.Modal.getInstance(document.getElementById('holdModal')).hide();
     document.getElementById('holdResultPanel').style.display='none';
