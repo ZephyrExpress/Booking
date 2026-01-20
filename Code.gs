@@ -502,17 +502,15 @@ function getAllData(username) {
         } else {
             // ⚡ Bolt Fix: Trim inputs to prevent "invisible" tasks due to whitespace
             const assignee = String(r[17]).trim().toLowerCase();
-            // ⚡ Bolt Fix: Use Entry User (Col I) as fallback if Auto Doer (Col P) is empty
-            const rawAutoBy = String(r[15] || r[8] || "");
-            const autoBy = rawAutoBy.trim().toLowerCase();
-            // Update item to reflect effective doer
-            item.autoDoer = rawAutoBy;
+            const autoBy = String(r[15]).trim().toLowerCase();
+            // const entryUser = String(r[8]).trim().toLowerCase(); // Not used for status logic anymore
 
             if (paperStatus === "Completed") {
                 completedManifest.push(item);
             }
             // ⚡ Bolt Fix: Prioritize Auto Doer (Col P) presence.
-            // If Auto Doer (or fallback) is present, treat as Done even if Status is Pending.
+            // If Auto Doer is present (Col P), treat as Done even if Status is Pending.
+            // Reverted fallback to Entry User to ensure Pending Automation list is populated correctly.
             else if ((autoStatus === "Pending" || autoStatus === "") && !autoBy) {
                 pendingAuto.push(item);
             }
