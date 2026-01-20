@@ -2551,12 +2551,12 @@ window.openReassign = function(id, type) {
     curReassign = {id: id, type: type};
     document.getElementById('rId').textContent = id;
     const s = document.getElementById('rStaff');
-    s.innerHTML = '<option value="">Select Staff...</option>';
+    let opts = '<option value="">Select Staff...</option>';
     if (window.APP_DATA.static && window.APP_DATA.static.staff) {
-        window.APP_DATA.static.staff.forEach(st => {
-            s.innerHTML += `<option value="${st}">${st}</option>`;
-        });
+        // ⚡ Bolt Optimization: Batch DOM update
+        opts += window.APP_DATA.static.staff.map(st => `<option value="${st}">${st}</option>`).join('');
     }
+    s.innerHTML = opts;
     new bootstrap.Modal(document.getElementById('reassignModal')).show();
 }
 
