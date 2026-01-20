@@ -280,7 +280,8 @@ function getAllData(username) {
   // ⚡ Bolt: Read Advance Data
   const advLast = advSh.getLastRow();
   // ⚡ Bolt: Read 35 columns from Advance sheet too
-  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 35).getDisplayValues() : [];
+  // ⚡ Bolt Optimization: Use getValues() for speed
+  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 35).getValues() : [];
 
   // ⚡ Bolt Optimization: FMS updates aggregation
   let fmsUpdates = [];
@@ -535,13 +536,16 @@ function getAllData(username) {
       // ⚡ Bolt Fix: Category is at Index 33 (Col 34/AH), fallback 32
       const category = (r[33] || r[32]) ? String(r[33] || r[32]).trim() : "Advance";
 
+      // ⚡ Bolt: Format raw values (since we switched to getValues)
+      const manifestDate = r[25] instanceof Date ? r[25].toLocaleDateString() : String(r[25] || "");
+
       const item = {
         id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
-        details: `${r[6]} Boxes | ${r[12]} Kg`,
+        details: `${r[6]} Boxes | ${num(r[12])} Kg`,
         user: r[8],
-        actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
-        netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
-        batchNo: r[24], manifestDate: r[25], paperwork: r[26],
+        actWgt: num(r[10]), volWgt: num(r[11]), chgWgt: num(r[12]), type: r[2], boxes: r[6], extra: r[7], rem: r[13],
+        netNo: r[20], payTotal: num(r[21]), payPaid: num(r[22]), payPending: num(r[23]),
+        batchNo: r[24], manifestDate: manifestDate, paperwork: r[26],
         holdStatus: r[27], category: category
       };
 
