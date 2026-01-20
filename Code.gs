@@ -476,7 +476,9 @@ function getAllData(username) {
     const isPendingManifest = (paperStatus === "Completed" && !batchNo);
     const isTodayManifest = (paperStatus === "Completed" && (manifestDate === todayStr || dateVal === todayTime));
 
-    if (isHold || isPending || isPendingManifest || isTodayManifest || isRTO) {
+    if (isRTO) return; // Skip RTO completely from active lists
+
+    if (isHold || isPending || isPendingManifest || isTodayManifest) {
         const item = {
           id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
           details: `${r[6]} Boxes | ${num(r[12])} Kg`,
@@ -489,7 +491,7 @@ function getAllData(username) {
           paperStatus: r[16] // ⚡ Bolt Fix: Explicitly store paperStatus for filtering
         };
 
-        if (isHold || isRTO) {
+        if (isHold) {
             holdings.push(item);
         } else {
             // ⚡ Bolt Fix: Trim inputs to prevent "invisible" tasks due to whitespace
@@ -707,6 +709,7 @@ function handleManageHold(b) {
     } else if(b.subAction === "rto") {
         if(!b.remarks || !b.remarks.trim()) return jsonResponse("error", "Remarks are mandatory");
         targetSh.getRange(row, 28, 1, 3).setValues([["RTO", "RTO", b.remarks]]);
+        targetSh.getRange(row, 35).setValue(new Date()); // Hold Date for RTO
         const oldLog = targetSh.getRange(row, 20).getValue();
         targetSh.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Marked RTO: ${b.remarks}]`);
     }
