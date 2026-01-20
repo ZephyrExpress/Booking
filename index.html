@@ -1361,7 +1361,7 @@ window.searchHoldings = function() {
     ];
     for(const source of sources) {
         if(!source) continue;
-        match = source.find(x => (awb && x.id.toLowerCase().includes(awb)) || (netSearch && x.netNo && x.netNo.toLowerCase().includes(netSearch)));
+        match = source.find(x => (awb && String(x.id).toLowerCase().includes(awb)) || (netSearch && x.netNo && String(x.netNo).toLowerCase().includes(netSearch)));
         if(match) break;
     }
 
@@ -1388,13 +1388,15 @@ window.searchHoldings = function() {
                     <select id="fix_net" class="form-select mb-2"><option value="" disabled selected>Select Network</option>${nets}</select>
                     <select id="fix_dest" class="form-select mb-2"><option value="" disabled selected>Select Destination</option>${dests}</select>
                     <button class="btn btn-warning w-100 mb-2 fw-bold" onclick="submitCorrection('${match.id}')">Update & Save</button>
-                `;
-            } else {
-                actionBtn = `
-                    <button class="btn btn-success btn-lg w-100 mb-2" onclick="actClearHold('${match.id}')">Clear Hold</button>
-                    <button class="btn btn-dark btn-lg w-100" onclick="actRTO('${match.id}')">Mark RTO</button>
+                    <hr>
                 `;
             }
+
+            // Always append standard actions for On Hold items
+            actionBtn += `
+                <button class="btn btn-success btn-lg w-100 mb-2" onclick="actClearHold('${match.id}')">Clear Hold</button>
+                <button class="btn btn-dark btn-lg w-100" onclick="actRTO('${match.id}')">Mark RTO</button>
+            `;
         } else {
             actionBtn = `<button class="btn btn-danger btn-lg w-100" onclick="openHoldModal('${match.id}', '${match.netNo||'-'}')">Put On Hold</button>`;
         }

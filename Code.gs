@@ -546,7 +546,7 @@ function getAllData(username) {
         netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
         batchNo: r[24], manifestDate: r[25], paperwork: r[26],
         holdStatus: holdStatus, holdReason: r[28], holdRem: r[29], heldBy: r[30],
-        category: category, holdDate: r[34]
+        category: category, holdDate: r[34] || r[1] // Use entry date as fallback
       };
 
       if (holdStatus === "On Hold") {
