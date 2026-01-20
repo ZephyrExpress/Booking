@@ -476,9 +476,7 @@ function getAllData(username) {
     const isPendingManifest = (paperStatus === "Completed" && !batchNo);
     const isTodayManifest = (paperStatus === "Completed" && (manifestDate === todayStr || dateVal === todayTime));
 
-    if (isRTO) return; // Skip RTO completely from active lists
-
-    if (isHold || isPending || isPendingManifest || isTodayManifest) {
+    if (isHold || isPending || isPendingManifest || isTodayManifest || isRTO) {
         const item = {
           id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
           details: `${r[6]} Boxes | ${num(r[12])} Kg`,
@@ -491,7 +489,7 @@ function getAllData(username) {
           paperStatus: r[16] // ⚡ Bolt Fix: Explicitly store paperStatus for filtering
         };
 
-        if (isHold) {
+        if (isHold || isRTO) {
             holdings.push(item);
         } else {
             // ⚡ Bolt Fix: Trim inputs to prevent "invisible" tasks due to whitespace
@@ -542,7 +540,8 @@ function getAllData(username) {
         actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
         netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
         batchNo: r[24], manifestDate: r[25], paperwork: r[26],
-        holdStatus: r[27], category: category
+        holdStatus: r[27], category: category,
+        holdDate: r[34], heldBy: r[30]
       };
 
       if (category === "Advance") advance.push(item);
@@ -675,18 +674,25 @@ function handleUpdateShipmentDetails(b) {
 }
 
 function handleManageHold(b) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
-    const row = findRow(ss, b.awb);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let targetSh = ss.getSheetByName("Shipments");
+    let row = findRow(targetSh, b.awb);
+
+    if (row === -1) {
+        targetSh = ss.getSheetByName("Advance_Records");
+        if (targetSh) row = findRow(targetSh, b.awb);
+    }
+
     if(row === -1) return jsonResponse("error", "AWB Not Found");
 
     if(b.subAction === "set") {
         // Write Status(28), Reason(29), Remarks(30), HeldBy(31), Empty, Empty, Category(34), HoldDate(35)
         // ⚡ Bolt: Write timestamp to Col 35 (AI) - leaving Category (Col 34) intact
-        ss.getRange(row, 28, 1, 4).setValues([["On Hold", b.reason, b.remarks, b.user || ""]]);
-        ss.getRange(row, 35).setValue(new Date());
+        targetSh.getRange(row, 28, 1, 4).setValues([["On Hold", b.reason, b.remarks, b.user || ""]]);
+        targetSh.getRange(row, 35).setValue(new Date());
     } else if(b.subAction === "clear") {
-        const net = String(ss.getRange(row, 4).getValue()).toUpperCase();
-        const dest = String(ss.getRange(row, 6).getValue()).toUpperCase();
+        const net = String(targetSh.getRange(row, 4).getValue()).toUpperCase();
+        const dest = String(targetSh.getRange(row, 6).getValue()).toUpperCase();
 
         // ⚡ Bolt Fix: Broaden check for "Not Known" logic
         if(net.startsWith("NA") || dest.startsWith("NA") || net.includes("NOT KNOWN") || dest.includes("NOT KNOWN")) {
@@ -694,15 +700,15 @@ function handleManageHold(b) {
         }
 
         if(!b.remarks || !b.remarks.trim()) return jsonResponse("error", "Remarks are mandatory");
-        ss.getRange(row, 28, 1, 4).setValues([["", "", "", ""]]);
-        ss.getRange(row, 35).setValue(""); // Clear Hold Date
-        const oldLog = ss.getRange(row, 20).getValue();
-        ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Hold Cleared: ${b.remarks}]`);
+        targetSh.getRange(row, 28, 1, 4).setValues([["", "", "", ""]]);
+        targetSh.getRange(row, 35).setValue(""); // Clear Hold Date
+        const oldLog = targetSh.getRange(row, 20).getValue();
+        targetSh.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Hold Cleared: ${b.remarks}]`);
     } else if(b.subAction === "rto") {
         if(!b.remarks || !b.remarks.trim()) return jsonResponse("error", "Remarks are mandatory");
-        ss.getRange(row, 28, 1, 3).setValues([["RTO", "RTO", b.remarks]]);
-        const oldLog = ss.getRange(row, 20).getValue();
-        ss.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Marked RTO: ${b.remarks}]`);
+        targetSh.getRange(row, 28, 1, 3).setValues([["RTO", "RTO", b.remarks]]);
+        const oldLog = targetSh.getRange(row, 20).getValue();
+        targetSh.getRange(row, 20).setValue(`${oldLog} [${new Date().toLocaleDateString()} Marked RTO: ${b.remarks}]`);
     }
     return jsonResponse("success", "Updated");
 }

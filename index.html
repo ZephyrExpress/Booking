@@ -1326,12 +1326,15 @@ window.renderHoldings = function() {
     list.innerHTML = items.map(x => {
             const reasonDesc = getReasonDesc(x.holdReason);
             const holdDate = x.holdDate ? new Date(x.holdDate).toLocaleDateString() : '-';
+            const isRTO = x.holdStatus === "RTO";
+            const badgeClass = isRTO ? "bg-dark text-white" : "bg-danger bg-opacity-10 text-danger";
+
             return `<tr>
                 <td class="clickable-cell font-monospace" onclick="openHoldAction('${x.id}')">${x.id}</td>
                 <td><small class="text-muted font-monospace">${holdDate}</small></td>
                 <td class="clickable-cell" onclick="openHoldAction('${x.id}')">${x.netNo||'-'}</td>
                 <td>${x.client}</td>
-                <td><span class="badge bg-danger bg-opacity-10 text-danger" title="${reasonDesc}" style="cursor:help;">${x.holdReason}</span></td>
+                <td><span class="badge ${badgeClass}" title="${reasonDesc}" style="cursor:help;">${x.holdReason}</span></td>
                 <td><small class="text-muted text-wrap" style="max-width:200px;">${x.holdRem}</small></td>
                 <td><span class="badge bg-light text-dark border">${x.heldBy||'-'}</span></td>
                 <td><small>${x.user}</small></td>
@@ -1348,7 +1351,14 @@ window.searchHoldings = function() {
     if(!awb && !netSearch) { resPanel.style.display='none'; return; }
 
     let match = null;
-    const sources = [window.APP_DATA.overview.auto, window.APP_DATA.overview.paper, window.APP_DATA.holdings, window.APP_DATA.manifest];
+    const sources = [
+        window.APP_DATA.overview.auto,
+        window.APP_DATA.overview.paper,
+        window.APP_DATA.holdings,
+        window.APP_DATA.manifest,
+        window.APP_DATA.overview.directPaper,
+        window.APP_DATA.advance
+    ];
     for(const source of sources) {
         if(!source) continue;
         match = source.find(x => (awb && x.id.toLowerCase().includes(awb)) || (netSearch && x.netNo && x.netNo.toLowerCase().includes(netSearch)));
