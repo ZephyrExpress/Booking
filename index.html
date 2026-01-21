@@ -2078,6 +2078,13 @@ window.switchInboundMode = function(mode) {
     if(mode === 'Normal' || mode === 'Advance') {
         document.getElementById('form_main_fields').style.display = 'block';
         if(mode === 'Advance') document.getElementById('f_category').value = "Advance";
+
+        // ⚡ Bolt Fix: Reset date to today on mode switch
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = String(today.getMonth() + 1).padStart(2, '0');
+        const d = String(today.getDate()).padStart(2, '0');
+        document.getElementById('f_date').value = `${y}-${m}-${d}`;
     }
     else if(mode === 'Connected') {
         document.getElementById('view_connected').style.display = 'block';
