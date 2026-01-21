@@ -43,41 +43,12 @@
     body { background-color: var(--bg-color); font-family: var(--font-main); color: var(--secondary-color); margin: 0; padding: 0; width: 100%; position: relative; overflow-x: hidden; }
     
     /* Login Styles */
-    .login-wrapper {
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: url('https://images.unsplash.com/photo-1578575437130-527eed3abbec?q=80&w=2070&auto=format&fit=crop') no-repeat center center;
-        background-size: cover;
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; overflow: hidden;
-    }
-    .login-overlay {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 51, 153, 0.85);
-        backdrop-filter: blur(5px);
-    }
+    .login-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #003399 0%, #001a4d 100%); position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; overflow: hidden; }
+    .login-wrapper::before { content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 30px 30px; transform: rotate(15deg); pointer-events: none; }
+    .login-overlay { display: none; }
     img { max-width: 100%; height: auto; }
-    .login-card {
-        width: 90%; max-width: 400px; padding: 2.5rem;
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 24px;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        z-index: 2; position: relative; text-align: center;
-        border: 1px solid rgba(255,255,255,0.5);
-    }
-    .login-card img { max-width: 60%; height: auto; display: inline-block; margin-bottom: 1.5rem; }
-    .login-input {
-        background: #f1f5f9; border: 2px solid transparent; border-radius: 12px;
-        padding: 0.8rem 1rem; font-weight: 500; color: #334155; transition: all 0.3s;
-    }
-    .login-input:focus { background: white; border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(0, 51, 153, 0.1); }
-    .login-btn {
-        background: linear-gradient(135deg, var(--brand-blue) 0%, #002266 100%);
-        border: none; border-radius: 12px; padding: 0.8rem; font-weight: 700;
-        letter-spacing: 0.5px; transition: transform 0.2s;
-    }
-    .login-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(0, 51, 153, 0.5); }
+    .login-card { width: 90%; max-width: 420px; padding: 3rem 2rem; background: #ffffff; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); z-index: 2; position: relative; text-align: center; }
+    .login-card img { max-width: 80%; height: auto; display: inline-block; }
 
     /* Layout & Sidebar */
     .sidebar { 
@@ -186,24 +157,15 @@
 <div id="loginSection" class="login-wrapper">
   <div class="login-overlay"></div>
   <div class="login-card">
-    <div class="text-center">
-        <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" class="d-block mx-auto">
+    <div class="text-center mb-4">
+        <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="40" class="d-block mx-auto">
     </div>
-    <h4 class="fw-bold text-dark mb-1">Welcome Back</h4>
-    <p class="text-muted small mb-4">Please sign in to continue</p>
-
+    <p class="text-center text-muted small mb-4">PORTAL LOGIN v6.0</p>
     <form onsubmit="event.preventDefault(); doLogin();" autocomplete="off">
-      <div class="mb-3 text-start">
-          <label class="small fw-bold text-muted ms-1 mb-1">USERNAME</label>
-          <input type="text" id="uIn" class="form-control login-input" required autocomplete="username">
-      </div>
-      <div class="mb-4 text-start">
-          <label class="small fw-bold text-muted ms-1 mb-1">PASSWORD</label>
-          <input type="password" id="pIn" class="form-control login-input" style="-webkit-text-security:disc" required autocomplete="new-password">
-      </div>
-      <button class="btn btn-primary w-100 login-btn text-white mb-4">SIGN IN</button>
+      <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required autocomplete="username">
+      <input type="password" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required autocomplete="new-password">
+      <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm" style="background-color: var(--brand-blue); border:none;">SIGN IN</button>
     </form>
-    <div class="text-muted" style="font-size:0.7rem; opacity:0.6;">ZEPHYR PORTAL v1.3.24</div>
     <div id="loginError" class="alert alert-danger mt-3 small text-center" style="display:none;"></div>
   </div>
 </div>
@@ -220,7 +182,7 @@
       <div class="nav-label">Main Menu</div>
       <a class="nav-item-custom active" id="nav-overview" onclick="switchTab('overview')" style="display:none"><i class="bi bi-grid-1x2 me-2"></i> Overview</a>
       <a class="nav-item-custom" id="nav-inbound" onclick="switchTab('inbound')" style="display:none"><i class="bi bi-box-seam me-2"></i> Inbound</a>
-      <a class="nav-item-custom" id="nav-advance" onclick="switchTab('advance')" style="display:none"><i class="bi bi-calendar-plus me-2"></i> Advance Records <span id="advBadge" class="badge bg-primary ms-auto" style="display:none">0</span></a>
+      <a class="nav-item-custom" id="nav-advance" onclick="switchTab('advance')" style="display:none"><i class="bi bi-calendar-plus me-2"></i> Advance Records</a>
       <a class="nav-item-custom" id="nav-taskhub" onclick="switchTab('taskhub')" style="display:none"><i class="bi bi-check-circle me-2"></i> <span id="taskLabel">My Tasks</span></a>
       <a class="nav-item-custom" id="nav-manifest" onclick="switchTab('manifest')" style="display:none"><i class="bi bi-file-earmark-spreadsheet me-2"></i> Manifest</a>
       <a class="nav-item-custom" id="nav-receivers" onclick="switchTab('receivers')" style="display:none"><i class="bi bi-printer me-2"></i> Receivers Slip</a>
@@ -425,7 +387,31 @@
            <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">TOTAL HOLDINGS</div><div class="stat-value text-secondary" id="ovHoldings">0</div></div><i class="bi bi-pause-circle fs-1 text-secondary opacity-25"></i></div></div>
         </div>
 
-        <!-- ⚡ Bolt: New Direct & Advance Overview Section (REMOVED) -->
+        <!-- ⚡ Bolt: New Direct & Advance Overview Section -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="panel-card border-start border-4 border-info h-100">
+                    <div class="panel-header bg-white border-bottom-0 pb-0">
+                        <span class="text-info"><i class="bi bi-send-check me-2"></i>Direct Shipments (Processing)</span>
+                        <span class="badge bg-info text-white" id="badgeDirect">0</span>
+                    </div>
+                    <div class="p-3">
+                        <div id="listDirect" style="max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="panel-card border-start border-4 border-primary h-100">
+                    <div class="panel-header bg-white border-bottom-0 pb-0">
+                        <span class="text-primary"><i class="bi bi-calendar-check me-2"></i>Advance Shipments</span>
+                        <span class="badge bg-primary" id="badgeAdv">0</span>
+                    </div>
+                    <div class="p-3">
+                        <div class="text-muted small">Manage these in the <strong>Advance Records</strong> tab.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="row g-4">
           <div class="col-lg-6">
@@ -1056,18 +1042,11 @@ async function syncData(init=false){
         if(r.role) curRole = r.role;
         curPerms = r.perms || [];
 
-        // ⚡ Bolt Fix: Admin Badge Updates
-        const newCount = r.stats.requests || 0;
-        const admBadge = document.getElementById('adminBadge');
-        if(admBadge) {
-            admBadge.textContent = newCount;
-            admBadge.style.display = newCount > 0 ? 'inline-block' : 'none';
+        if(curRole === 'Admin' || curRole === 'Owner') {
+            const newCount = r.stats.requests || 0;
+            if(!init && newCount > lastReqCount) toast(`<strong>New Transfer Request!</strong><br>${newCount} pending actions.`, 'danger');
+            lastReqCount = newCount;
         }
-
-        if((curRole === 'Admin' || curRole === 'Owner') && !init && newCount > lastReqCount) {
-             toast(`<strong>New Transfer Request!</strong><br>${newCount} pending actions.`, 'danger');
-        }
-        lastReqCount = newCount;
         updateNavVisibility();
         if(init) initForms(); else updDd();
         renderUI();
@@ -1136,13 +1115,9 @@ function renderUI(){
   document.getElementById('totalHoldings').textContent=s.holdings;
   document.getElementById('ovHoldings').textContent=s.holdings;
 
-  // ⚡ Bolt: Update Badges (Sidebar)
-  const advCount = (window.APP_DATA.advance || []).length;
-  const advBadge = document.getElementById('advBadge');
-  if(advBadge) {
-      advBadge.textContent = advCount;
-      advBadge.style.display = advCount > 0 ? 'inline-block' : 'none';
-  }
+  // ⚡ Bolt: Update New Badges
+  document.getElementById('badgeDirect').textContent = (d.directPaper || []).length;
+  document.getElementById('badgeAdv').textContent = (window.APP_DATA.advance || []).length;
 
   // Render Direct List
   const ld = document.getElementById('listDirect');
@@ -1349,8 +1324,6 @@ window.renderHoldings = function() {
     };
 
     list.innerHTML = items.map(x => {
-            if(x.holdStatus === 'RTO') return ''; // Filter out RTO from active list
-
             const reasonDesc = getReasonDesc(x.holdReason);
             // ⚡ Bolt Fix: Use Entry Date as fallback if Hold Date is missing
             const rawDate = x.holdDate || x.date;
@@ -1393,9 +1366,71 @@ window.searchHoldings = function() {
     }
 
     if(match) {
-        showHoldActionModal(match); // ⚡ Bolt Fix: Use Popup for Search Results too
-        document.getElementById('holdSearchAwb').value = ""; // Clear input after finding
-        document.getElementById('holdSearchNet').value = "";
+        // ⚡ Bolt Fix: Normalize values for NA check
+        const netVal = (match.net || "").toUpperCase().trim();
+        const destVal = (match.dest || "").toUpperCase().trim();
+
+        const isOnHold = match.holdStatus === "On Hold";
+        // Check for NA/N/A/NOT KNOWN variations
+        const isNA = (netVal === "NA" || netVal === "N/A" || netVal.includes("NOT KNOWN") ||
+                      destVal === "NA" || destVal === "N/A" || destVal.includes("NOT KNOWN"));
+
+        let actionBtn = "";
+
+        // ⚡ Bolt Fix: Always provide action buttons if On Hold, defaulting to standard actions if not NA
+        if(isOnHold) {
+            if (isNA) {
+                const nets = window.APP_DATA.static.dropdowns.networks.map(n => `<option value="${n}">${n}</option>`).join('');
+                const dests = window.APP_DATA.static.dropdowns.destinations.map(d => `<option value="${d}">${d}</option>`).join('');
+
+                actionBtn = `
+                    <div class="alert alert-warning small p-2 mb-2">Update Details to Clear Hold</div>
+                    <select id="fix_net" class="form-select mb-2"><option value="" disabled selected>Select Network</option>${nets}</select>
+                    <select id="fix_dest" class="form-select mb-2"><option value="" disabled selected>Select Destination</option>${dests}</select>
+                    <button class="btn btn-warning w-100 mb-2 fw-bold" onclick="submitCorrection('${match.id}')">Update & Save</button>
+                    <hr>
+                `;
+            }
+
+            // Always append standard actions for On Hold items
+            actionBtn += `
+                <button class="btn btn-success btn-lg w-100 mb-2" onclick="actClearHold('${match.id}')">Clear Hold</button>
+                <button class="btn btn-dark btn-lg w-100" onclick="actRTO('${match.id}')">Mark RTO</button>
+            `;
+        } else {
+            actionBtn = `<button class="btn btn-danger btn-lg w-100" onclick="openHoldModal('${match.id}', '${match.netNo||'-'}')">Put On Hold</button>`;
+        }
+
+        resPanel.innerHTML = `
+            <div class="panel-card border-2 ${isOnHold ? 'border-warning' : 'border-success'} p-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge ${isOnHold ? 'bg-warning text-dark' : 'bg-success'} me-2">${isOnHold ? 'CURRENTLY ON HOLD' : 'ACTIVE STATUS'}</span>
+                            <h4 class="fw-bold m-0">${match.id}</h4>
+                        </div>
+                        <div class="row g-3 small text-muted">
+                            <div class="col-auto"><strong class="text-dark">Net No:</strong> ${match.netNo||'-'}</div>
+                            <div class="col-auto"><strong class="text-dark">Client:</strong> ${match.client}</div>
+                            <div class="col-auto"><strong class="text-dark">Network:</strong> <span class="${(match.net==='NA'||match.net==='N/A')?'text-danger fw-bold':''}">${match.net}</span></div>
+                            <div class="col-auto"><strong class="text-dark">Dest:</strong> <span class="${(match.dest==='NA'||match.dest==='N/A')?'text-danger fw-bold':''}">${match.dest}</span></div>
+                            <div class="col-auto"><strong class="text-dark">Weight:</strong> ${match.chgWgt}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mt-3 mt-md-0">
+                        ${actionBtn}
+                    </div>
+                </div>
+            </div>
+        `;
+        resPanel.style.display='block';
+
+        if(isNA && isOnHold) {
+             const fn = document.getElementById('fix_net');
+             const fd = document.getElementById('fix_dest');
+             if(fn && match.net !== "NA" && match.net !== "N/A") fn.value = match.net;
+             if(fd && match.dest !== "NA" && match.dest !== "N/A") fd.value = match.dest;
+        }
     } else {
         resPanel.innerHTML = `<div class="alert alert-secondary text-center py-4">No shipment found matching your search.</div>`;
         resPanel.style.display='block';
@@ -1409,92 +1444,8 @@ window.clearHoldSearch = function() {
 }
 
 window.openHoldAction = function(id) {
-    // ⚡ Bolt Fix: Open Modal instead of embedded search
-    // We reuse searchHoldings logic but direct it to the modal
-    const item = findHoldItem(id);
-    if(item) showHoldActionModal(item);
-    else {
-        document.getElementById('holdSearchAwb').value = id;
-        searchHoldings(); // Fallback if not found immediately (e.g. from table click)
-    }
-}
-
-function findHoldItem(id) {
-    const sources = [
-        window.APP_DATA.overview.auto,
-        window.APP_DATA.overview.paper,
-        window.APP_DATA.holdings,
-        window.APP_DATA.manifest,
-        window.APP_DATA.overview.directPaper,
-        window.APP_DATA.advance
-    ];
-    const target = String(id).trim().toLowerCase();
-    for(const source of sources) {
-        if(!source) continue;
-        const match = source.find(x => String(x.id).trim().toLowerCase() === target);
-        if(match) return match;
-    }
-    return null;
-}
-
-function showHoldActionModal(match) {
-    const isOnHold = match.holdStatus === "On Hold";
-    const netVal = (match.net || "").toUpperCase().trim();
-    const destVal = (match.dest || "").toUpperCase().trim();
-    const isNA = (netVal === "NA" || netVal === "N/A" || netVal.includes("NOT KNOWN") ||
-                  destVal === "NA" || destVal === "N/A" || destVal.includes("NOT KNOWN"));
-
-    document.getElementById('ham_awb').textContent = match.id;
-    document.getElementById('ham_net').textContent = match.netNo || '-';
-
-    // Reset sections
-    document.getElementById('ham_na_section').style.display = 'none';
-    document.getElementById('ham_norm_section').style.display = 'none';
-
-    // Fill NA dropdowns if needed
-    if(isNA) {
-        const nets = window.APP_DATA.static.dropdowns.networks.map(n => `<option value="${n}">${n}</option>`).join('');
-        const dests = window.APP_DATA.static.dropdowns.destinations.map(d => `<option value="${d}">${d}</option>`).join('');
-        document.getElementById('ham_sel_net').innerHTML = `<option value="" disabled selected>Select Network</option>${nets}`;
-        document.getElementById('ham_sel_dest').innerHTML = `<option value="" disabled selected>Select Destination</option>${dests}`;
-
-        // Pre-fill if not completely empty
-        if(match.net && match.net !== 'NA') document.getElementById('ham_sel_net').value = match.net;
-
-        document.getElementById('ham_na_section').style.display = 'block';
-    } else {
-        document.getElementById('ham_norm_section').style.display = 'block';
-    }
-
-    // Show Modal
-    selectedHoldAwb = match.id; // Global state for actions
-    new bootstrap.Modal(document.getElementById('holdActionModal')).show();
-}
-
-// Hook into existing ham functions
-window.hamClear = function() { actClearHold(selectedHoldAwb); bootstrap.Modal.getInstance(document.getElementById('holdActionModal')).hide(); }
-window.hamRTO = function() { actRTO(selectedHoldAwb); bootstrap.Modal.getInstance(document.getElementById('holdActionModal')).hide(); }
-window.hamSubmit = function() {
-    const net = document.getElementById('ham_sel_net').value;
-    const dest = document.getElementById('ham_sel_dest').value;
-    if(!net || !dest) return alert("Select both Network and Destination");
-
-    // Reuse existing correction logic
-    submitCorrectionFromModal(selectedHoldAwb, net, dest);
-    bootstrap.Modal.getInstance(document.getElementById('holdActionModal')).hide();
-}
-
-window.submitCorrectionFromModal = async function(id, net, dest) {
-    showSpin(true);
-    const r = await callApi({action: 'updateShipmentDetails', awb: id, network: net, destination: dest});
-    if(r.result === "success") {
-        await callApi({action:"manageHold", subAction:"clear", awb:id, remarks:"Hold cleared after correction"});
-        toast("Correction Saved & Hold Cleared");
-        syncData(false);
-    } else {
-        alert("Error: " + r.message);
-    }
-    showSpin(false);
+    document.getElementById('holdSearchAwb').value = id;
+    searchHoldings();
 }
 
 window.openHoldModal = function(id, netNo) {
@@ -1841,7 +1792,6 @@ function resetForm(){
     if(window.tomInstances.dest) window.tomInstances.dest.clear();
 
     // ⚡ Bolt Fix: Robust Date Setting (YYYY-MM-DD)
-    // Default to Today for Inbound/Advance
     const today = new Date();
     const y = today.getFullYear();
     const m = String(today.getMonth() + 1).padStart(2, '0');
@@ -2127,13 +2077,6 @@ window.switchInboundMode = function(mode) {
     if(mode === 'Normal' || mode === 'Advance') {
         document.getElementById('form_main_fields').style.display = 'block';
         if(mode === 'Advance') document.getElementById('f_category').value = "Advance";
-
-        // ⚡ Bolt Fix: Reset date to today on mode switch
-        const today = new Date();
-        const y = today.getFullYear();
-        const m = String(today.getMonth() + 1).padStart(2, '0');
-        const d = String(today.getDate()).padStart(2, '0');
-        document.getElementById('f_date').value = `${y}-${m}-${d}`;
     }
     else if(mode === 'Connected') {
         document.getElementById('view_connected').style.display = 'block';
