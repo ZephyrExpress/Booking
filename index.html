@@ -1062,15 +1062,28 @@ async function syncData(init=false){
      if(r.result==="success"){
         // ⚡ Bolt Optimization: Pre-calculate formatted dates to avoid O(N) re-parsing during render loops
         const fmt = (d) => d ? new Date(d).toLocaleDateString() : '';
-        const processList = (list) => { if(list) list.forEach(x => x.fmtDate = fmt(x.date)); };
+        const processList = (list) => {
+            if(list) list.forEach(x => {
+                x.fmtDate = fmt(x.date);
+                // ⚡ Bolt Optimization: Pre-calculate search strings for O(1) filtering
+                // Unified search string covers ID, NetNo, Network, and Client
+                x.searchStr = (String(x.id||'') + '|' + String(x.netNo||'') + '|' + String(x.net||'') + '|' + String(x.client||'')).toLowerCase();
+                // Individual lower-cased fields for specific lookups if needed
+                x.idLower = String(x.id||'').toLowerCase();
+                x.netNoLower = String(x.netNo||'').toLowerCase();
+            });
+        };
 
         processList(r.manifest);
         processList(r.holdings);
         processList(r.advance); // ⚡ Bolt: Format date for Advance tab
+        // ⚡ Bolt Fix: Process ALL lists including Advance and Direct to prevent crashes
         if(r.overview) {
             processList(r.overview.auto);
             processList(r.overview.paper);
+            processList(r.overview.directPaper); // Ensure Direct shipments are processed
         }
+        processList(r.advance); // Ensure Advance shipments are processed
         if(r.workflow) {
             processList(r.workflow.toAssign);
             processList(r.workflow.toDo);
@@ -1234,10 +1247,7 @@ window.renderAdvance = function() {
     const items = window.APP_DATA.advance || [];
 
     const filtered = items.filter(x =>
-        !term ||
-        x.id.toLowerCase().includes(term) ||
-        (x.client||'').toLowerCase().includes(term) ||
-        (x.net||'').toLowerCase().includes(term)
+        !term || x.searchStr.includes(term)
     );
 
     if(!filtered.length) {
@@ -1399,7 +1409,8 @@ window.searchHoldings = function() {
     ];
     for(const source of sources) {
         if(!source) continue;
-        match = source.find(x => (awb && String(x.id).toLowerCase().includes(awb)) || (netSearch && x.netNo && String(x.netNo).toLowerCase().includes(netSearch)));
+        // ⚡ Bolt Optimization: Use pre-calculated lower case fields
+        match = source.find(x => (awb && x.idLower.includes(awb)) || (netSearch && x.netNoLower.includes(netSearch)));
         if(match) break;
     }
 
@@ -1981,7 +1992,8 @@ window.renderManifest = function() {
 
     const filtered = items.filter(x => {
         const matchesNet = net ? x.net === net : true;
-        const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
+        // ⚡ Bolt Optimization: Use pre-calculated searchStr
+        const matchesTerm = term ? x.searchStr.includes(term) : false;
         const shouldShow = (!x.batchNo) || (term && matchesTerm);
         return matchesNet && shouldShow && (!term || matchesTerm);
     });
@@ -2019,7 +2031,8 @@ window.renderDailyManifest = function() {
         const isToday = (x.manifestDate === today) || (x.fmtDate === today);
 
         const matchesNet = net ? x.net === net : true;
-        const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
+        // ⚡ Bolt Optimization: Use pre-calculated searchStr
+        const matchesTerm = term ? x.searchStr.includes(term) : false;
         return isToday && matchesNet && (!term || matchesTerm);
     });
 
@@ -2488,12 +2501,10 @@ window.renderReceivers = function() {
     // Unique items by ID
     const uniqueItems = Array.from(new Map(allItems.map(item => [item.id, item])).values());
 
-    // ⚡ Bolt Fix: Implement filtering for searchbar
+    // ⚡ Bolt Fix: Implement filtering for searchbar using optimized searchStr
     const filtered = uniqueItems.filter(x => {
         if(!term) return true;
-        return x.id.toLowerCase().includes(term) ||
-               (x.client||'').toLowerCase().includes(term) ||
-               (x.netNo||'').toLowerCase().includes(term);
+        return x.searchStr.includes(term);
     });
 
     if(!filtered.length) {
