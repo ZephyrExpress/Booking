@@ -103,7 +103,6 @@ function doPost(e) {
     if (act === "editShipment") return handleEditShipment(body);
     if (act === "getBillingData") return getBillingData(body.from, body.to, body.net, body.client);
     if (act === "moveAdvance") return handleMoveAdvance(body);
-    if (act === "handleBulkDataUpload") return handleBulkDataUpload(body);
     if (act === "handleConnectedScan") return handleConnectedScan(body);
     if (act === "handleAutomationScan") return handleAutomationScan(body);
 
@@ -1348,21 +1347,6 @@ function handleAddUser(b){
 function handleDeleteUser(u){clearUserCache(); const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users"),d=s.getDataRange().getValues();for(let i=1;i<d.length;i++)if(String(d[i][0]).toLowerCase()==String(u).toLowerCase()){s.deleteRow(i+1);return jsonResponse("success","Deleted");}return jsonResponse("error","Not Found");}
 function handleSetConfig(b) { PropertiesService.getScriptProperties().setProperty(b.key, b.value); return jsonResponse("success", "Config Saved"); }
 function jsonResponse(s,m,d){return ContentService.createTextOutput(JSON.stringify({result:s,message:m,...d})).setMimeType(ContentService.MimeType.JSON);}
-// ⚡ Bolt: Bulk Data Upload
-function handleBulkDataUpload(b) {
-    try {
-        const rows = JSON.parse(b.data);
-        if (!rows || !rows.length) return jsonResponse("error", "No Data");
-
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        let sh = ss.getSheetByName("Bulk_Data");
-        if (!sh) sh = ss.insertSheet("Bulk_Data");
-
-        sh.clear();
-        sh.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
-        return jsonResponse("success", "Bulk Data Uploaded");
-    } catch(e) { return jsonResponse("error", e.toString()); }
-}
 
 // ⚡ Bolt: Helper to search Booking Report (Replacing searchBulkData)
 function searchBookingReport(netNo) {

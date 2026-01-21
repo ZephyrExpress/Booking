@@ -539,7 +539,7 @@
                   <span><i class="bi bi-kanban me-2"></i>Task Manager (Global Pool)</span>
                   <div class="d-flex gap-2 align-items-center">
                       <button class="btn btn-sm btn-light text-primary fw-bold" onclick="saveBulkAssignments()"><i class="bi bi-save-fill me-1"></i> Bulk Assign</button>
-                      <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold"><i class="bi bi-table me-1"></i> Automation data</a>
+                      <a href="https://docs.google.com/spreadsheets/d/1bJDseY0Rgi5uZz409DL91dLMkXKC81XRPHAEI736jCA/edit?gid=2117522398#gid=2117522398" target="_blank" class="btn btn-sm btn-light text-primary fw-bold" style="text-transform:none"><i class="bi bi-table me-1"></i> Automation data</a>
                       <button class="btn btn-sm btn-light text-primary fw-bold" onclick="exportPool()">Export</button>
                   </div>
               </div>
@@ -800,21 +800,6 @@
   </div>
 </div>
 
-<div class="modal fade" id="bulkUploadModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Upload Bulk Data</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-      <div class="modal-body p-4">
-          <div class="alert alert-light border small mb-3"><i class="bi bi-info-circle me-2"></i> Upload the Excel file exported from company software. This will populate the system reference data.</div>
-          <div class="mb-4">
-              <label class="form-label fw-bold small">Upload Excel File (.xlsx, .xls)</label>
-              <input type="file" id="bulk_file" class="form-control" accept=".xlsx, .xls">
-          </div>
-          <button class="btn btn-primary w-100 fw-bold py-2" onclick="processBulkUpload()">Upload & Update</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <div class="modal fade" id="editShipmentModal" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -1904,8 +1889,11 @@ window.toggleNetNo = function() {
 }
 
 function resetForm(){
+    const currentMode = document.getElementById('f_active_mode').value;
     document.getElementById('shipForm').reset();
-    document.getElementById('f_category').value = "Normal";
+    document.getElementById('f_active_mode').value = currentMode;
+    if(currentMode === "Advance") document.getElementById('f_category').value = "Advance";
+    else document.getElementById('f_category').value = "Normal";
     toggleNetNo();
     document.getElementById('boxTable').innerHTML='';
     document.getElementById('f_payeeName').value = "";
@@ -2133,50 +2121,6 @@ window.downloadHistoryBatch = function(batchId, net) {
 }
 
 window.openAddHistoryModal = function() { new bootstrap.Modal(document.getElementById('addHistoryModal')).show(); }
-window.openBulkUpload = function() { new bootstrap.Modal(document.getElementById('bulkUploadModal')).show(); }
-
-window.processBulkUpload = function() {
-    const fileInput = document.getElementById('bulk_file');
-    if (!fileInput.files || fileInput.files.length === 0) return alert("Please upload an Excel file.");
-
-    const file = fileInput.files[0];
-    const reader = new FileReader();
-
-    reader.onload = async function(e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, {type: 'array'});
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            // Get raw JSON array of arrays
-            const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
-
-            if (rows.length < 2) return alert("File appears empty.");
-
-            showSpin(true);
-            bootstrap.Modal.getInstance(document.getElementById('bulkUploadModal')).hide();
-
-            // Send raw rows to backend for processing
-            const r = await callApi({
-                action: 'handleBulkDataUpload',
-                data: JSON.stringify(rows),
-                user: curUser
-            });
-            showSpin(false);
-
-            if(r.result === "success") {
-                toast("Bulk Data Updated Successfully");
-            } else {
-                alert("Error: " + r.message);
-            }
-
-        } catch(err) {
-            console.error(err);
-            alert("Error parsing file: " + err.message);
-            showSpin(false);
-        }
-    };
-    reader.readAsArrayBuffer(file);
-}
 
 // ⚡ Bolt: Inbound Mode Switcher
 window.switchInboundMode = function(mode) {
