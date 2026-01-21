@@ -1792,6 +1792,7 @@ function resetForm(){
     if(window.tomInstances.dest) window.tomInstances.dest.clear();
 
     // ⚡ Bolt Fix: Robust Date Setting (YYYY-MM-DD)
+    // Default to Today for Inbound/Advance
     const today = new Date();
     const y = today.getFullYear();
     const m = String(today.getMonth() + 1).padStart(2, '0');
