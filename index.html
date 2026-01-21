@@ -43,12 +43,41 @@
     body { background-color: var(--bg-color); font-family: var(--font-main); color: var(--secondary-color); margin: 0; padding: 0; width: 100%; position: relative; overflow-x: hidden; }
     
     /* Login Styles */
-    .login-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #003399 0%, #001a4d 100%); position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; overflow: hidden; }
-    .login-wrapper::before { content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 30px 30px; transform: rotate(15deg); pointer-events: none; }
-    .login-overlay { display: none; }
+    .login-wrapper {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: url('https://images.unsplash.com/photo-1578575437130-527eed3abbec?q=80&w=2070&auto=format&fit=crop') no-repeat center center;
+        background-size: cover;
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; overflow: hidden;
+    }
+    .login-overlay {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 51, 153, 0.85);
+        backdrop-filter: blur(5px);
+    }
     img { max-width: 100%; height: auto; }
-    .login-card { width: 90%; max-width: 420px; padding: 3rem 2rem; background: #ffffff; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); z-index: 2; position: relative; text-align: center; }
-    .login-card img { max-width: 80%; height: auto; display: inline-block; }
+    .login-card {
+        width: 90%; max-width: 400px; padding: 2.5rem;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 24px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        z-index: 2; position: relative; text-align: center;
+        border: 1px solid rgba(255,255,255,0.5);
+    }
+    .login-card img { max-width: 60%; height: auto; display: inline-block; margin-bottom: 1.5rem; }
+    .login-input {
+        background: #f1f5f9; border: 2px solid transparent; border-radius: 12px;
+        padding: 0.8rem 1rem; font-weight: 500; color: #334155; transition: all 0.3s;
+    }
+    .login-input:focus { background: white; border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(0, 51, 153, 0.1); }
+    .login-btn {
+        background: linear-gradient(135deg, var(--brand-blue) 0%, #002266 100%);
+        border: none; border-radius: 12px; padding: 0.8rem; font-weight: 700;
+        letter-spacing: 0.5px; transition: transform 0.2s;
+    }
+    .login-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -10px rgba(0, 51, 153, 0.5); }
 
     /* Layout & Sidebar */
     .sidebar { 
@@ -157,15 +186,24 @@
 <div id="loginSection" class="login-wrapper">
   <div class="login-overlay"></div>
   <div class="login-card">
-    <div class="text-center mb-4">
-        <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" height="40" class="d-block mx-auto">
+    <div class="text-center">
+        <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" class="d-block mx-auto">
     </div>
-    <p class="text-center text-muted small mb-4">PORTAL LOGIN v6.0</p>
+    <h4 class="fw-bold text-dark mb-1">Welcome Back</h4>
+    <p class="text-muted small mb-4">Please sign in to continue</p>
+
     <form onsubmit="event.preventDefault(); doLogin();" autocomplete="off">
-      <input type="text" id="uIn" class="form-control mb-3 p-3" placeholder="Username" required autocomplete="username">
-      <input type="password" id="pIn" class="form-control mb-4 p-3" placeholder="Password" style="-webkit-text-security:disc" required autocomplete="new-password">
-      <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm" style="background-color: var(--brand-blue); border:none;">SIGN IN</button>
+      <div class="mb-3 text-start">
+          <label class="small fw-bold text-muted ms-1 mb-1">USERNAME</label>
+          <input type="text" id="uIn" class="form-control login-input" required autocomplete="username">
+      </div>
+      <div class="mb-4 text-start">
+          <label class="small fw-bold text-muted ms-1 mb-1">PASSWORD</label>
+          <input type="password" id="pIn" class="form-control login-input" style="-webkit-text-security:disc" required autocomplete="new-password">
+      </div>
+      <button class="btn btn-primary w-100 login-btn text-white mb-4">SIGN IN</button>
     </form>
+    <div class="text-muted" style="font-size:0.7rem; opacity:0.6;">ZEPHYR PORTAL v1.3.23</div>
     <div id="loginError" class="alert alert-danger mt-3 small text-center" style="display:none;"></div>
   </div>
 </div>
@@ -1444,8 +1482,92 @@ window.clearHoldSearch = function() {
 }
 
 window.openHoldAction = function(id) {
-    document.getElementById('holdSearchAwb').value = id;
-    searchHoldings();
+    // ⚡ Bolt Fix: Open Modal instead of embedded search
+    // We reuse searchHoldings logic but direct it to the modal
+    const item = findHoldItem(id);
+    if(item) showHoldActionModal(item);
+    else {
+        document.getElementById('holdSearchAwb').value = id;
+        searchHoldings(); // Fallback if not found immediately (e.g. from table click)
+    }
+}
+
+function findHoldItem(id) {
+    const sources = [
+        window.APP_DATA.overview.auto,
+        window.APP_DATA.overview.paper,
+        window.APP_DATA.holdings,
+        window.APP_DATA.manifest,
+        window.APP_DATA.overview.directPaper,
+        window.APP_DATA.advance
+    ];
+    const target = String(id).trim().toLowerCase();
+    for(const source of sources) {
+        if(!source) continue;
+        const match = source.find(x => String(x.id).trim().toLowerCase() === target);
+        if(match) return match;
+    }
+    return null;
+}
+
+function showHoldActionModal(match) {
+    const isOnHold = match.holdStatus === "On Hold";
+    const netVal = (match.net || "").toUpperCase().trim();
+    const destVal = (match.dest || "").toUpperCase().trim();
+    const isNA = (netVal === "NA" || netVal === "N/A" || netVal.includes("NOT KNOWN") ||
+                  destVal === "NA" || destVal === "N/A" || destVal.includes("NOT KNOWN"));
+
+    document.getElementById('ham_awb').textContent = match.id;
+    document.getElementById('ham_net').textContent = match.netNo || '-';
+
+    // Reset sections
+    document.getElementById('ham_na_section').style.display = 'none';
+    document.getElementById('ham_norm_section').style.display = 'none';
+
+    // Fill NA dropdowns if needed
+    if(isNA) {
+        const nets = window.APP_DATA.static.dropdowns.networks.map(n => `<option value="${n}">${n}</option>`).join('');
+        const dests = window.APP_DATA.static.dropdowns.destinations.map(d => `<option value="${d}">${d}</option>`).join('');
+        document.getElementById('ham_sel_net').innerHTML = `<option value="" disabled selected>Select Network</option>${nets}`;
+        document.getElementById('ham_sel_dest').innerHTML = `<option value="" disabled selected>Select Destination</option>${dests}`;
+
+        // Pre-fill if not completely empty
+        if(match.net && match.net !== 'NA') document.getElementById('ham_sel_net').value = match.net;
+
+        document.getElementById('ham_na_section').style.display = 'block';
+    } else {
+        document.getElementById('ham_norm_section').style.display = 'block';
+    }
+
+    // Show Modal
+    selectedHoldAwb = match.id; // Global state for actions
+    new bootstrap.Modal(document.getElementById('holdActionModal')).show();
+}
+
+// Hook into existing ham functions
+window.hamClear = function() { actClearHold(selectedHoldAwb); bootstrap.Modal.getInstance(document.getElementById('holdActionModal')).hide(); }
+window.hamRTO = function() { actRTO(selectedHoldAwb); bootstrap.Modal.getInstance(document.getElementById('holdActionModal')).hide(); }
+window.hamSubmit = function() {
+    const net = document.getElementById('ham_sel_net').value;
+    const dest = document.getElementById('ham_sel_dest').value;
+    if(!net || !dest) return alert("Select both Network and Destination");
+
+    // Reuse existing correction logic
+    submitCorrectionFromModal(selectedHoldAwb, net, dest);
+    bootstrap.Modal.getInstance(document.getElementById('holdActionModal')).hide();
+}
+
+window.submitCorrectionFromModal = async function(id, net, dest) {
+    showSpin(true);
+    const r = await callApi({action: 'updateShipmentDetails', awb: id, network: net, destination: dest});
+    if(r.result === "success") {
+        await callApi({action:"manageHold", subAction:"clear", awb:id, remarks:"Hold cleared after correction"});
+        toast("Correction Saved & Hold Cleared");
+        syncData(false);
+    } else {
+        alert("Error: " + r.message);
+    }
+    showSpin(false);
 }
 
 window.openHoldModal = function(id, netNo) {
