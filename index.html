@@ -203,7 +203,7 @@
       </div>
       <button class="btn btn-primary w-100 login-btn text-white mb-4">SIGN IN</button>
     </form>
-    <div class="text-muted" style="font-size:0.7rem; opacity:0.6;">ZEPHYR PORTAL v1.3.23</div>
+    <div class="text-muted" style="font-size:0.7rem; opacity:0.6;">ZEPHYR PORTAL v1.3.24</div>
     <div id="loginError" class="alert alert-danger mt-3 small text-center" style="display:none;"></div>
   </div>
 </div>
@@ -220,7 +220,7 @@
       <div class="nav-label">Main Menu</div>
       <a class="nav-item-custom active" id="nav-overview" onclick="switchTab('overview')" style="display:none"><i class="bi bi-grid-1x2 me-2"></i> Overview</a>
       <a class="nav-item-custom" id="nav-inbound" onclick="switchTab('inbound')" style="display:none"><i class="bi bi-box-seam me-2"></i> Inbound</a>
-      <a class="nav-item-custom" id="nav-advance" onclick="switchTab('advance')" style="display:none"><i class="bi bi-calendar-plus me-2"></i> Advance Records</a>
+      <a class="nav-item-custom" id="nav-advance" onclick="switchTab('advance')" style="display:none"><i class="bi bi-calendar-plus me-2"></i> Advance Records <span id="advBadge" class="badge bg-primary ms-auto" style="display:none">0</span></a>
       <a class="nav-item-custom" id="nav-taskhub" onclick="switchTab('taskhub')" style="display:none"><i class="bi bi-check-circle me-2"></i> <span id="taskLabel">My Tasks</span></a>
       <a class="nav-item-custom" id="nav-manifest" onclick="switchTab('manifest')" style="display:none"><i class="bi bi-file-earmark-spreadsheet me-2"></i> Manifest</a>
       <a class="nav-item-custom" id="nav-receivers" onclick="switchTab('receivers')" style="display:none"><i class="bi bi-printer me-2"></i> Receivers Slip</a>
@@ -425,31 +425,7 @@
            <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">TOTAL HOLDINGS</div><div class="stat-value text-secondary" id="ovHoldings">0</div></div><i class="bi bi-pause-circle fs-1 text-secondary opacity-25"></i></div></div>
         </div>
 
-        <!-- ⚡ Bolt: New Direct & Advance Overview Section -->
-        <div class="row g-4 mb-4">
-            <div class="col-md-6">
-                <div class="panel-card border-start border-4 border-info h-100">
-                    <div class="panel-header bg-white border-bottom-0 pb-0">
-                        <span class="text-info"><i class="bi bi-send-check me-2"></i>Direct Shipments (Processing)</span>
-                        <span class="badge bg-info text-white" id="badgeDirect">0</span>
-                    </div>
-                    <div class="p-3">
-                        <div id="listDirect" style="max-height: 200px; overflow-y: auto;"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="panel-card border-start border-4 border-primary h-100">
-                    <div class="panel-header bg-white border-bottom-0 pb-0">
-                        <span class="text-primary"><i class="bi bi-calendar-check me-2"></i>Advance Shipments</span>
-                        <span class="badge bg-primary" id="badgeAdv">0</span>
-                    </div>
-                    <div class="p-3">
-                        <div class="text-muted small">Manage these in the <strong>Advance Records</strong> tab.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- ⚡ Bolt: New Direct & Advance Overview Section (REMOVED) -->
 
         <div class="row g-4">
           <div class="col-lg-6">
@@ -1080,11 +1056,18 @@ async function syncData(init=false){
         if(r.role) curRole = r.role;
         curPerms = r.perms || [];
 
-        if(curRole === 'Admin' || curRole === 'Owner') {
-            const newCount = r.stats.requests || 0;
-            if(!init && newCount > lastReqCount) toast(`<strong>New Transfer Request!</strong><br>${newCount} pending actions.`, 'danger');
-            lastReqCount = newCount;
+        // ⚡ Bolt Fix: Admin Badge Updates
+        const newCount = r.stats.requests || 0;
+        const admBadge = document.getElementById('adminBadge');
+        if(admBadge) {
+            admBadge.textContent = newCount;
+            admBadge.style.display = newCount > 0 ? 'inline-block' : 'none';
         }
+
+        if((curRole === 'Admin' || curRole === 'Owner') && !init && newCount > lastReqCount) {
+             toast(`<strong>New Transfer Request!</strong><br>${newCount} pending actions.`, 'danger');
+        }
+        lastReqCount = newCount;
         updateNavVisibility();
         if(init) initForms(); else updDd();
         renderUI();
@@ -1153,9 +1136,13 @@ function renderUI(){
   document.getElementById('totalHoldings').textContent=s.holdings;
   document.getElementById('ovHoldings').textContent=s.holdings;
 
-  // ⚡ Bolt: Update New Badges
-  document.getElementById('badgeDirect').textContent = (d.directPaper || []).length;
-  document.getElementById('badgeAdv').textContent = (window.APP_DATA.advance || []).length;
+  // ⚡ Bolt: Update Badges (Sidebar)
+  const advCount = (window.APP_DATA.advance || []).length;
+  const advBadge = document.getElementById('advBadge');
+  if(advBadge) {
+      advBadge.textContent = advCount;
+      advBadge.style.display = advCount > 0 ? 'inline-block' : 'none';
+  }
 
   // Render Direct List
   const ld = document.getElementById('listDirect');
@@ -1362,6 +1349,8 @@ window.renderHoldings = function() {
     };
 
     list.innerHTML = items.map(x => {
+            if(x.holdStatus === 'RTO') return ''; // Filter out RTO from active list
+
             const reasonDesc = getReasonDesc(x.holdReason);
             // ⚡ Bolt Fix: Use Entry Date as fallback if Hold Date is missing
             const rawDate = x.holdDate || x.date;
@@ -1404,71 +1393,9 @@ window.searchHoldings = function() {
     }
 
     if(match) {
-        // ⚡ Bolt Fix: Normalize values for NA check
-        const netVal = (match.net || "").toUpperCase().trim();
-        const destVal = (match.dest || "").toUpperCase().trim();
-
-        const isOnHold = match.holdStatus === "On Hold";
-        // Check for NA/N/A/NOT KNOWN variations
-        const isNA = (netVal === "NA" || netVal === "N/A" || netVal.includes("NOT KNOWN") ||
-                      destVal === "NA" || destVal === "N/A" || destVal.includes("NOT KNOWN"));
-
-        let actionBtn = "";
-
-        // ⚡ Bolt Fix: Always provide action buttons if On Hold, defaulting to standard actions if not NA
-        if(isOnHold) {
-            if (isNA) {
-                const nets = window.APP_DATA.static.dropdowns.networks.map(n => `<option value="${n}">${n}</option>`).join('');
-                const dests = window.APP_DATA.static.dropdowns.destinations.map(d => `<option value="${d}">${d}</option>`).join('');
-
-                actionBtn = `
-                    <div class="alert alert-warning small p-2 mb-2">Update Details to Clear Hold</div>
-                    <select id="fix_net" class="form-select mb-2"><option value="" disabled selected>Select Network</option>${nets}</select>
-                    <select id="fix_dest" class="form-select mb-2"><option value="" disabled selected>Select Destination</option>${dests}</select>
-                    <button class="btn btn-warning w-100 mb-2 fw-bold" onclick="submitCorrection('${match.id}')">Update & Save</button>
-                    <hr>
-                `;
-            }
-
-            // Always append standard actions for On Hold items
-            actionBtn += `
-                <button class="btn btn-success btn-lg w-100 mb-2" onclick="actClearHold('${match.id}')">Clear Hold</button>
-                <button class="btn btn-dark btn-lg w-100" onclick="actRTO('${match.id}')">Mark RTO</button>
-            `;
-        } else {
-            actionBtn = `<button class="btn btn-danger btn-lg w-100" onclick="openHoldModal('${match.id}', '${match.netNo||'-'}')">Put On Hold</button>`;
-        }
-
-        resPanel.innerHTML = `
-            <div class="panel-card border-2 ${isOnHold ? 'border-warning' : 'border-success'} p-4">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                        <div class="d-flex align-items-center mb-2">
-                            <span class="badge ${isOnHold ? 'bg-warning text-dark' : 'bg-success'} me-2">${isOnHold ? 'CURRENTLY ON HOLD' : 'ACTIVE STATUS'}</span>
-                            <h4 class="fw-bold m-0">${match.id}</h4>
-                        </div>
-                        <div class="row g-3 small text-muted">
-                            <div class="col-auto"><strong class="text-dark">Net No:</strong> ${match.netNo||'-'}</div>
-                            <div class="col-auto"><strong class="text-dark">Client:</strong> ${match.client}</div>
-                            <div class="col-auto"><strong class="text-dark">Network:</strong> <span class="${(match.net==='NA'||match.net==='N/A')?'text-danger fw-bold':''}">${match.net}</span></div>
-                            <div class="col-auto"><strong class="text-dark">Dest:</strong> <span class="${(match.dest==='NA'||match.dest==='N/A')?'text-danger fw-bold':''}">${match.dest}</span></div>
-                            <div class="col-auto"><strong class="text-dark">Weight:</strong> ${match.chgWgt}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mt-3 mt-md-0">
-                        ${actionBtn}
-                    </div>
-                </div>
-            </div>
-        `;
-        resPanel.style.display='block';
-
-        if(isNA && isOnHold) {
-             const fn = document.getElementById('fix_net');
-             const fd = document.getElementById('fix_dest');
-             if(fn && match.net !== "NA" && match.net !== "N/A") fn.value = match.net;
-             if(fd && match.dest !== "NA" && match.dest !== "N/A") fd.value = match.dest;
-        }
+        showHoldActionModal(match); // ⚡ Bolt Fix: Use Popup for Search Results too
+        document.getElementById('holdSearchAwb').value = ""; // Clear input after finding
+        document.getElementById('holdSearchNet').value = "";
     } else {
         resPanel.innerHTML = `<div class="alert alert-secondary text-center py-4">No shipment found matching your search.</div>`;
         resPanel.style.display='block';

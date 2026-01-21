@@ -476,9 +476,9 @@ function getAllData(username) {
     const isPendingManifest = (paperStatus === "Completed" && !batchNo);
     const isTodayManifest = (paperStatus === "Completed" && (manifestDate === todayStr || dateVal === todayTime));
 
-    if (isRTO) return; // Skip RTO completely from active lists
+    // if (isRTO) return; // Allow RTO in data for search, filter in UI active views
 
-    if (isHold || isPending || isPendingManifest || isTodayManifest) {
+    if (isHold || isPending || isPendingManifest || isTodayManifest || isRTO) {
         const item = {
           id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
           details: `${r[6]} Boxes | ${num(r[12])} Kg`,
@@ -533,7 +533,7 @@ function getAllData(username) {
       if(rId) allAwbs.push(rId); // Add to global duplicate check list
 
       const holdStatus = r[27];
-      if (holdStatus === "RTO") return; // Strictly hide RTO from active views
+      // if (holdStatus === "RTO") return; // Allow RTO for search
 
       // ⚡ Bolt Fix: Category is at Index 33 (Col 34/AH), fallback 32
       const category = (r[33] || r[32]) ? String(r[33] || r[32]).trim() : "Advance";
@@ -1364,83 +1364,63 @@ function handleBulkDataUpload(b) {
     } catch(e) { return jsonResponse("error", e.toString()); }
 }
 
-// ⚡ Bolt: Helper to search Bulk Data
-function searchBulkData(netNo) {
+// ⚡ Bolt: Helper to search Booking Report (Replacing searchBulkData)
+function searchBookingReport(netNo) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sh = ss.getSheetByName("Bulk_Data");
-    if (!sh || sh.getLastRow() < 2) return null;
+    let brSheet = ss.getSheetByName("Booking_Report");
 
-    const data = sh.getDataRange().getValues();
-    const headers = data[0].map(h => String(h).trim().toLowerCase());
-
-    // Find Columns
-    // Try dynamic search first, else fallback to Col U (Index 20) if headers are ambiguous
-    let cNetNo = headers.findIndex(h => h.includes("net no") || h.includes("network no"));
-    let useStandardMap = false;
-
-    if (cNetNo === -1) {
-        if (headers.length > 20) {
-             cNetNo = 20;
-             useStandardMap = true;
-        } else {
-             return null; // Can't find and not enough columns for standard
-        }
+    // If not found in active sheet, try opening external task sheet
+    if (!brSheet) {
+        try {
+            const taskSS = SpreadsheetApp.openById(TASK_SHEET_ID);
+            brSheet = taskSS.getSheetByName("Booking_Report");
+        } catch(e) { console.error("Ext BR Access Error", e); }
     }
 
+    if (!brSheet || brSheet.getLastRow() < 2) return null;
+
+    // Use getValues for full data scan
+    const data = brSheet.getDataRange().getValues();
+    // Column U (Index 20) is Network No
+    const cNetNo = 20;
     const target = String(netNo).trim().toLowerCase();
 
+    // Loop skip header
     for(let i=1; i<data.length; i++) {
-        // Safe check for undefined if row is short
-        const cellVal = data[i][cNetNo] ? String(data[i][cNetNo]).trim().toLowerCase() : "";
+        const row = data[i];
+        const cellVal = row[cNetNo] ? String(row[cNetNo]).trim().toLowerCase() : "";
 
         if(cellVal === target) {
-            const row = data[i];
+            // Found! Map fields
+            // AWB:0, Date:1, Dest:3, ClientCode:4, ClientName:5, Net:19, Boxes:23, Wgt:26(Chg)
+            // Client: Combine name + code if needed, or just name. Original logic used Name-Code.
+            // Let's stick to Name (Col 5) as primary or Name-Code if requested. Previous sync logic used:
+            // `${br.clientName}-${br.clientCode}`.slice(-4) === br.clientCode ? ...
+            const clientName = row[5];
+            const clientCode = row[4];
+            // Format Client: "Name - Code" if not redundant, or just Name. Keeping it simple: Name.
+            // Actually, consistency with Sync logic is better:
+            const clientVal = clientName;
 
-            if (useStandardMap) {
-                // Standard Booking Report Map
-                // AWB:0, Date:1, Dest:3, Client:5, Net:19, NetNo:20, Boxes:23, Wgt:26(Chg)
-                return {
-                    awb: row[0],
-                    date: row[1],
-                    dest: row[3],
-                    net: row[19],
-                    netNo: row[20],
-                    boxes: row[23],
-                    wgt: row[26],
-                    client: row[5]
-                };
-            } else {
-                // Dynamic Header Map
-                const getVal = (k) => {
-                    // Try multiple variations
-                    const idx = headers.findIndex(h => h.includes(k));
-                    return idx > -1 ? row[idx] : "";
-                };
-
-                // Enhanced Dynamic Lookup
-                const netVal = getVal("network") || getVal("net") || "DHL";
-                const pcsVal = getVal("pcs") || getVal("box");
-                const wgtVal = getVal("wgt") || getVal("weight") || getVal("chg");
-
-                return {
-                    awb: getVal("awb"),
-                    date: getVal("date"),
-                    dest: getVal("dest"),
-                    net: netVal,
-                    netNo: row[cNetNo],
-                    boxes: pcsVal,
-                    wgt: wgtVal,
-                    client: getVal("client")
-                };
-            }
+            return {
+                awb: row[0],
+                date: row[1],
+                dest: row[3],
+                net: row[19],
+                netNo: row[20],
+                boxes: row[23],
+                wgt: row[26],
+                client: clientVal,
+                type: row[22] // W
+            };
         }
     }
     return null;
 }
 
 function handleConnectedScan(b) {
-    const res = searchBulkData(b.netNo);
-    if(!res) return jsonResponse("error", "Network No not found in Bulk Data");
+    const res = searchBookingReport(b.netNo);
+    if(!res) return jsonResponse("error", "Network No not found in Booking Report");
 
     // Check Duplicates
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1452,7 +1432,7 @@ function handleConnectedScan(b) {
     // FMS Doer: Client Name (res.client)
 
     const rowData = [
-        "'"+res.awb, new Date(), "Ndox", "DHL", res.client, res.dest, // Assuming Net=DHL default if missing
+        "'"+res.awb, new Date(), res.type || "Ndox", "DHL", res.client, res.dest, // Assuming Net=DHL default if missing
         res.boxes, "", b.user, new Date(),
         res.wgt, res.wgt, res.wgt, "Connected Scan",
         "Done", res.client, "Pending", "", // Auto Done (by Client), Paper Pending
@@ -1467,7 +1447,7 @@ function handleConnectedScan(b) {
     // Add to FMS
     // Status: Done, Doer: Client Name
     addToFMS({
-        awb: res.awb, date: new Date(), type: "Ndox", net: "DHL",
+        awb: res.awb, date: new Date(), type: res.type || "Ndox", net: "DHL",
         client: res.client, dest: res.dest, boxes: res.boxes,
         wgt: res.wgt, user: b.user,
         status: "Done", doer: res.client
@@ -1477,8 +1457,8 @@ function handleConnectedScan(b) {
 }
 
 function handleAutomationScan(b) {
-    const res = searchBulkData(b.netNo);
-    if(!res) return jsonResponse("error", "Network No not found in Bulk Data");
+    const res = searchBookingReport(b.netNo);
+    if(!res) return jsonResponse("error", "Network No not found in Booking Report");
     return jsonResponse("success", "Found", { data: res });
 }
 
