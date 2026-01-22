@@ -773,20 +773,14 @@ function handleManifestBatch(b) {
 
   const localRangesCol25 = []; // Batch ID (Y)
   const localRangesCol26 = []; // Manifest Date (Z)
-  const fmsRanges = [];
+  const fmsStatusRanges = [];
+  const fmsUserRanges = [];
 
   // Helper to convert (row, col) to A1 Notation
-  // ⚡ Bolt Fix: Update A1 notation for shifted columns
   const getA1 = (r, c) => {
-      // Y(25)->AA(27), AD(30)->AF(32), AI(35)->AK(37), AN(40)->AP(42), AS(45)->AU(47)
-      // Also local sheet (Y=25, Z=26)
-      if(c === 25) return `Y${r}`;
-      if(c === 26) return `Z${r}`;
-
-      const colMap = {
-          27: 'AA', 32: 'AF', 37: 'AK', 42: 'AP', 47: 'AU'
-      };
-      return `${colMap[c] || '?'}${r}`;
+      const letters = ["","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",
+                       "AA","AB","AC","AD","AE","AF","AG","AH","AI","AJ","AK","AL","AM","AN","AO","AP","AQ","AR","AS","AT","AU"];
+      return (letters[c] || '?') + r;
   };
 
   b.ids.forEach(id => {
@@ -810,7 +804,10 @@ function handleManifestBatch(b) {
               else if(net.includes("ups")) col = 40; // AN
               else if(net.includes("self")) col = 45; // AS
 
-              if(col > 0) fmsRanges.push(getA1(r, col));
+              if(col > 0) {
+                  fmsStatusRanges.push(getA1(r, col)); // Status: Y, AD, AI...
+                  fmsUserRanges.push(getA1(r, col + 2)); // User: AA, AF, AK...
+              }
           }
       }
   });
@@ -818,7 +815,11 @@ function handleManifestBatch(b) {
   // ⚡ Bolt Optimization: Batch updates using RangeList to reduce API calls
   if(localRangesCol25.length) ss.getRangeList(localRangesCol25).setValue(b.batchNo);
   if(localRangesCol26.length) ss.getRangeList(localRangesCol26).setValue(b.date);
-  if(fmsRanges.length && fms) fms.getRangeList(fmsRanges).setValue(b.user);
+
+  if(fms) {
+      if(fmsStatusRanges.length) fms.getRangeList(fmsStatusRanges).setValue("Done");
+      if(fmsUserRanges.length) fms.getRangeList(fmsUserRanges).setValue(b.user);
+  }
 
   return jsonResponse("success", "Batch Updated");
 }
