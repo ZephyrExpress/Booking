@@ -1196,7 +1196,6 @@ function renderUI(){
 
   renderTaskHub();
   if(document.getElementById('manifest-tab').style.display==='block') renderManifest();
-  if(document.getElementById('man-daily-view').style.display==='block') renderDailyManifest();
   if(document.getElementById('holdings-tab').style.display==='block') renderHoldings();
   if(document.getElementById('receivers-tab').style.display==='block') renderReceivers();
   if(document.getElementById('admin-tab').style.display==='block') renderAdminPanel();
@@ -1817,7 +1816,6 @@ window.switchTab=function(t){
    closeSidebar();
    
    if(t==='manifest') renderManifest();
-   if(t==='manifest') renderDailyManifest(); // Render Daily too just in case
    if(t==='admin') renderAdminPanel();
    if(t==='holdings') renderHoldings();
    if(t==='receivers') renderReceivers();
