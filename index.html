@@ -581,7 +581,6 @@
       <div id="manifest-tab" class="tab-view" style="display:none;">
         <ul class="nav nav-pills mb-3" id="manTabs">
            <li class="nav-item"><button class="nav-link active rounded-pill px-4" onclick="switchManifestView('pending')">Pending Manifest</button></li>
-           <li class="nav-item ms-2"><button class="nav-link rounded-pill px-4" onclick="switchManifestView('daily')">Daily Manifest</button></li>
            <li class="nav-item ms-2"><button class="nav-link rounded-pill px-4" onclick="switchManifestView('history')">Manifest History</button></li>
         </ul>
         <div id="man-pending-view" style="display:block;">
@@ -622,56 +621,29 @@
           </div>
         </div>
 
-        <!-- DAILY MANIFEST VIEW -->
-        <div id="man-daily-view" style="display:none;">
-          <div class="panel-card p-3">
-             <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 gap-3">
-                <div class="d-flex align-items-center gap-3">
-                   <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px"><i class="bi bi-calendar-check"></i></div>
-                   <div><div class="fw-bold">Daily Manifest</div><div class="small text-muted fw-normal">Items Manifested Today</div></div>
-                </div>
-                <div class="d-flex gap-2 align-items-center flex-wrap justify-content-end">
-                   <button class="btn btn-sm btn-outline-dark" onclick="openAddHistoryModal()"><i class="bi bi-clock-history me-1"></i> Add from History</button>
-                   <button class="btn btn-sm btn-outline-secondary" onclick="printDailyManifest()"><i class="bi bi-printer me-1"></i> Print View</button>
-                   <select id="man_daily_net" class="form-select form-select-sm" style="width:150px" onchange="renderDailyManifest()"><option value="">Select Network...</option></select>
-                   <div class="input-group input-group-sm" style="width:200px;">
-                       <span class="input-group-text"><i class="bi bi-search"></i></span>
-                       <input id="man_daily_search" class="form-control" placeholder="Search ID/NetNo..." oninput="d_renderDailyManifest()">
-                   </div>
-                   <button class="btn btn-primary btn-sm rounded-pill shadow-sm text-nowrap px-3" onclick="createBatch()"><i class="bi bi-file-text me-2"></i>Create Manifest</button>
-                </div>
-             </div>
-
-             <div class="table-responsive border rounded" style="max-height:600px; overflow-y:auto;">
-                <table class="table table-hover align-middle mb-0 small">
-                   <thead class="bg-light sticky-top">
-                      <tr>
-                         <th class="ps-3" style="width:40px"><input type="checkbox" class="form-check-input daily-check" onclick="toggleAllDaily(this)"></th>
-                         <th>AWB</th><th>Date</th><th>Dest</th><th>Network</th><th>Net No</th><th>Pcs</th><th>Wgt</th><th>Client</th><th class="text-end pe-3">Batch</th>
-                      </tr>
-                   </thead>
-                   <tbody id="dailyManifestList"></tbody>
-                </table>
-             </div>
-             <div id="dailyManifestEmptyState" class="text-center py-5">
-                <div class="mb-3 text-muted"><i class="bi bi-inbox fs-1"></i></div>
-                <h6 class="text-muted fw-bold">No Items Found</h6>
-                <p class="text-muted small">No manifests generated today.</p>
-             </div>
-          </div>
-        </div>
 
         <div id="man-history-view" style="display:none;">
            <div class="panel-card p-3 mb-4">
-               <div class="d-flex align-items-end gap-3 flex-wrap">
+               <div class="d-flex justify-content-between align-items-center mb-3">
+                   <h5 class="fw-bold m-0"><i class="bi bi-clock-history me-2"></i>Manifest History</h5>
+               </div>
+               <div class="d-flex align-items-end gap-2 flex-wrap bg-light p-3 rounded">
                    <div><label class="small fw-bold">From Date</label><input type="date" id="hist_from" class="form-control form-control-sm"></div>
                    <div><label class="small fw-bold">To Date</label><input type="date" id="hist_to" class="form-control form-control-sm"></div>
-                   <button class="btn btn-sm btn-primary" onclick="renderManifestHistory()">Filter History</button>
+                   <button class="btn btn-sm btn-primary" onclick="renderManifestHistory()">Filter</button>
                    <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('hist_from').value='';document.getElementById('hist_to').value='';renderManifestHistory()">Reset</button>
                </div>
            </div>
-           <div class="row g-4" id="batchContainer"></div>
-           <div id="batchEmptyState" class="text-center py-5" style="display:none"><div class="mb-3 text-muted"><i class="bi bi-clock-history fs-1"></i></div><h6 class="text-muted fw-bold">No History</h6><p class="text-muted small">Generated batches appear here.</p></div>
+
+           <div class="panel-card">
+               <div class="table-responsive">
+                   <table class="table table-hover align-middle mb-0">
+                       <thead class="bg-light"><tr><th>Batch No</th><th>Date</th><th>Network</th><th>Items</th><th class="text-end">Action</th></tr></thead>
+                       <tbody id="batchContainer"></tbody>
+                   </table>
+               </div>
+               <div id="batchEmptyState" class="text-center py-5" style="display:none"><div class="mb-3 text-muted"><i class="bi bi-clock-history fs-1 opacity-25"></i></div><h6 class="text-muted fw-bold">No History Found</h6></div>
+           </div>
         </div>
       </div>
 
@@ -714,11 +686,20 @@
                       <div class="alert alert-light border small text-muted mb-4"><i class="bi bi-info-circle me-2"></i>Owners can promote/demote. Admins can manage data. Staff access is restricted by permissions.</div>
 
                       <!-- Auto AWB Toggle -->
-                      <div class="d-flex align-items-center justify-content-between p-3 border rounded mb-4 bg-light">
+                      <div class="d-flex align-items-center justify-content-between p-3 border rounded mb-2 bg-light">
                           <div class="fw-bold text-dark"><i class="bi bi-magic me-2"></i>Auto AWB Generation</div>
                           <div class="form-check form-switch">
-                              <input class="form-check-input" type="checkbox" role="switch" id="autoAwbSwitch" onchange="toggleAutoAwb(this)">
+                              <input class="form-check-input" type="checkbox" role="switch" id="autoAwbSwitch" onchange="toggleConfig('AUTO_AWB', this)">
                               <label class="form-check-label small fw-bold" id="autoAwbLabel">Enabled</label>
+                          </div>
+                      </div>
+
+                      <!-- Transfer Request Toggle -->
+                      <div class="d-flex align-items-center justify-content-between p-3 border rounded mb-4 bg-light">
+                          <div class="fw-bold text-dark"><i class="bi bi-arrow-left-right me-2"></i>Allow Transfer Requests</div>
+                          <div class="form-check form-switch">
+                              <input class="form-check-input" type="checkbox" role="switch" id="allowTransferSwitch" onchange="toggleConfig('ALLOW_TRANSFER', this)">
+                              <label class="form-check-label small fw-bold" id="allowTransferLabel">Enabled</label>
                           </div>
                       </div>
 
@@ -1075,14 +1056,23 @@ async function syncData(init=false){
         renderUI();
 
         if(window.APP_DATA.static && window.APP_DATA.static.config) {
-            const enabled = window.APP_DATA.static.config.autoAwb;
-            const sw = document.getElementById('autoAwbSwitch');
-            if(sw) {
-                sw.checked = enabled;
-                document.getElementById('autoAwbLabel').textContent = enabled ? "Enabled" : "Disabled";
+            const conf = window.APP_DATA.static.config;
+
+            // Auto AWB
+            const swAwb = document.getElementById('autoAwbSwitch');
+            if(swAwb) {
+                swAwb.checked = conf.autoAwb;
+                document.getElementById('autoAwbLabel').textContent = conf.autoAwb ? "Enabled" : "Disabled";
             }
-            const btn = document.getElementById('btnAutoAwb');
-            if(btn) btn.style.display = enabled ? 'block' : 'none';
+            const btnAwb = document.getElementById('btnAutoAwb');
+            if(btnAwb) btnAwb.style.display = conf.autoAwb ? 'block' : 'none';
+
+            // Transfer Toggle
+            const swTr = document.getElementById('allowTransferSwitch');
+            if(swTr) {
+                swTr.checked = conf.allowTransfer;
+                document.getElementById('allowTransferLabel').textContent = conf.allowTransfer ? "Enabled" : "Disabled";
+            }
         }
      } else {
         console.error("Sync Error:", r.message);
@@ -1281,8 +1271,28 @@ function renderTaskHub(){
    } else {
       document.getElementById('adminTaskView').style.display = 'none'; document.getElementById('staffTaskView').style.display = 'block';
       const wf=window.APP_DATA.workflow; const ca=document.getElementById('contAssign');
+
+      const allowTransfer = window.APP_DATA.static.config.allowTransfer;
+
       if(!wf.toAssign.length) ca.innerHTML='<div class="col-12 text-center text-muted small py-4">No tasks to assign</div>';
-      else { let opts=`<option value="">Assign To...</option>`; if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`); ca.innerHTML = wf.toAssign.map(x => `<div class="col-12"><div class="panel-card p-3 border-info border-start border-4"><div class="fw-bold">${x.id}</div><div class="small text-muted mb-2">${x.client} • ${x.net}</div><div class="input-group input-group-sm"><select id="direct_tr_${x.id}" class="form-select">${opts}</select><button class="btn btn-primary" onclick="actDirectTransfer('${x.id}')">Assign</button></div></div></div>`).join(''); }
+      else {
+          let opts=`<option value="">Assign To...</option>`;
+          if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`);
+
+          ca.innerHTML = wf.toAssign.map(x => `
+          <div class="col-12">
+            <div class="panel-card p-3 border-info border-start border-4">
+                <div class="fw-bold">${x.id}</div>
+                <div class="small text-muted mb-2">${x.client} • ${x.net}</div>
+                ${allowTransfer ? `
+                <div class="input-group input-group-sm">
+                    <select id="direct_tr_${x.id}" class="form-select">${opts}</select>
+                    <button class="btn btn-primary" onclick="actDirectTransfer('${x.id}')">Assign</button>
+                </div>` : `<div class="small text-muted fst-italic">Transfers disabled</div>`}
+            </div>
+          </div>`).join('');
+      }
+
       const ct=document.getElementById('contTodo');
       if(!wf.toDo.length) ct.innerHTML='<div class="col-12 text-center text-muted small py-4">No tasks assigned to you</div>';
       else { ct.innerHTML = wf.toDo.map(x => `
@@ -1296,7 +1306,7 @@ function renderTaskHub(){
                         <div class="small text-muted">${x.subtitle}</div>
                     </div>
                 </div>
-                <button class="btn btn-sm btn-light" onclick="openReassign('${x.id}','Paperwork')"><i class="bi bi-arrow-left-right"></i></button>
+                ${allowTransfer ? `<button class="btn btn-sm btn-light" onclick="openReassign('${x.id}','Paperwork')"><i class="bi bi-arrow-left-right"></i></button>` : ''}
             </div>
             <div class="small text-primary my-2 ps-4">${x.details}</div>
             <button class="btn btn-success w-100 btn-sm rounded-pill mt-2" onclick="actComplete('${x.id}')">Mark Complete</button>
@@ -1951,13 +1961,11 @@ window.getBillingData = async function() {
 }
 window.switchManifestView = function(view) {
    document.querySelectorAll('#manTabs .nav-link').forEach(el => el.classList.remove('active'));
-   const idx = view === 'pending' ? 0 : (view === 'daily' ? 1 : 2);
+   const idx = view === 'pending' ? 0 : 1;
    document.querySelectorAll('#manTabs .nav-link')[idx].classList.add('active');
    document.getElementById('man-pending-view').style.display = view === 'pending' ? 'block' : 'none';
-   document.getElementById('man-daily-view').style.display = view === 'daily' ? 'block' : 'none';
    document.getElementById('man-history-view').style.display = view === 'history' ? 'block' : 'none';
    if(view === 'pending') renderManifest();
-   if(view === 'daily') renderDailyManifest();
    if(view === 'history') renderManifestHistory();
 }
 
@@ -1966,6 +1974,16 @@ window.renderManifest = function() {
     const term = document.getElementById('man_search').value.toLowerCase();
     const list = document.getElementById('manifestList');
     const items = window.APP_DATA.manifest || [];
+
+    // ⚡ Bolt: Shift Logic (9 AM Start)
+    const now = new Date();
+    // Shift Start: If Now >= 9AM, Shift Start is Today. Else Yesterday.
+    let shiftStart = new Date();
+    if (now.getHours() < 9) {
+        shiftStart.setDate(shiftStart.getDate() - 1);
+    }
+    shiftStart.setHours(0, 0, 0, 0); // Normalized to Midnight
+    const shiftStartTime = shiftStart.getTime();
 
     const filtered = items.filter(x => {
         const matchesNet = net ? x.net === net : true;
@@ -1982,51 +2000,19 @@ window.renderManifest = function() {
     document.getElementById('manifestEmptyState').style.display = 'none';
     list.innerHTML = filtered.map(x => {
         const badge = x.batchNo ? `<span class="badge bg-secondary" title="In Batch: ${x.batchNo}">History</span>` : `<span class="badge bg-success">Ready</span>`;
-        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check pending-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${x.fmtDate}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${badge}</td></tr>`;
+
+        // Red Highlight Logic
+        let rowClass = "";
+        const d = new Date(x.date);
+        d.setHours(0,0,0,0);
+        // If item date is strictly before shift date (and it is pending/ready), it is overdue.
+        if (!x.batchNo && d.getTime() < shiftStartTime) {
+            rowClass = "table-danger";
+        }
+
+        return `<tr class="${rowClass}"><td class="ps-4"><input type="checkbox" class="form-check-input batch-check pending-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${x.fmtDate}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${badge}</td></tr>`;
     }).join('');
 };
-
-window.renderDailyManifest = function() {
-    const net = document.getElementById('man_daily_net').value;
-    const term = document.getElementById('man_daily_search').value.toLowerCase();
-    const list = document.getElementById('dailyManifestList');
-    const items = window.APP_DATA.manifest || [];
-    const today = new Date().toLocaleDateString();
-
-    // Populate dropdown if empty
-    const mn = document.getElementById('man_daily_net');
-    if(mn && mn.options.length<=1 && window.APP_DATA.static && window.APP_DATA.static.dropdowns && window.APP_DATA.static.dropdowns.networks){
-         let opts='';
-         window.APP_DATA.static.dropdowns.networks.forEach(x=>opts+=`<option value="${x}">${x}</option>`);
-         mn.innerHTML+=opts;
-    }
-
-    const filtered = items.filter(x => {
-        // ⚡ Bolt Fix: Show all items from today (Inbound OR Manifested)
-        // Optimization: Use pre-calculated fmtDate
-        const isToday = (x.manifestDate === today) || (x.fmtDate === today);
-
-        const matchesNet = net ? x.net === net : true;
-        const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
-        return isToday && matchesNet && (!term || matchesTerm);
-    });
-
-    if (filtered.length === 0) {
-        list.innerHTML = '';
-        document.getElementById('dailyManifestEmptyState').style.display = 'block';
-        return;
-    }
-    document.getElementById('dailyManifestEmptyState').style.display = 'none';
-
-    list.innerHTML = filtered.map(x => {
-        const batchBadge = x.batchNo ? `<span class="badge bg-secondary">${x.batchNo}</span>` : `<span class="badge bg-success">Pending</span>`;
-        return `<tr><td class="ps-4"><input type="checkbox" class="form-check-input batch-check daily-check" value="${x.id}"></td><td class="fw-bold font-monospace">${x.id}</td><td>${x.fmtDate}</td><td>${x.dest}</td><td>${x.net}</td><td>${x.netNo||'-'}</td><td>${x.boxes}</td><td>${x.chgWgt}</td><td>${x.client.slice(-4)}</td><td class="pe-4 text-end">${batchBadge}</td></tr>`;
-    }).join('');
-};
-
-window.toggleAllDaily = function(el) {
-    document.querySelectorAll('.daily-check').forEach(c => c.checked = el.checked);
-}
 
 window.toggleAllMan = function(el) {
     document.querySelectorAll('.pending-check').forEach(c => c.checked = el.checked);
@@ -2034,34 +2020,6 @@ window.toggleAllMan = function(el) {
 
 window.toggleRc = function(el) {
     document.querySelectorAll('#rcList input[type="checkbox"]').forEach(c => c.checked = el.checked);
-}
-
-window.printDailyManifest = function() {
-    const net = document.getElementById('man_daily_net').value || "ALL";
-    const items = [];
-    const chks = document.querySelectorAll('.daily-check:checked');
-
-    // Logic: If user selected checkboxes, print those. Else print visible table items.
-    if(chks.length > 0) {
-        chks.forEach(c => {
-             const item = window.APP_DATA.manifest.find(x => x.id === c.value);
-             if(item) items.push(item);
-        });
-    } else {
-        const term = document.getElementById('man_daily_search').value.toLowerCase();
-        const today = new Date().toLocaleDateString();
-        const manNet = document.getElementById('man_daily_net').value;
-        items.push(...(window.APP_DATA.manifest || []).filter(x => {
-            const isToday = x.manifestDate === today;
-            const hasBatch = !!x.batchNo;
-            const matchesNet = manNet ? x.net === manNet : true;
-            const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
-            return isToday && hasBatch && matchesNet && (!term || matchesTerm);
-        }));
-    }
-
-    if(items.length === 0) return alert("No items to print");
-    downloadManifestPdf(items, net + " (Daily)");
 }
 
 window.renderManifestHistory = function() {
@@ -2096,21 +2054,17 @@ window.renderManifestHistory = function() {
     list.innerHTML = keys.map(b => {
          const batch = batches[b];
          return `
-           <div class="col-md-6 col-lg-4">
-             <div class="panel-card p-3 h-100 border-start border-4 border-primary">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                   <div>
-                      <div class="fw-bold text-dark text-break" style="font-size:0.9rem">${b}</div>
-                      <div class="small text-muted">${batch.date}</div>
-                   </div>
-                   <span class="badge bg-light text-dark border">${batch.count} Items</span>
-                </div>
-                <div class="small text-muted mb-3">${batch.net}</div>
-                <button class="btn btn-sm btn-outline-primary w-100" onclick="downloadHistoryBatch('${b}', '${batch.net}')">
-                   <i class="bi bi-download me-1"></i> Download PDF
+           <tr>
+             <td class="fw-bold font-monospace text-primary">${b}</td>
+             <td>${batch.date}</td>
+             <td>${batch.net}</td>
+             <td><span class="badge bg-light text-dark border">${batch.count} Items</span></td>
+             <td class="text-end">
+                <button class="btn btn-sm btn-outline-dark" onclick="downloadHistoryBatch('${b}', '${batch.net}')">
+                   <i class="bi bi-download me-2"></i>Download
                 </button>
-             </div>
-           </div>
+             </td>
+           </tr>
          `;
     }).join('');
 };
@@ -2330,90 +2284,97 @@ window.printManifest = function() {
 
 window.downloadManifestPdf = function(items, network) {
     if(!items || !items.length) return;
-    const doc = new jspdf.jsPDF({orientation: 'p', unit: 'mm', format: 'a4'});
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const dateStr = new Date().toLocaleDateString();
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({orientation: 'p', unit: 'mm', format: 'a4'});
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const dateStr = new Date().toLocaleDateString();
 
-    // Center Logo
-    if(LOGO_BASE64) {
-        doc.addImage(LOGO_BASE64, 'PNG', (pageWidth - 50) / 2, 10, 50, 15);
-    } else {
-        doc.setFontSize(14); doc.setFont("helvetica", "bold");
-        const textWidth = doc.getTextWidth("ZEPHYR EXPRESS");
-        doc.text("ZEPHYR EXPRESS", (pageWidth - textWidth) / 2, 20);
+        // Center Logo
+        if(LOGO_BASE64) {
+            try {
+                doc.addImage(LOGO_BASE64, 'PNG', (pageWidth - 50) / 2, 10, 50, 15);
+            } catch(e) { console.error("Logo Error", e); }
+        } else {
+            doc.setFontSize(14); doc.setFont("helvetica", "bold");
+            const textWidth = doc.getTextWidth("ZEPHYR EXPRESS");
+            doc.text("ZEPHYR EXPRESS", (pageWidth - textWidth) / 2, 20);
+        }
+
+        doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.text("MANIFEST", 10, 35);
+        doc.setFontSize(10); doc.text(`Network: ${network}`, 10, 42);
+        doc.setFont("helvetica", "normal"); doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
+
+        // ⚡ Bolt Fix: Add Net No column
+        const tableBody = items.map((x, i) => [
+            i + 1, x.id, new Date(x.date).toLocaleDateString(), x.dest, x.netNo || '-', x.boxes, x.chgWgt, (x.client || '').slice(-4)
+        ]);
+
+        doc.autoTable({
+            startY: 48,
+            head: [['#', 'AWB', 'Date', 'Dest', 'Net No', 'Pcs', 'Wgt', 'Client']],
+            body: tableBody,
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
+            columnStyles: { 0: { cellWidth: 8 }, 4: { cellWidth: 25 }, 5: { cellWidth: 10 }, 6: { cellWidth: 15 } }
+        });
+
+        const finalY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 50) + 10;
+        const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
+        const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
+
+        doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("SUMMARY", 10, finalY);
+        doc.setFontSize(9); doc.setFont("helvetica", "normal");
+        doc.text(`Total Shipments: ${items.length}`, 10, finalY + 6);
+        doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
+        doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
+
+        doc.line(10, finalY + 25, 60, finalY + 25); doc.text("Authorized Signatory", 10, finalY + 30);
+        doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25); doc.text("Handover By", pageWidth - 60, finalY + 30);
+        doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
+    } catch(err) {
+        console.error("PDF Gen Error", err);
+        alert("Failed to generate PDF: " + err.message);
     }
-
-    doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.text("MANIFEST", 10, 35);
-    doc.setFontSize(10); doc.text(`Network: ${network}`, 10, 42);
-    doc.setFont("helvetica", "normal"); doc.text(`Date: ${dateStr}`, pageWidth - 40, 42);
-
-    // ⚡ Bolt Fix: Add Net No column
-    const tableBody = items.map((x, i) => [
-        i + 1, x.id, new Date(x.date).toLocaleDateString(), x.dest, x.netNo || '-', x.boxes, x.chgWgt, (x.client || '').slice(-4)
-    ]);
-
-    doc.autoTable({
-        startY: 48,
-        head: [['#', 'AWB', 'Date', 'Dest', 'Net No', 'Pcs', 'Wgt', 'Client']],
-        body: tableBody,
-        theme: 'grid',
-        styles: { fontSize: 8, cellPadding: 2 },
-        headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
-        columnStyles: { 0: { cellWidth: 8 }, 4: { cellWidth: 25 }, 5: { cellWidth: 10 }, 6: { cellWidth: 15 } }
-    });
-
-    const finalY = doc.lastAutoTable.finalY + 10;
-    const totalPcs = items.reduce((sum, x) => sum + (parseFloat(x.boxes) || 0), 0);
-    const totalWgt = items.reduce((sum, x) => sum + (parseFloat(x.chgWgt) || 0), 0).toFixed(2);
-
-    doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("SUMMARY", 10, finalY);
-    doc.setFontSize(9); doc.setFont("helvetica", "normal");
-    doc.text(`Total Shipments: ${items.length}`, 10, finalY + 6);
-    doc.text(`Total Boxes: ${totalPcs}`, 60, finalY + 6);
-    doc.text(`Total Weight: ${totalWgt} KG`, 110, finalY + 6);
-
-    doc.line(10, finalY + 25, 60, finalY + 25); doc.text("Authorized Signatory", 10, finalY + 30);
-    doc.line(pageWidth - 60, finalY + 25, pageWidth - 10, finalY + 25); doc.text("Handover By", pageWidth - 60, finalY + 30);
-    doc.save(`Manifest_${network}_${dateStr.replace(/\//g,'-')}.pdf`);
 };
 
 window.createBatch = async function() {
-    // Determine active view
-    const isDaily = document.getElementById('man-daily-view').style.display === 'block';
-
-    // Use correct network selector
-    const netSelectId = isDaily ? 'man_daily_net' : 'man_net';
-    const net = document.getElementById(netSelectId).value;
+    const net = document.getElementById('man_net').value;
     if(!net) return alert("Select Network");
 
-    // Use correct checkbox class
-    const checkClass = isDaily ? '.daily-check:checked' : '.pending-check:checked';
-    const chks = document.querySelectorAll(checkClass);
+    const chks = document.querySelectorAll('.pending-check:checked');
 
     if(chks.length === 0) return alert("Select at least one item");
     const ids = Array.from(chks).map(c => c.value);
-    const batchId = `${net}-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(Math.random()*1000)}`;
     const manifestDate = new Date().toLocaleDateString();
-    if(!confirm(`Create Manifest "${batchId}" for ${ids.length} items?`)) return;
 
-    // Generate PDF instantly (Optimistic UI)
-    const selectedItems = window.APP_DATA.manifest.filter(x => ids.includes(x.id));
-    // Temporarily update local state for PDF
-    selectedItems.forEach(x => { x.batchNo = batchId; x.manifestDate = manifestDate; });
-    window.downloadManifestPdf(selectedItems, net);
+    if(!confirm(`Create Manifest for ${ids.length} items?`)) return;
 
-    // Call API in background
-    await callApi({ action: 'updateManifestBatch', batchNo: batchId, ids: ids, date: manifestDate, network: net, user: curUser });
+    showSpin(true);
 
-    // Permanently update local data
-    window.APP_DATA.manifest.forEach(x => {
-        if(ids.includes(x.id)) { x.batchNo = batchId; x.manifestDate = manifestDate; }
-    });
+    // Call API to create batch and get ID
+    const r = await callApi({ action: 'updateManifestBatch', ids: ids, date: manifestDate, network: net, user: curUser });
 
-    // Re-render
-    renderManifest();
-    renderDailyManifest();
-    toast("Manifest Created");
+    showSpin(false);
+
+    if(r.result === "success") {
+        const batchId = r.batchNo;
+        toast("Manifest Created: " + batchId);
+
+        // Update local data
+        window.APP_DATA.manifest.forEach(x => {
+            if(ids.includes(x.id)) { x.batchNo = batchId; x.manifestDate = manifestDate; }
+        });
+
+        // Generate PDF
+        const selectedItems = window.APP_DATA.manifest.filter(x => ids.includes(x.id));
+        window.downloadManifestPdf(selectedItems, net);
+
+        renderManifest();
+    } else {
+        alert("Error: " + r.message);
+    }
 };
 
 // --- Receivers Slip (Real Implementation) ---
@@ -2627,10 +2588,25 @@ window.generateAwb = async function() {
         toast("AWB Generated: " + r.awb);
     }
 }
-window.toggleAutoAwb = function(el) {
-    document.getElementById('autoAwbLabel').textContent = el.checked ? "Enabled" : "Disabled";
-    document.getElementById('btnAutoAwb').style.display = el.checked ? 'block' : 'none';
-    callApi({action:'setConfig', key:'AUTO_AWB', value: el.checked});
+window.toggleConfig = function(key, el) {
+    const labelId = key === 'AUTO_AWB' ? 'autoAwbLabel' : 'allowTransferLabel';
+    const label = document.getElementById(labelId);
+    if(label) label.textContent = el.checked ? "Enabled" : "Disabled";
+
+    if(key === 'AUTO_AWB') {
+        const btn = document.getElementById('btnAutoAwb');
+        if(btn) btn.style.display = el.checked ? 'block' : 'none';
+    }
+
+    // Update local state immediately
+    if(window.APP_DATA.static && window.APP_DATA.static.config) {
+        if(key === 'AUTO_AWB') window.APP_DATA.static.config.autoAwb = el.checked;
+        if(key === 'ALLOW_TRANSFER') window.APP_DATA.static.config.allowTransfer = el.checked;
+    }
+    // Re-render taskhub if transfer toggled
+    if(key === 'ALLOW_TRANSFER') renderTaskHub();
+
+    callApi({action:'setConfig', key:key, value: el.checked});
 }
 
 window.openReassign = function(id, type) {
