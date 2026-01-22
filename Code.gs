@@ -208,6 +208,7 @@ function getAllData(username) {
   // Fetch Config
   const props = PropertiesService.getScriptProperties();
   const autoAwbEnabled = props.getProperty('AUTO_AWB') !== 'false'; // Default true
+  const allowTransfer = props.getProperty('ALLOW_TRANSFER') !== 'false'; // Default true
 
   if (!staticDataStr) {
     try {
@@ -235,7 +236,7 @@ function getAllData(username) {
     } catch(e) { staticData = { staff: [], dropdowns: {} }; }
   } else { staticData = JSON.parse(staticDataStr); }
 
-  staticData.config = { autoAwb: autoAwbEnabled };
+  staticData.config = { autoAwb: autoAwbEnabled, allowTransfer: allowTransfer };
 
   let role = "Staff";
   let perms = [];
@@ -763,7 +764,11 @@ function handleUpdateUserPerms(b) {
 
 function handleManifestBatch(b) {
   const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
-  if(!b.ids || !b.batchNo) return jsonResponse("error", "Invalid Data");
+  if(!b.ids) return jsonResponse("error", "Invalid Data");
+
+  // ⚡ Bolt Fix: Generate Server-Side Batch ID
+  const batchNo = getNextManifestId(b.network);
+
   const allIds = ss.getRange(2, 1, ss.getLastRow()-1, 1).getValues().flat();
   const awbMap = {};
   allIds.forEach((id, i) => { awbMap[String(id).replace(/'/g,"").trim().toLowerCase()] = i + 2; });
@@ -813,7 +818,7 @@ function handleManifestBatch(b) {
   });
 
   // ⚡ Bolt Optimization: Batch updates using RangeList to reduce API calls
-  if(localRangesCol25.length) ss.getRangeList(localRangesCol25).setValue(b.batchNo);
+  if(localRangesCol25.length) ss.getRangeList(localRangesCol25).setValue(batchNo);
   if(localRangesCol26.length) ss.getRangeList(localRangesCol26).setValue(b.date);
 
   if(fms) {
@@ -821,7 +826,32 @@ function handleManifestBatch(b) {
       if(fmsUserRanges.length) fms.getRangeList(fmsUserRanges).setValue(b.user);
   }
 
-  return jsonResponse("success", "Batch Updated");
+  return jsonResponse("success", "Batch Updated", { batchNo: batchNo });
+}
+
+// ⚡ Bolt: Manifest ID Generator
+function getNextManifestId(networkName) {
+    const props = PropertiesService.getScriptProperties();
+    const lock = LockService.getScriptLock();
+    try {
+        // Only lock if we need to increment (we do)
+        if (lock.tryLock(5000)) {
+            let current = Number(props.getProperty('MANIFEST_CTR')) || 60100;
+            let next = current + 1;
+            props.setProperty('MANIFEST_CTR', String(next));
+            lock.releaseLock();
+
+            let prefix = String(networkName).trim().substring(0, 3).toUpperCase();
+            if (String(networkName).trim().toLowerCase() === "self") prefix = "SEF";
+
+            return `${prefix}-${next}`;
+        } else {
+             throw new Error("System Busy - Counter Lock");
+        }
+    } catch (e) {
+        console.error("ID Gen Error", e);
+        return `ERR-${Date.now()}`;
+    }
 }
 
 function handleSubmit(body){
