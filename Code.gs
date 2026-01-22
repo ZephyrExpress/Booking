@@ -279,7 +279,8 @@ function getAllData(username) {
   // ⚡ Bolt: Read Advance Data
   const advLast = advSh.getLastRow();
   // ⚡ Bolt: Read 35 columns from Advance sheet too
-  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 35).getDisplayValues() : [];
+  // ⚡ Bolt Optimization: Use getValues() instead of getDisplayValues() for performance
+  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 35).getValues() : [];
 
   // ⚡ Bolt Optimization: FMS updates aggregation
   let fmsUpdates = [];
@@ -438,9 +439,6 @@ function getAllData(username) {
   const todayTime = getNormDate(new Date());
   const todayStr = new Date().toLocaleDateString();
 
-  // ⚡ Bolt Helper: Format raw numbers to fixed decimals (simulate getDisplayValues)
-  const num = (v) => { const n = parseFloat(v); return isNaN(n) ? v : n.toFixed(2); };
-
   // ⚡ Bolt Optimization: Filter data processing
   // Only process rows that are ACTIVE or RECENT.
   // Criteria:
@@ -480,10 +478,10 @@ function getAllData(username) {
     if (isHold || isPending || isPendingManifest || isTodayManifest || isRTO) {
         const item = {
           id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
-          details: `${r[6]} Boxes | ${num(r[12])} Kg`,
+          details: `${r[6]} Boxes | ${fmtNum(r[12])} Kg`,
           user: r[8], autoDoer: r[15], assignee: r[17], assigner: r[18],
-          actWgt: num(r[10]), volWgt: num(r[11]), chgWgt: num(r[12]), type: r[2], boxes: r[6], extra: r[7], rem: r[13],
-          netNo: r[20], payTotal: num(r[21]), payPaid: num(r[22]), payPending: num(r[23]),
+          actWgt: fmtNum(r[10]), volWgt: fmtNum(r[11]), chgWgt: fmtNum(r[12]), type: r[2], boxes: r[6], extra: r[7], rem: r[13],
+          netNo: r[20], payTotal: fmtNum(r[21]), payPaid: fmtNum(r[22]), payPending: fmtNum(r[23]),
           batchNo: batchNo, manifestDate: manifestDate, paperwork: r[26],
           holdStatus: holdStatus, holdReason: r[28], holdRem: r[29], heldBy: r[30],
           category: category, holdDate: r[34],
@@ -538,11 +536,11 @@ function getAllData(username) {
       const category = (r[33] || r[32]) ? String(r[33] || r[32]).trim() : "Advance";
 
       const item = {
-        id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
-        details: `${r[6]} Boxes | ${r[12]} Kg`,
+        id: String(r[0]), date: r[1], net: r[3], client: r[4], dest: r[5],
+        details: `${r[6]} Boxes | ${fmtNum(r[12])} Kg`,
         user: r[8],
-        actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
-        netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
+        actWgt: fmtNum(r[10]), volWgt: fmtNum(r[11]), chgWgt: fmtNum(r[12]), type: r[2], boxes: r[6], extra: r[7], rem: r[13],
+        netNo: String(r[20] || ""), payTotal: fmtNum(r[21]), payPaid: fmtNum(r[22]), payPending: fmtNum(r[23]),
         batchNo: r[24], manifestDate: r[25], paperwork: r[26],
         holdStatus: holdStatus, holdReason: r[28], holdRem: r[29], heldBy: r[30],
         category: category, holdDate: r[34] || r[1] // Use entry date as fallback
@@ -1447,3 +1445,5 @@ function handleAutomationScan(b) {
     return jsonResponse("success", "Found", { data: res });
 }
 
+// ⚡ Bolt Optimization: Global helper for number formatting
+function fmtNum(v) { const n = parseFloat(v); return isNaN(n) ? v : n.toFixed(2); }
