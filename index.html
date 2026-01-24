@@ -1977,12 +1977,11 @@ window.renderManifest = function() {
 
     // ⚡ Bolt: Shift Logic (9 AM Start)
     const now = new Date();
-    // Shift Start: If Now >= 9AM, Shift Start is Today. Else Yesterday.
-    let shiftStart = new Date();
+    const shiftStart = new Date(now);
     if (now.getHours() < 9) {
         shiftStart.setDate(shiftStart.getDate() - 1);
     }
-    shiftStart.setHours(0, 0, 0, 0); // Normalized to Midnight
+    shiftStart.setHours(9, 0, 0, 0); // Set to 9:00 AM
     const shiftStartTime = shiftStart.getTime();
 
     const filtered = items.filter(x => {
@@ -2003,10 +2002,9 @@ window.renderManifest = function() {
 
         // Red Highlight Logic
         let rowClass = "";
-        const d = new Date(x.date);
-        d.setHours(0,0,0,0);
-        // If item date is strictly before shift date (and it is pending/ready), it is overdue.
-        if (!x.batchNo && d.getTime() < shiftStartTime) {
+        const itemTime = new Date(x.date).getTime();
+        // If item date is strictly before shift start time (and it is pending/ready), it is overdue.
+        if (!x.batchNo && itemTime < shiftStartTime) {
             rowClass = "table-danger";
         }
 
