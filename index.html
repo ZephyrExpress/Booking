@@ -354,6 +354,7 @@
                  </div>
                  <div class="col-md-4"><label class="fun-label">Client *</label><select id="f_client" required></select></div>
                  <div class="col-md-4"><label class="fun-label">Destination *</label><select id="f_dest" required></select></div>
+                 <div class="col-md-4"><label class="fun-label">Branch *</label><select id="f_branch" class="form-select fun-input" required></select></div>
                </div>
 
                <div class="mb-4 p-3 border rounded bg-white">
@@ -423,6 +424,27 @@
            <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">PENDING AUTOMATION</div><div class="stat-value text-danger" id="ovAuto">0</div></div><i class="bi bi-robot fs-1 text-danger opacity-25"></i></div></div>
            <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">PENDING PAPERWORK</div><div class="stat-value text-warning" id="ovPaper">0</div></div><i class="bi bi-files fs-1 text-warning opacity-25"></i></div></div>
            <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">TOTAL HOLDINGS</div><div class="stat-value text-secondary" id="ovHoldings">0</div></div><i class="bi bi-pause-circle fs-1 text-secondary opacity-25"></i></div></div>
+        </div>
+
+        <!-- ⚡ Bolt: Analytics -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-7">
+                <div class="panel-card">
+                    <div class="panel-header"><i class="bi bi-building me-2"></i>Branch Performance (Today)</div>
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead class="bg-light"><tr><th>Branch</th><th>Total Shipments</th><th>Total Weight (Kg)</th></tr></thead>
+                            <tbody id="branchAnalytics"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <div class="panel-card">
+                    <div class="panel-header"><i class="bi bi-person-stars me-2"></i>Top Staff (Today)</div>
+                    <ul class="list-group list-group-flush" id="staffAnalytics"></ul>
+                </div>
+            </div>
         </div>
 
         <!-- ⚡ Bolt: New Direct & Advance Overview Section -->
@@ -928,7 +950,7 @@ window.d_searchHoldings = debounce(() => searchHoldings(), 300);
 const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
 let API_URL = localStorage.getItem("ZEPHYR_API_URL") || DEFAULT_API_URL;
 
-let curUser="", curRole="", curReassign={}, curPerms=[];
+let curUser="", curRole="", curBranch="", curReassign={}, curPerms=[];
 let lastReqCount = 0;
 let selectedHoldAwb = "";
 let html5QrcodeScanner = null;
@@ -936,6 +958,13 @@ let LOGO_BASE64 = "";
 
 window.APP_DATA={staff:[], dropdowns:{}, overview:{auto:[],paper:[]}, workflow:{toAssign:[],toDo:[]}, manifest:[], holdings:[]};
 window.tomInstances={client:null,dest:null,del:null,holdReason:null};
+
+// ⚡ Bolt: Safe Display Helper
+window.safeDisplay = function(id, display) {
+    const el = document.getElementById(id);
+    if(el) el.style.display = display;
+    else console.warn(`safeDisplay: Element with ID '${id}' not found.`);
+}
 
 // Preload Logo
 const toDataURL = url => fetch(url)
@@ -1011,13 +1040,13 @@ window.doLogin=async function(){
   showSpin(true); const u=document.getElementById('uIn').value, p=document.getElementById('pIn').value;
   const r=await callApi({action:"login",username:u,password:p});
   if(r.result==="success"){
-     curUser=r.username; curRole=r.role; 
+     curUser=r.username; curRole=r.role; curBranch = r.branch;
      document.getElementById('userDisplay').textContent=r.name;
-     document.getElementById('loginSection').style.display='none';
-     document.getElementById('appSection').style.display='flex';
+     safeDisplay('loginSection', 'none');
+     safeDisplay('appSection', 'flex');
      syncData(true);
      if (curRole.toLowerCase() === 'staff') { switchTab('inbound'); }
-  } else { showSpin(false); document.getElementById('loginError').textContent=r.message; document.getElementById('loginError').style.display='block'; }
+  } else { showSpin(false); const errDiv = document.getElementById('loginError'); if(errDiv){ errDiv.textContent=r.message; errDiv.style.display='block';} }
 }
 window.logout=function(){location.reload();}
 window.refreshApp=async function(){ showSpin(true); await syncData(false); showSpin(false); toast("Data Refreshed"); }
@@ -1044,6 +1073,7 @@ async function syncData(init=false){
 
         window.APP_DATA = r;
         if(r.role) curRole = r.role;
+        if(r.branch) curBranch = r.branch;
         curPerms = r.perms || [];
 
         if(curRole === 'Admin' || curRole === 'Owner') {
@@ -1064,8 +1094,8 @@ async function syncData(init=false){
                 swAwb.checked = conf.autoAwb;
                 document.getElementById('autoAwbLabel').textContent = conf.autoAwb ? "Enabled" : "Disabled";
             }
-            const btnAwb = document.getElementById('btnAutoAwb');
-            if(btnAwb) btnAwb.style.display = conf.autoAwb ? 'block' : 'none';
+            safeDisplay('btnAutoAwb', conf.autoAwb ? 'block' : 'none');
+
 
             // Transfer Toggle
             const swTr = document.getElementById('allowTransferSwitch');
@@ -1086,36 +1116,25 @@ function updateNavVisibility() {
     const role = curRole.toLowerCase();
     const p = curPerms;
     const show = (id, permName) => {
-        const el = document.getElementById(id);
-        if(role.includes('owner') || role.includes('admin') || p.includes(permName)) el.style.display='flex';
-        else el.style.display='none';
+        const hasPerm = role.includes('owner') || role.includes('admin') || p.includes(permName);
+        safeDisplay(id, hasPerm ? 'flex' : 'none');
     };
 
     show('nav-inbound', 'inbound');
-    show('nav-advance', 'inbound'); // Same perm as inbound
+    show('nav-advance', 'inbound');
     show('nav-overview', 'overview');
     show('nav-holdings', 'holdings');
     show('nav-taskhub', 'taskhub');
     show('nav-manifest', 'manifest');
 
-    // ⚡ Bolt Fix: Hide Receivers Slip from Admin/Staff
-    if(role.includes('owner')) {
-        document.getElementById('nav-receivers').style.display = 'flex';
-    } else {
-        document.getElementById('nav-receivers').style.display = 'none';
-    }
+    safeDisplay('nav-receivers', role.includes('owner') ? 'flex' : 'none');
 
     const taskLabel = document.getElementById('taskLabel');
     if (taskLabel) {
-        if (role.includes('admin') || role.includes('owner')) taskLabel.textContent = "Task Manager";
-        else taskLabel.textContent = "My Tasks";
+        taskLabel.textContent = (role.includes('admin') || role.includes('owner')) ? "Task Manager" : "My Tasks";
     }
 
-    if(role.includes('owner') || role.includes('admin')) {
-        document.getElementById('adminNavGroup').style.display='block';
-    } else {
-        document.getElementById('adminNavGroup').style.display='none';
-    }
+    safeDisplay('adminNavGroup', (role.includes('owner') || role.includes('admin')) ? 'block' : 'none');
 }
 
 function renderUI(){
@@ -1199,8 +1218,49 @@ function renderUI(){
   if(document.getElementById('man-daily-view').style.display==='block') renderDailyManifest();
   if(document.getElementById('holdings-tab').style.display==='block') renderHoldings();
   if(document.getElementById('receivers-tab').style.display==='block') renderReceivers();
+  renderAnalytics();
   if(document.getElementById('admin-tab').style.display==='block') renderAdminPanel();
   if(document.getElementById('advance-tab').style.display==='block') renderAdvance();
+}
+
+function renderAnalytics() {
+    const analytics = window.APP_DATA.analytics;
+    if(!analytics) return;
+
+    // Branch Analytics
+    const branchBody = document.getElementById('branchAnalytics');
+    if(branchBody) {
+        const branchData = analytics.branch || {};
+        const branchNames = Object.keys(branchData);
+        if(branchNames.length === 0) {
+            branchBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted small p-3">No activity today.</td></tr>`;
+        } else {
+            branchBody.innerHTML = branchNames.map(name => {
+                const data = branchData[name];
+                return `<tr>
+                    <td class="fw-bold">${name}</td>
+                    <td><span class="badge bg-primary">${data.count}</span></td>
+                    <td>${data.weight.toFixed(2)} Kg</td>
+                </tr>`;
+            }).join('');
+        }
+    }
+
+    // Staff Analytics
+    const staffList = document.getElementById('staffAnalytics');
+    if(staffList) {
+        const staffData = analytics.staff || [];
+        if(staffData.length === 0) {
+            staffList.innerHTML = `<li class="list-group-item text-center text-muted small p-3">No activity today.</li>`;
+        } else {
+            staffList.innerHTML = staffData.map(person => {
+                return `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">${person.name}</span>
+                    <span class="badge bg-success rounded-pill">${person.count} Shipments</span>
+                </li>`;
+            }).join('');
+        }
+    }
 }
 
 window.renderAdvance = function() {
@@ -1217,10 +1277,10 @@ window.renderAdvance = function() {
 
     if(!filtered.length) {
         list.innerHTML = '';
-        document.getElementById('advanceEmpty').style.display='block';
+        safeDisplay('advanceEmpty', 'block');
         return;
     }
-    document.getElementById('advanceEmpty').style.display='none';
+    safeDisplay('advanceEmpty', 'none');
 
     list.innerHTML = filtered.map(x => `
         <tr>
@@ -1258,7 +1318,7 @@ window.actReceiveAdvance = async function(id) {
 function renderTaskHub(){
    const role = curRole.toLowerCase();
    if(role === 'admin' || role === 'owner') {
-      document.getElementById('adminTaskView').style.display = 'block'; document.getElementById('staffTaskView').style.display = 'none';
+      safeDisplay('adminTaskView', 'block'); safeDisplay('staffTaskView', 'none');
       const pt=document.getElementById('poolBody'); let opts=`<option value="">Select Staff...</option>`; if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`);
       pt.innerHTML = window.APP_DATA.adminPool.map(x => {
           let autoBy = x.autoDoer || "";
@@ -1269,7 +1329,7 @@ function renderTaskHub(){
           return `<tr><td class="fw-bold font-monospace">${x.id}</td><td>${x.netNo||'-'}</td><td>${x.net}</td><td>${x.chgWgt}</td><td><small class="text-muted">${x.details}</small></td><td>${x.client.slice(-4)}</td><td class="text-center">${autoBy}</td><td class="text-center">${assignee}</td><td><div class="d-flex gap-2 align-items-center"><select id="adm_as_${x.id}" class="form-select form-select-sm" style="width:120px">${opts}</select></div></td></tr>`;
       }).join('');
    } else {
-      document.getElementById('adminTaskView').style.display = 'none'; document.getElementById('staffTaskView').style.display = 'block';
+      safeDisplay('adminTaskView', 'none'); safeDisplay('staffTaskView', 'block');
       const wf=window.APP_DATA.workflow; const ca=document.getElementById('contAssign');
 
       const allowTransfer = window.APP_DATA.static.config.allowTransfer;
@@ -1381,7 +1441,7 @@ window.searchHoldings = function() {
     const netSearch = document.getElementById('holdSearchNet').value.toLowerCase().trim();
     const resPanel = document.getElementById('holdResultPanel');
 
-    if(!awb && !netSearch) { resPanel.style.display='none'; return; }
+    if(!awb && !netSearch) { safeDisplay('holdResultPanel', 'none'); return; }
 
     let match = null;
     const sources = [
@@ -1434,7 +1494,7 @@ window.searchHoldings = function() {
             actionBtn = `<button class="btn btn-danger btn-lg w-100" onclick="openHoldModal('${match.id}', '${match.netNo||'-'}')">Put On Hold</button>`;
         }
 
-        resPanel.innerHTML = `
+        if(resPanel) resPanel.innerHTML = `
             <div class="panel-card border-2 ${isOnHold ? 'border-warning' : 'border-success'} p-4">
                 <div class="row align-items-center">
                     <div class="col-md-8">
@@ -1456,7 +1516,7 @@ window.searchHoldings = function() {
                 </div>
             </div>
         `;
-        resPanel.style.display='block';
+        safeDisplay('holdResultPanel', 'block');
 
         if(isNA && isOnHold) {
              const fn = document.getElementById('fix_net');
@@ -1465,15 +1525,15 @@ window.searchHoldings = function() {
              if(fd && match.dest !== "NA" && match.dest !== "N/A") fd.value = match.dest;
         }
     } else {
-        resPanel.innerHTML = `<div class="alert alert-secondary text-center py-4">No shipment found matching your search.</div>`;
-        resPanel.style.display='block';
+        if(resPanel) resPanel.innerHTML = `<div class="alert alert-secondary text-center py-4">No shipment found matching your search.</div>`;
+        safeDisplay('holdResultPanel', 'block');
     }
 }
 
 window.clearHoldSearch = function() {
     document.getElementById('holdSearchAwb').value='';
     document.getElementById('holdSearchNet').value='';
-    document.getElementById('holdResultPanel').style.display='none';
+    safeDisplay('holdResultPanel', 'none');
 }
 
 window.openHoldAction = function(id) {
@@ -1825,7 +1885,7 @@ window.switchTab=function(t){
 }
 function initForms(){
    const dd=window.APP_DATA.static.dropdowns;
-   if(dd) { fillSel('f_net', dd.networks); window.tomInstances.client = new TomSelect("#f_client",{create:false, maxOptions: null, dropdownParent:'body', placeholder:"Select Client..."}); window.tomInstances.dest = new TomSelect("#f_dest",{create:false, maxOptions: null, dropdownParent:'body', placeholder:"Select Destination..."}); updDd(); }
+   if(dd) { fillSel('f_net', dd.networks); fillSel('f_branch', ["Naraina Vihar", "Mahipalpur", "Santnagar"], curBranch); window.tomInstances.client = new TomSelect("#f_client",{create:false, maxOptions: null, dropdownParent:'body', placeholder:"Select Client..."}); window.tomInstances.dest = new TomSelect("#f_dest",{create:false, maxOptions: null, dropdownParent:'body', placeholder:"Select Destination..."}); updDd(); }
 }
 function updDd(){
    if(!window.APP_DATA.static) return;
@@ -1843,14 +1903,14 @@ function updDd(){
    const r = curRole.toLowerCase();
    if(r==='admin' || r==='owner'){
      const cat=document.getElementById('dd_cat').value;
-     if(cat==="hold") document.getElementById('dd_desc').style.display='block'; else document.getElementById('dd_desc').style.display='none';
+     safeDisplay('dd_desc', cat === "hold" ? 'block' : 'none');
      let targetList = [];
      if(cat==="hold") targetList = dd.holdReasons ? dd.holdReasons.map(x=>x.code) : [];
      else targetList = dd[{'network':'networks','client':'clients','destination':'destinations','extra':'extraCharges'}[cat]];
      const delSel=document.getElementById('dd_del'); if(targetList) delSel.innerHTML=targetList.map(x=>`<option value="${x}">${x}</option>`).join('');
    }
 }
-function fillSel(id, arr){ const e=document.getElementById(id); if(!e||e.options.length>1)return; if(arr) { let html=''; arr.forEach(x=>html+=`<option value="${x}">${x}</option>`); e.innerHTML+=html; } }
+function fillSel(id, arr, selectedValue){ const e=document.getElementById(id); if(!e) return; if(e.options.length > 1 && !selectedValue) return; if(arr) { let html=''; arr.forEach(x=>html+=`<option value="${x}">${x}</option>`); e.innerHTML+=html; } if(selectedValue) e.value = selectedValue; }
 window.toggleAllPaperwork = function(el) { document.querySelectorAll('.pw-chk').forEach(c => { if(c.value !== "N/A") c.checked = el.checked; }); }
 window.exportOverview = function(type) { const d = window.APP_DATA.overview[type] || []; if(!d.length) return alert("Nothing to export"); const data = d.map(x => ({ "AWB": x.id, "Network": x.net, "Client": x.client, "User/Auto": x.user||x.autoDoer, "Boxes": x.boxes, "Weight": x.chgWgt })); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), type.toUpperCase()); XLSX.writeFile(wb, `Overview_${type}.xlsx`); };
 
@@ -1881,20 +1941,20 @@ document.getElementById('shipForm').onsubmit = async (e)=>{
        const hiddenNet = document.getElementById('f_net_no_hidden').value;
        if(hiddenNet) netNo = hiddenNet;
    }
+    const branch = document.getElementById('f_branch').value;
 
-   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', '), category: cat, netNo: netNo, isAutomationMode: isAuto });
+   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', '), category: cat, netNo: netNo, isAutomationMode: isAuto, branch: branch });
    showSpin(false); if(r.result==='success') { toast("Entry Saved"); resetForm(); syncData(false); } else alert(r.message);
 };
 
 // ⚡ Bolt: Toggle Net No Field
 window.toggleNetNo = function() {
     const val = document.getElementById('f_category').value;
-    const div = document.getElementById('div_net_no');
-    if(val === 'Direct_Skip' || val === 'Direct_Paperwork') {
-        div.style.display = 'block';
-    } else {
-        div.style.display = 'none';
-        document.getElementById('f_net_no').value = '';
+    const show = val === 'Direct_Skip' || val === 'Direct_Paperwork';
+    safeDisplay('div_net_no', show ? 'block' : 'none');
+    if(!show) {
+        const netNoInput = document.getElementById('f_net_no');
+        if(netNoInput) netNoInput.value = '';
     }
 }
 
@@ -1962,9 +2022,10 @@ window.getBillingData = async function() {
 window.switchManifestView = function(view) {
    document.querySelectorAll('#manTabs .nav-link').forEach(el => el.classList.remove('active'));
    const idx = view === 'pending' ? 0 : 1;
-   document.querySelectorAll('#manTabs .nav-link')[idx].classList.add('active');
-   document.getElementById('man-pending-view').style.display = view === 'pending' ? 'block' : 'none';
-   document.getElementById('man-history-view').style.display = view === 'history' ? 'block' : 'none';
+   const activeEl = document.querySelectorAll('#manTabs .nav-link')[idx];
+   if(activeEl) activeEl.classList.add('active');
+   safeDisplay('man-pending-view', view === 'pending' ? 'block' : 'none');
+   safeDisplay('man-history-view', view === 'history' ? 'block' : 'none');
    if(view === 'pending') renderManifest();
    if(view === 'history') renderManifestHistory();
 }
@@ -1992,12 +2053,12 @@ window.renderManifest = function() {
     });
 
     if (filtered.length === 0) {
-        list.innerHTML = '';
-        document.getElementById('manifestEmptyState').style.display = 'block';
+        if(list) list.innerHTML = '';
+        safeDisplay('manifestEmptyState', 'block');
         return;
     }
-    document.getElementById('manifestEmptyState').style.display = 'none';
-    list.innerHTML = filtered.map(x => {
+    safeDisplay('manifestEmptyState', 'none');
+    if(list) list.innerHTML = filtered.map(x => {
         const badge = x.batchNo ? `<span class="badge bg-secondary" title="In Batch: ${x.batchNo}">History</span>` : `<span class="badge bg-success">Ready</span>`;
 
         // Red Highlight Logic
@@ -2043,13 +2104,13 @@ window.renderManifestHistory = function() {
     const keys = Object.keys(batches).reverse(); // Show newest first
 
     if(keys.length === 0) {
-        document.getElementById('batchEmptyState').style.display = 'block';
-        list.innerHTML = '';
+        safeDisplay('batchEmptyState', 'block');
+        if(list) list.innerHTML = '';
         return;
     }
-    document.getElementById('batchEmptyState').style.display = 'none';
+    safeDisplay('batchEmptyState', 'none');
 
-    list.innerHTML = keys.map(b => {
+    if(list) list.innerHTML = keys.map(b => {
          const batch = batches[b];
          return `
            <tr>
@@ -2083,9 +2144,9 @@ window.switchInboundMode = function(mode) {
     document.getElementById('f_active_mode').value = mode;
 
     // Reset Views
-    document.getElementById('form_main_fields').style.display = 'none';
-    document.getElementById('view_connected').style.display = 'none';
-    document.getElementById('view_automation_search').style.display = 'none';
+    safeDisplay('form_main_fields', 'none');
+    safeDisplay('view_connected', 'none');
+    safeDisplay('view_automation_search', 'none');
 
     // Reset Form
     document.getElementById('shipForm').reset();
@@ -2094,7 +2155,7 @@ window.switchInboundMode = function(mode) {
     document.getElementById('f_category').value = "Normal"; // Default backend category placeholder
 
     if(mode === 'Normal' || mode === 'Advance') {
-        document.getElementById('form_main_fields').style.display = 'block';
+        safeDisplay('form_main_fields', 'block');
         if(mode === 'Advance') document.getElementById('f_category').value = "Advance";
 
         // ⚡ Bolt Fix: Reset date to today on mode switch
@@ -2153,8 +2214,8 @@ window.handleAutomationScan = async function(el) {
         document.getElementById('f_net_no_hidden').value = val; // Store for submit
 
         // Unhide form
-        document.getElementById('view_automation_search').style.display = 'none';
-        document.getElementById('form_main_fields').style.display = 'block';
+        safeDisplay('view_automation_search', 'none');
+        safeDisplay('form_main_fields', 'block');
 
         // Fill details
         if(d.awb) document.getElementById('f_awb').value = d.awb;

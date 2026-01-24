@@ -151,7 +151,8 @@ function getUserMap() {
                     username: data[i][0], // Keep original case
                     name: data[i][2],
                     role: data[i][3],
-                    perms: data[i][4] || ""
+                    perms: data[i][4] || "",
+                    branch: data[i][5] || "Naraina Vihar" // ⚡ Bolt: Add Branch, default for BC
                 };
             }
         }
@@ -179,8 +180,8 @@ function getAllData(username) {
   const sh = ss.getSheetByName("Shipments");
   if (!sh) return jsonResponse("error", "Shipments Sheet Missing");
 
-  // ⚡ Bolt: Ensure Sheet Columns (need 35 for Hold Date - Index 34, Category is 33)
-  if (sh.getMaxColumns() < 35) sh.insertColumnsAfter(sh.getMaxColumns(), 35 - sh.getMaxColumns());
+  // ⚡ Bolt: Ensure Sheet Columns (need 36 for Branch - Index 35)
+  if (sh.getMaxColumns() < 36) sh.insertColumnsAfter(sh.getMaxColumns(), 36 - sh.getMaxColumns());
 
   // ⚡ Bolt: Get Advance Sheet (Create if missing)
   let advSh = ss.getSheetByName(ADVANCE_SHEET_NAME);
@@ -188,8 +189,8 @@ function getAllData(username) {
       advSh = ss.insertSheet(ADVANCE_SHEET_NAME);
   }
 
-  // ⚡ Bolt: Ensure Advance Sheet Columns (need 35)
-  if (advSh.getMaxColumns() < 35) advSh.insertColumnsAfter(advSh.getMaxColumns(), 35 - advSh.getMaxColumns());
+  // ⚡ Bolt: Ensure Advance Sheet Columns (need 36)
+  if (advSh.getMaxColumns() < 36) advSh.insertColumnsAfter(advSh.getMaxColumns(), 36 - advSh.getMaxColumns());
 
   // Copy header if empty
   if (advSh.getLastRow() < 1 || advSh.getRange(1,1).getValue() === "") {
@@ -241,12 +242,14 @@ function getAllData(username) {
   let role = "Staff";
   let perms = [];
   let targetName = "";
+  let branch = "Naraina Vihar"; // Default branch
 
   // 1. Try Optimized Map Lookup
   const userMap = getUserMap();
   if (userMap[targetUser]) {
       role = userMap[targetUser].role;
       targetName = String(userMap[targetUser].name || "").trim().toLowerCase();
+      branch = userMap[targetUser].branch || "Naraina Vihar";
       const pStr = userMap[targetUser].perms;
       perms = pStr.split(',').map(s=>s.trim()).filter(Boolean);
   }
@@ -274,13 +277,13 @@ function getAllData(username) {
 
   const lastRow = sh.getLastRow();
   // ⚡ Bolt Optimization: Use getValues() for speed. Single read.
-  const range = lastRow > 1 ? sh.getRange(2, 1, lastRow-1, 35) : null;
+  const range = lastRow > 1 ? sh.getRange(2, 1, lastRow-1, 36) : null;
   const data = range ? range.getValues() : [];
 
   // ⚡ Bolt: Read Advance Data
   const advLast = advSh.getLastRow();
-  // ⚡ Bolt: Read 35 columns from Advance sheet too
-  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 35).getDisplayValues() : [];
+  // ⚡ Bolt: Read 36 columns from Advance sheet too
+  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 36).getDisplayValues() : [];
 
   // ⚡ Bolt Optimization: FMS updates aggregation
   let fmsUpdates = [];
@@ -428,6 +431,7 @@ function getAllData(username) {
   let completedManifest = [];
   let holdings = [];
   let allAwbs = []; // ⚡ Bolt: Lightweight list for instant duplicate checks
+  let todaysShipments = []; // ⚡ Bolt: For analytics
 
   // ⚡ Bolt: New Categories
   let advance = [];
@@ -501,8 +505,13 @@ function getAllData(username) {
           batchNo: batchNo, manifestDate: manifestDate, paperwork: r[26],
           holdStatus: holdStatus, holdReason: r[28], holdRem: r[29], heldBy: r[30],
           category: category, holdDate: r[34],
-          paperStatus: r[16] // ⚡ Bolt Fix: Explicitly store paperStatus for filtering
+          paperStatus: r[16], // ⚡ Bolt Fix: Explicitly store paperStatus for filtering
+          branch: r[35] || "Naraina Vihar" // ⚡ Bolt: Add branch with fallback
         };
+
+        if (r[1] && new Date(r[1]).getTime() >= shiftStartTime) {
+            todaysShipments.push(item);
+        }
 
         if (isHold) {
             holdings.push(item);
@@ -559,7 +568,8 @@ function getAllData(username) {
         netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
         batchNo: r[24], manifestDate: r[25], paperwork: r[26],
         holdStatus: holdStatus, holdReason: r[28], holdRem: r[29], heldBy: r[30],
-        category: category, holdDate: r[34] || r[1] // Use entry date as fallback
+        category: category, holdDate: r[34] || r[1], // Use entry date as fallback
+        branch: r[35] || "Naraina Vihar" // ⚡ Bolt: Add branch with fallback
       };
 
       if (holdStatus === "On Hold") {
@@ -580,8 +590,33 @@ function getAllData(username) {
       }
   } catch(e) { console.error("Requests Sheet Error", e); }
 
+  // ⚡ Bolt: Analytics Calculations
+  const branchStats = {};
+  const staffCounts = {};
+
+  todaysShipments.forEach(item => {
+      const branch = item.branch || "Naraina Vihar";
+      const user = item.user || "Unknown";
+      const weight = parseFloat(item.chgWgt) || 0;
+
+      if (!branchStats[branch]) {
+          branchStats[branch] = { count: 0, weight: 0 };
+      }
+      branchStats[branch].count++;
+      branchStats[branch].weight += weight;
+
+      staffCounts[user] = (staffCounts[user] || 0) + 1;
+  });
+
+  const staffStats = Object.entries(staffCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+
   return jsonResponse("success", "OK", {
     role: role,
+    branch: branch,
     perms: perms,
     static: staticData,
     stats: { inbound: inboundTodayCount, auto: pendingAuto.length, paper: pendingPaper.length, requests: reqList.length, holdings: holdings.length },
@@ -591,6 +626,7 @@ function getAllData(username) {
     holdings: holdings,
     allAwbs: allAwbs,
     advance: advance,
+    analytics: { branch: branchStats, staff: staffStats },
     // ⚡ Bolt Fix: Admin Pool now shows ONLY UNASSIGNED pending paperwork.
     // Logic matches toAssign: Status != assigned OR Assignee is empty.
     adminPool: pendingPaper.filter(x => String(x.paperStatus||"").trim().toLowerCase() !== "assigned" || !x.assignee)
@@ -936,7 +972,7 @@ function handleSubmit(body){
       autoStatus, autoDoer, "", "", "", "", body.netNo,
       body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
       holdStatus, holdReason, "", (holdStatus==="On Hold" ? body.username : ""), body.payeeName, body.payeeContact,
-      category, "" // Col 33 (AH) = Category, 34 (AI) = Hold Date (Empty initially)
+      category, "", body.branch || "Naraina Vihar" // Col 33 (AH) = Category, 34 (AI) = Hold Date, 35 (AJ) = Branch
   ];
 
   if(category === "Normal") {
@@ -1362,30 +1398,62 @@ function handleTransferRequest(b) { SpreadsheetApp.getActiveSpreadsheet().getShe
 function handleLogin(u,p){
   const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
   const d = s.getDataRange().getValues();
+  const userMap = getUserMap(); // Use optimized map
 
-  // Robust input handling
-  const inputStr = String(p).trim();
-  const hashedInput = hashString(inputStr);
+  const inputUser = String(u).trim().toLowerCase();
+  const inputPass = String(p).trim();
+  const hashedInput = hashString(inputPass);
 
-  for(let i=1;i<d.length;i++) {
-    if(String(d[i][0]).trim().toLowerCase() == String(u).trim().toLowerCase()) {
-        // Robust stored value handling
-        const storedVal = d[i][1];
-        const storedStr = String(storedVal).trim();
+  if (userMap[inputUser]) {
+      const userDetails = userMap[inputUser];
+      let storedPass = "";
+      // Find the raw password from sheet data for comparison
+      for(let i=1; i<d.length; i++) {
+          if(String(d[i][0]).trim().toLowerCase() === inputUser) {
+              storedPass = String(d[i][1]).trim();
+              break;
+          }
+      }
 
-        // 1. Check Hash Match
-        if (storedStr === hashedInput) {
-             return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
-        }
+      // 1. Check Hash Match
+      if (storedPass === hashedInput) {
+          return jsonResponse("success", "OK", {
+              username: userDetails.username,
+              name: userDetails.name,
+              role: userDetails.role,
+              branch: userDetails.branch || "Naraina Vihar"
+          });
+      }
 
-        // 2. Check Plain Text Match
-        if (storedStr === inputStr) {
-            s.getRange(i+1, 2).setValue(hashedInput);
-            return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
-        }
-    }
+      // 2. Check Plain Text Match & Upgrade Hash (WRITE Operation)
+      if (storedPass === inputPass) {
+          const lock = LockService.getScriptLock();
+          if(lock.tryLock(5000)) { // Lock only for the write
+              try {
+                  for(let i=1; i<d.length; i++) {
+                      if(String(d[i][0]).trim().toLowerCase() === inputUser) {
+                          s.getRange(i+1, 2).setValue(hashedInput);
+                          break;
+                      }
+                  }
+              } finally {
+                  lock.releaseLock();
+              }
+              clearUserCache(); // Invalidate cache after write
+          } else {
+              // Fail silently on lock contention, user can try again.
+              // This is better than blocking other logins.
+          }
+          // Still log them in successfully this time
+          return jsonResponse("success", "OK", {
+              username: userDetails.username,
+              name: userDetails.name,
+              role: userDetails.role,
+              branch: userDetails.branch || "Naraina Vihar"
+          });
+      }
   }
-  return jsonResponse("error","Invalid Credentials");
+  return jsonResponse("error", "Invalid Credentials");
 }
 
 function handleDropdowns(b){ const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet2"); const col = {network:1, client:2, destination:3, extra:4, hold:5}[b.category]; if(b.subAction==="add"){ let r=2; while(s.getRange(r,col).getValue()!=="") r++; s.getRange(r,col).setValue(b.value); if(b.category==="hold") s.getRange(r,6).setValue(b.desc); } else { const v=s.getRange(2,col,s.getLastRow()).getValues().flat(); const i=v.indexOf(b.value); if(i>-1) s.getRange(i+2,col,1,2).deleteCells(SpreadsheetApp.Dimension.ROWS); } return jsonResponse("success","Updated"); }
