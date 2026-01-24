@@ -151,8 +151,7 @@ function getUserMap() {
                     username: data[i][0], // Keep original case
                     name: data[i][2],
                     role: data[i][3],
-                    perms: data[i][4] || "",
-                    branch: data[i][5] || "Naraina Vihar" // ⚡ Bolt: Add Branch, default for BC
+                    perms: data[i][4] || ""
                 };
             }
         }
@@ -180,8 +179,8 @@ function getAllData(username) {
   const sh = ss.getSheetByName("Shipments");
   if (!sh) return jsonResponse("error", "Shipments Sheet Missing");
 
-  // ⚡ Bolt: Ensure Sheet Columns (need 36 for Branch - Index 35)
-  if (sh.getMaxColumns() < 36) sh.insertColumnsAfter(sh.getMaxColumns(), 36 - sh.getMaxColumns());
+  // ⚡ Bolt: Ensure Sheet Columns (need 35 for Hold Date - Index 34, Category is 33)
+  if (sh.getMaxColumns() < 35) sh.insertColumnsAfter(sh.getMaxColumns(), 35 - sh.getMaxColumns());
 
   // ⚡ Bolt: Get Advance Sheet (Create if missing)
   let advSh = ss.getSheetByName(ADVANCE_SHEET_NAME);
@@ -189,8 +188,8 @@ function getAllData(username) {
       advSh = ss.insertSheet(ADVANCE_SHEET_NAME);
   }
 
-  // ⚡ Bolt: Ensure Advance Sheet Columns (need 36)
-  if (advSh.getMaxColumns() < 36) advSh.insertColumnsAfter(advSh.getMaxColumns(), 36 - advSh.getMaxColumns());
+  // ⚡ Bolt: Ensure Advance Sheet Columns (need 35)
+  if (advSh.getMaxColumns() < 35) advSh.insertColumnsAfter(advSh.getMaxColumns(), 35 - advSh.getMaxColumns());
 
   // Copy header if empty
   if (advSh.getLastRow() < 1 || advSh.getRange(1,1).getValue() === "") {
@@ -242,14 +241,12 @@ function getAllData(username) {
   let role = "Staff";
   let perms = [];
   let targetName = "";
-  let branch = "Naraina Vihar"; // Default branch
 
   // 1. Try Optimized Map Lookup
   const userMap = getUserMap();
   if (userMap[targetUser]) {
       role = userMap[targetUser].role;
       targetName = String(userMap[targetUser].name || "").trim().toLowerCase();
-      branch = userMap[targetUser].branch || "Naraina Vihar";
       const pStr = userMap[targetUser].perms;
       perms = pStr.split(',').map(s=>s.trim()).filter(Boolean);
   }
@@ -277,13 +274,13 @@ function getAllData(username) {
 
   const lastRow = sh.getLastRow();
   // ⚡ Bolt Optimization: Use getValues() for speed. Single read.
-  const range = lastRow > 1 ? sh.getRange(2, 1, lastRow-1, 36) : null;
+  const range = lastRow > 1 ? sh.getRange(2, 1, lastRow-1, 35) : null;
   const data = range ? range.getValues() : [];
 
   // ⚡ Bolt: Read Advance Data
   const advLast = advSh.getLastRow();
-  // ⚡ Bolt: Read 36 columns from Advance sheet too
-  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 36).getDisplayValues() : [];
+  // ⚡ Bolt: Read 35 columns from Advance sheet too
+  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 35).getDisplayValues() : [];
 
   // ⚡ Bolt Optimization: FMS updates aggregation
   let fmsUpdates = [];
@@ -431,7 +428,6 @@ function getAllData(username) {
   let completedManifest = [];
   let holdings = [];
   let allAwbs = []; // ⚡ Bolt: Lightweight list for instant duplicate checks
-  let todaysShipments = []; // ⚡ Bolt: For analytics
 
   // ⚡ Bolt: New Categories
   let advance = [];
@@ -442,16 +438,6 @@ function getAllData(username) {
   const getNormDate = (d) => new Date(d).setHours(0,0,0,0);
   const todayTime = getNormDate(new Date());
   const todayStr = new Date().toLocaleDateString();
-
-  // ⚡ Bolt: Shift Logic (9 AM Start)
-  const now = new Date();
-  const shiftStart = new Date(now);
-  if (now.getHours() < 9) {
-      shiftStart.setDate(shiftStart.getDate() - 1);
-  }
-  shiftStart.setHours(9, 0, 0, 0);
-  const shiftStartTime = shiftStart.getTime();
-
 
   // ⚡ Bolt Helper: Format raw numbers to fixed decimals (simulate getDisplayValues)
   const num = (v) => { const n = parseFloat(v); return isNaN(n) ? v : n.toFixed(2); };
@@ -472,10 +458,7 @@ function getAllData(username) {
 
     const category = "Normal";
     const dateVal = getNormDate(r[1]);
-    // Old logic: if(dateVal === todayTime) inboundTodayCount++;
-    if (r[1] && new Date(r[1]).getTime() >= shiftStartTime) {
-        inboundTodayCount++;
-    }
+    if(dateVal === todayTime) inboundTodayCount++;
 
     const holdStatus = r[27];
     const paperStatus = r[16];
@@ -505,13 +488,8 @@ function getAllData(username) {
           batchNo: batchNo, manifestDate: manifestDate, paperwork: r[26],
           holdStatus: holdStatus, holdReason: r[28], holdRem: r[29], heldBy: r[30],
           category: category, holdDate: r[34],
-          paperStatus: r[16], // ⚡ Bolt Fix: Explicitly store paperStatus for filtering
-          branch: r[35] || "Naraina Vihar" // ⚡ Bolt: Add branch with fallback
+          paperStatus: r[16] // ⚡ Bolt Fix: Explicitly store paperStatus for filtering
         };
-
-        if (r[1] && new Date(r[1]).getTime() >= shiftStartTime) {
-            todaysShipments.push(item);
-        }
 
         if (isHold) {
             holdings.push(item);
@@ -568,8 +546,7 @@ function getAllData(username) {
         netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
         batchNo: r[24], manifestDate: r[25], paperwork: r[26],
         holdStatus: holdStatus, holdReason: r[28], holdRem: r[29], heldBy: r[30],
-        category: category, holdDate: r[34] || r[1], // Use entry date as fallback
-        branch: r[35] || "Naraina Vihar" // ⚡ Bolt: Add branch with fallback
+        category: category, holdDate: r[34] || r[1] // Use entry date as fallback
       };
 
       if (holdStatus === "On Hold") {
@@ -590,33 +567,8 @@ function getAllData(username) {
       }
   } catch(e) { console.error("Requests Sheet Error", e); }
 
-  // ⚡ Bolt: Analytics Calculations
-  const branchStats = {};
-  const staffCounts = {};
-
-  todaysShipments.forEach(item => {
-      const branch = item.branch || "Naraina Vihar";
-      const user = item.user || "Unknown";
-      const weight = parseFloat(item.chgWgt) || 0;
-
-      if (!branchStats[branch]) {
-          branchStats[branch] = { count: 0, weight: 0 };
-      }
-      branchStats[branch].count++;
-      branchStats[branch].weight += weight;
-
-      staffCounts[user] = (staffCounts[user] || 0) + 1;
-  });
-
-  const staffStats = Object.entries(staffCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-
-
   return jsonResponse("success", "OK", {
     role: role,
-    branch: branch,
     perms: perms,
     static: staticData,
     stats: { inbound: inboundTodayCount, auto: pendingAuto.length, paper: pendingPaper.length, requests: reqList.length, holdings: holdings.length },
@@ -626,7 +578,6 @@ function getAllData(username) {
     holdings: holdings,
     allAwbs: allAwbs,
     advance: advance,
-    analytics: { branch: branchStats, staff: staffStats },
     // ⚡ Bolt Fix: Admin Pool now shows ONLY UNASSIGNED pending paperwork.
     // Logic matches toAssign: Status != assigned OR Assignee is empty.
     adminPool: pendingPaper.filter(x => String(x.paperStatus||"").trim().toLowerCase() !== "assigned" || !x.assignee)
@@ -972,7 +923,7 @@ function handleSubmit(body){
       autoStatus, autoDoer, "", "", "", "", body.netNo,
       body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
       holdStatus, holdReason, "", (holdStatus==="On Hold" ? body.username : ""), body.payeeName, body.payeeContact,
-      category, "", body.branch || "Naraina Vihar" // Col 33 (AH) = Category, 34 (AI) = Hold Date, 35 (AJ) = Branch
+      category, "" // Col 33 (AH) = Category, 34 (AI) = Hold Date (Empty initially)
   ];
 
   if(category === "Normal") {
@@ -1072,53 +1023,39 @@ function handleBulkAssign(b) {
     ids.forEach((id, i) => { idMap[String(id).replace(/'/g, "").trim().toLowerCase()] = i + 2; });
 
     // ⚡ Bolt Fix: Explicitly EXCLUDE 'user' column (9) from updates
-    // ⚡ Bolt Optimization: Batch update main sheet
+    // We can't use RangeList easily for different values, so we iterate
+    // But we can optimize by reading existing data if needed, though here we just write.
+    // For max speed in GAS, fewer calls is better. But random access writes are slow.
+    // Since users usually assign 10-20 at a time, loop is acceptable IF we don't open SS every time.
+    // We already have 'ss'.
+
     const fmsData = [];
-    const assignmentRange = ss.getRange(2, 17, lr - 1, 3);
-    const assignmentData = assignmentRange.getValues();
-    let hasChanges = false;
 
     assignments.forEach(a => {
         const key = String(a.id).replace(/'/g, "").trim().toLowerCase();
         if (idMap[key]) {
-            const rowIndex = idMap[key] - 2; // Adjust for 0-based index
-            if (rowIndex >= 0 && rowIndex < assignmentData.length) {
-                assignmentData[rowIndex][0] = "Assigned";
-                assignmentData[rowIndex][1] = a.staff;
-                assignmentData[rowIndex][2] = b.assigner;
-                hasChanges = true;
-                fmsData.push({ id: a.id, assignee: a.staff, assigner: b.assigner });
-            }
+            const r = idMap[key];
+            // Write: Status (17), Assignee (18), Assigner (19) -> Cols Q, R, S
+            ss.getRange(r, 17, 1, 3).setValues([["Assigned", a.staff, b.assigner]]);
+            fmsData.push({ id: a.id, assignee: a.staff, assigner: b.assigner });
         }
     });
 
-    if (hasChanges) {
-        assignmentRange.setValues(assignmentData);
-    }
-
-    // ⚡ Bolt Optimization: Batch update FMS
+    // Sync FMS (Batched lookup)
     if (fmsData.length > 0) {
         try {
             const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
             if (fms && fms.getLastRow() >= 7) {
-                const numRows = fms.getLastRow() - 6;
-                const fmsIds = fms.getRange(7, 2, numRows, 1).getValues().flat().map(x => String(x).replace(/'/g, "").trim().toLowerCase());
-                const fmsUpdateRange = fms.getRange(7, 21, numRows, 2); // Cols U and V
-                const fmsUpdateData = fmsUpdateRange.getValues();
-                let fmsHasChanges = false;
-
+                const fmsIds = fms.getRange(7, 2, fms.getLastRow() - 6, 1).getValues().flat().map(x => String(x).replace(/'/g, "").trim().toLowerCase());
                 fmsData.forEach(item => {
                     const idx = fmsIds.indexOf(String(item.id).trim().toLowerCase());
                     if (idx > -1) {
-                        fmsUpdateData[idx][0] = item.assignee; // Col U
-                        fmsUpdateData[idx][1] = item.assigner; // Col V
-                        fmsHasChanges = true;
+                        const r = idx + 7;
+                        // ⚡ Bolt Fix: Shift +2
+                        fms.getRange(r, 21).setValue(item.assignee); // U (was S/19)
+                        fms.getRange(r, 22).setValue(item.assigner); // V (was T/20)
                     }
                 });
-
-                if (fmsHasChanges) {
-                    fmsUpdateRange.setValues(fmsUpdateData);
-                }
             }
         } catch (e) { console.error("FMS Bulk Sync Error", e); }
     }
@@ -1398,62 +1335,30 @@ function handleTransferRequest(b) { SpreadsheetApp.getActiveSpreadsheet().getShe
 function handleLogin(u,p){
   const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
   const d = s.getDataRange().getValues();
-  const userMap = getUserMap(); // Use optimized map
 
-  const inputUser = String(u).trim().toLowerCase();
-  const inputPass = String(p).trim();
-  const hashedInput = hashString(inputPass);
+  // Robust input handling
+  const inputStr = String(p).trim();
+  const hashedInput = hashString(inputStr);
 
-  if (userMap[inputUser]) {
-      const userDetails = userMap[inputUser];
-      let storedPass = "";
-      // Find the raw password from sheet data for comparison
-      for(let i=1; i<d.length; i++) {
-          if(String(d[i][0]).trim().toLowerCase() === inputUser) {
-              storedPass = String(d[i][1]).trim();
-              break;
-          }
-      }
+  for(let i=1;i<d.length;i++) {
+    if(String(d[i][0]).trim().toLowerCase() == String(u).trim().toLowerCase()) {
+        // Robust stored value handling
+        const storedVal = d[i][1];
+        const storedStr = String(storedVal).trim();
 
-      // 1. Check Hash Match
-      if (storedPass === hashedInput) {
-          return jsonResponse("success", "OK", {
-              username: userDetails.username,
-              name: userDetails.name,
-              role: userDetails.role,
-              branch: userDetails.branch || "Naraina Vihar"
-          });
-      }
+        // 1. Check Hash Match
+        if (storedStr === hashedInput) {
+             return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
+        }
 
-      // 2. Check Plain Text Match & Upgrade Hash (WRITE Operation)
-      if (storedPass === inputPass) {
-          const lock = LockService.getScriptLock();
-          if(lock.tryLock(5000)) { // Lock only for the write
-              try {
-                  for(let i=1; i<d.length; i++) {
-                      if(String(d[i][0]).trim().toLowerCase() === inputUser) {
-                          s.getRange(i+1, 2).setValue(hashedInput);
-                          break;
-                      }
-                  }
-              } finally {
-                  lock.releaseLock();
-              }
-              clearUserCache(); // Invalidate cache after write
-          } else {
-              // Fail silently on lock contention, user can try again.
-              // This is better than blocking other logins.
-          }
-          // Still log them in successfully this time
-          return jsonResponse("success", "OK", {
-              username: userDetails.username,
-              name: userDetails.name,
-              role: userDetails.role,
-              branch: userDetails.branch || "Naraina Vihar"
-          });
-      }
+        // 2. Check Plain Text Match
+        if (storedStr === inputStr) {
+            s.getRange(i+1, 2).setValue(hashedInput);
+            return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
+        }
+    }
   }
-  return jsonResponse("error", "Invalid Credentials");
+  return jsonResponse("error","Invalid Credentials");
 }
 
 function handleDropdowns(b){ const s=SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet2"); const col = {network:1, client:2, destination:3, extra:4, hold:5}[b.category]; if(b.subAction==="add"){ let r=2; while(s.getRange(r,col).getValue()!=="") r++; s.getRange(r,col).setValue(b.value); if(b.category==="hold") s.getRange(r,6).setValue(b.desc); } else { const v=s.getRange(2,col,s.getLastRow()).getValues().flat(); const i=v.indexOf(b.value); if(i>-1) s.getRange(i+2,col,1,2).deleteCells(SpreadsheetApp.Dimension.ROWS); } return jsonResponse("success","Updated"); }
