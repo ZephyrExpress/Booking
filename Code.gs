@@ -149,6 +149,7 @@ function getUserMap() {
             if (u) {
                 map[u] = {
                     username: data[i][0], // Keep original case
+                    password: data[i][1], // ⚡ Bolt: Cache password for login opt
                     name: data[i][2],
                     role: data[i][3],
                     perms: data[i][4] || "",
@@ -1381,6 +1382,7 @@ function handleApproveTransfer(b) {
 }
 
 function handleChangePassword(b) {
+  clearUserCache();
   const ss=SpreadsheetApp.getActiveSpreadsheet();
   const uSheet = ss.getSheetByName("Users");
   const d = uSheet.getDataRange().getValues();
@@ -1396,9 +1398,8 @@ function handleChangePassword(b) {
 function handleTransferRequest(b) { SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Requests").appendRow([new Date().getTime().toString().slice(-6), b.taskId, b.type, b.by, b.to, "Pending", new Date()]); return jsonResponse("success", "Request Sent"); }
 
 function handleLogin(u,p){
-  const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
-  const d = s.getDataRange().getValues();
-  const userMap = getUserMap(); // Use optimized map
+  // ⚡ Bolt Optimization: Use cached map for auth, avoid sheet read
+  const userMap = getUserMap();
 
   const inputUser = String(u).trim().toLowerCase();
   const inputPass = String(p).trim();
@@ -1406,14 +1407,7 @@ function handleLogin(u,p){
 
   if (userMap[inputUser]) {
       const userDetails = userMap[inputUser];
-      let storedPass = "";
-      // Find the raw password from sheet data for comparison
-      for(let i=1; i<d.length; i++) {
-          if(String(d[i][0]).trim().toLowerCase() === inputUser) {
-              storedPass = String(d[i][1]).trim();
-              break;
-          }
-      }
+      const storedPass = String(userDetails.password || "").trim();
 
       // 1. Check Hash Match
       if (storedPass === hashedInput) {
@@ -1427,6 +1421,10 @@ function handleLogin(u,p){
 
       // 2. Check Plain Text Match & Upgrade Hash (WRITE Operation)
       if (storedPass === inputPass) {
+          // ⚡ Bolt: Only access sheet for Write operations
+          const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Users");
+          const d = s.getDataRange().getValues();
+
           const lock = LockService.getScriptLock();
           if(lock.tryLock(5000)) { // Lock only for the write
               try {
