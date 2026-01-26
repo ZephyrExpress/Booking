@@ -1022,23 +1022,31 @@ function handleBulkAssign(b) {
     const idMap = {};
     ids.forEach((id, i) => { idMap[String(id).replace(/'/g, "").trim().toLowerCase()] = i + 2; });
 
-    // ⚡ Bolt Fix: Explicitly EXCLUDE 'user' column (9) from updates
-    // We can't use RangeList easily for different values, so we iterate
-    // But we can optimize by reading existing data if needed, though here we just write.
-    // For max speed in GAS, fewer calls is better. But random access writes are slow.
-    // Since users usually assign 10-20 at a time, loop is acceptable IF we don't open SS every time.
-    // We already have 'ss'.
-
+    // ⚡ Bolt Optimization: Group updates by Staff to use RangeList (O(K) writes instead of O(N))
+    const groups = {};
     const fmsData = [];
 
     assignments.forEach(a => {
         const key = String(a.id).replace(/'/g, "").trim().toLowerCase();
         if (idMap[key]) {
             const r = idMap[key];
-            // Write: Status (17), Assignee (18), Assigner (19) -> Cols Q, R, S
-            ss.getRange(r, 17, 1, 3).setValues([["Assigned", a.staff, b.assigner]]);
+            if (!groups[a.staff]) {
+                groups[a.staff] = { statusRanges: [], staffRanges: [], assignerRanges: [] };
+            }
+            // Col 17=Q, 18=R, 19=S
+            groups[a.staff].statusRanges.push(`Q${r}`);
+            groups[a.staff].staffRanges.push(`R${r}`);
+            groups[a.staff].assignerRanges.push(`S${r}`);
+
             fmsData.push({ id: a.id, assignee: a.staff, assigner: b.assigner });
         }
+    });
+
+    Object.keys(groups).forEach(staff => {
+        const g = groups[staff];
+        if (g.statusRanges.length) ss.getRangeList(g.statusRanges).setValue("Assigned");
+        if (g.staffRanges.length) ss.getRangeList(g.staffRanges).setValue(staff);
+        if (g.assignerRanges.length) ss.getRangeList(g.assignerRanges).setValue(b.assigner);
     });
 
     // Sync FMS (Batched lookup)
@@ -1047,14 +1055,25 @@ function handleBulkAssign(b) {
             const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
             if (fms && fms.getLastRow() >= 7) {
                 const fmsIds = fms.getRange(7, 2, fms.getLastRow() - 6, 1).getValues().flat().map(x => String(x).replace(/'/g, "").trim().toLowerCase());
+
+                const fmsGroups = {};
                 fmsData.forEach(item => {
                     const idx = fmsIds.indexOf(String(item.id).trim().toLowerCase());
                     if (idx > -1) {
                         const r = idx + 7;
-                        // ⚡ Bolt Fix: Shift +2
-                        fms.getRange(r, 21).setValue(item.assignee); // U (was S/19)
-                        fms.getRange(r, 22).setValue(item.assigner); // V (was T/20)
+                        if (!fmsGroups[item.assignee]) {
+                             fmsGroups[item.assignee] = { assigneeRanges: [], assignerRanges: [] };
+                        }
+                        // Col 21=U, 22=V
+                        fmsGroups[item.assignee].assigneeRanges.push(`U${r}`);
+                        fmsGroups[item.assignee].assignerRanges.push(`V${r}`);
                     }
+                });
+
+                Object.keys(fmsGroups).forEach(staff => {
+                    const g = fmsGroups[staff];
+                    if (g.assigneeRanges.length) fms.getRangeList(g.assigneeRanges).setValue(staff);
+                    if (g.assignerRanges.length) fms.getRangeList(g.assignerRanges).setValue(b.assigner);
                 });
             }
         } catch (e) { console.error("FMS Bulk Sync Error", e); }
