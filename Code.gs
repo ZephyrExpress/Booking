@@ -179,8 +179,8 @@ function getAllData(username) {
   const sh = ss.getSheetByName("Shipments");
   if (!sh) return jsonResponse("error", "Shipments Sheet Missing");
 
-  // ⚡ Bolt: Ensure Sheet Columns (need 35 for Hold Date - Index 34, Category is 33)
-  if (sh.getMaxColumns() < 35) sh.insertColumnsAfter(sh.getMaxColumns(), 35 - sh.getMaxColumns());
+  // ⚡ Bolt: Ensure Sheet Columns (need 36 for Branch - Index 35, Hold Date is 34, Category is 33)
+  if (sh.getMaxColumns() < 36) sh.insertColumnsAfter(sh.getMaxColumns(), 36 - sh.getMaxColumns());
 
   // ⚡ Bolt: Get Advance Sheet (Create if missing)
   let advSh = ss.getSheetByName(ADVANCE_SHEET_NAME);
@@ -188,8 +188,8 @@ function getAllData(username) {
       advSh = ss.insertSheet(ADVANCE_SHEET_NAME);
   }
 
-  // ⚡ Bolt: Ensure Advance Sheet Columns (need 35)
-  if (advSh.getMaxColumns() < 35) advSh.insertColumnsAfter(advSh.getMaxColumns(), 35 - advSh.getMaxColumns());
+  // ⚡ Bolt: Ensure Advance Sheet Columns (need 36)
+  if (advSh.getMaxColumns() < 36) advSh.insertColumnsAfter(advSh.getMaxColumns(), 36 - advSh.getMaxColumns());
 
   // Copy header if empty
   if (advSh.getLastRow() < 1 || advSh.getRange(1,1).getValue() === "") {
@@ -274,13 +274,13 @@ function getAllData(username) {
 
   const lastRow = sh.getLastRow();
   // ⚡ Bolt Optimization: Use getValues() for speed. Single read.
-  const range = lastRow > 1 ? sh.getRange(2, 1, lastRow-1, 35) : null;
+  const range = lastRow > 1 ? sh.getRange(2, 1, lastRow-1, 36) : null;
   const data = range ? range.getValues() : [];
 
   // ⚡ Bolt: Read Advance Data
   const advLast = advSh.getLastRow();
-  // ⚡ Bolt: Read 35 columns from Advance sheet too
-  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 35).getDisplayValues() : [];
+  // ⚡ Bolt: Read 36 columns from Advance sheet too
+  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 36).getDisplayValues() : [];
 
   // ⚡ Bolt Optimization: FMS updates aggregation
   let fmsUpdates = [];
@@ -439,6 +439,19 @@ function getAllData(username) {
   const todayTime = getNormDate(new Date());
   const todayStr = new Date().toLocaleDateString();
 
+  // ⚡ Bolt: Analytics Aggregation (Today's Shift: 9 AM to 2 AM Next Day)
+  const now = new Date();
+  let shiftStart = new Date(now);
+  if (now.getHours() < 9) {
+      shiftStart.setDate(shiftStart.getDate() - 1);
+  }
+  shiftStart.setHours(9, 0, 0, 0);
+  const shiftStartTime = shiftStart.getTime();
+  // Shift window: > shiftStartTime (Essentially "Active Today")
+
+  const branchMap = {};
+  const staffMap = {};
+
   // ⚡ Bolt Helper: Format raw numbers to fixed decimals (simulate getDisplayValues)
   const num = (v) => { const n = parseFloat(v); return isNaN(n) ? v : n.toFixed(2); };
 
@@ -455,6 +468,29 @@ function getAllData(username) {
   data.forEach(r => {
     const rId = String(r[0]).replace(/'/g, "").trim();
     if(rId) allAwbs.push(rId);
+
+    // ⚡ Bolt Analytics: Check Timestamp (Col J / 9)
+    const ts = r[9] instanceof Date ? r[9].getTime() : 0;
+    if (ts >= shiftStartTime) {
+         // Branch Performance (Col AJ / 35)
+         const branch = String(r[35] || "Unknown").trim();
+         if (branch) branchMap[branch] = (branchMap[branch] || 0) + 1;
+
+         // Staff Performance (Automation Doer Col P/15 + Paperwork Assignee Col R/17)
+         // Note: We count ACTIONS, so one shipment could credit two people if both actions happened today.
+         // However, we only have the "Entry" timestamp here readily available in `ts`.
+         // Ideally we check Action Dates, but for simplicity/performance in this structure (since we don't store separate action logs per row easily accessible),
+         // we credit the "Doer" if the shipment ENTRY is today. This is a proxy.
+         // If precise "Action Time" is needed, we'd need more columns.
+         // Given "Top staff who did most automation", assuming "on today's shipments" or "actions done today".
+         // Using Entry Time is the standard proxy in this system.
+
+         const autoDoer = String(r[15]).trim();
+         if (autoDoer) staffMap[autoDoer] = (staffMap[autoDoer] || 0) + 1;
+
+         const assignee = String(r[17]).trim();
+         if (assignee) staffMap[assignee] = (staffMap[assignee] || 0) + 1;
+    }
 
     const category = "Normal";
     const dateVal = getNormDate(r[1]);
@@ -567,10 +603,15 @@ function getAllData(username) {
       }
   } catch(e) { console.error("Requests Sheet Error", e); }
 
+  // Transform Analytics Maps to Lists
+  const branchPerf = Object.keys(branchMap).map(k => ({ name: k, count: branchMap[k] })).sort((a,b) => b.count - a.count);
+  const staffPerf = Object.keys(staffMap).map(k => ({ name: k, count: staffMap[k] })).sort((a,b) => b.count - a.count).slice(0, 10); // Top 10
+
   return jsonResponse("success", "OK", {
     role: role,
     perms: perms,
     static: staticData,
+    analytics: { branchPerf: branchPerf, staffPerf: staffPerf },
     stats: { inbound: inboundTodayCount, auto: pendingAuto.length, paper: pendingPaper.length, requests: reqList.length, holdings: holdings.length },
     overview: { auto: pendingAuto, paper: pendingPaper, directPaper: directPaper },
     workflow: { toAssign: toAssign, toDo: myToDo },
@@ -593,8 +634,8 @@ function handleMoveAdvance(b) {
     if(row === -1) return jsonResponse("error", "AWB Not Found in Advance Records");
 
     // Get Data
-    // ⚡ Bolt Fix: Read 35 columns
-    const data = advSh.getRange(row, 1, 1, 35).getValues()[0];
+    // ⚡ Bolt Fix: Read 36 columns
+    const data = advSh.getRange(row, 1, 1, 36).getValues()[0];
 
     // Modify for Transfer
     data[1] = new Date(); // Update Date to Today (Received)

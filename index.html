@@ -425,27 +425,27 @@
            <div class="col-md-3"><div class="stat-card"><div><div class="stat-label">TOTAL HOLDINGS</div><div class="stat-value text-secondary" id="ovHoldings">0</div></div><i class="bi bi-pause-circle fs-1 text-secondary opacity-25"></i></div></div>
         </div>
 
-        <!-- ⚡ Bolt: New Direct & Advance Overview Section -->
+        <!-- ⚡ Bolt: Analytics Section -->
         <div class="row g-4 mb-4">
             <div class="col-md-6">
-                <div class="panel-card border-start border-4 border-info h-100">
-                    <div class="panel-header bg-white border-bottom-0 pb-0">
-                        <span class="text-info"><i class="bi bi-send-check me-2"></i>Direct Shipments (Processing)</span>
-                        <span class="badge bg-info text-white" id="badgeDirect">0</span>
-                    </div>
-                    <div class="p-3">
-                        <div id="listDirect" style="max-height: 200px; overflow-y: auto;"></div>
+                <div class="panel-card h-100">
+                    <div class="panel-header"><i class="bi bi-bar-chart-fill me-2 text-primary"></i>Branch Performance (Today)</div>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 align-middle">
+                            <thead class="bg-light"><tr><th>Branch</th><th class="text-end">Count</th></tr></thead>
+                            <tbody id="tblBranchPerf"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
             <div class="col-md-6">
-                <div class="panel-card border-start border-4 border-primary h-100">
-                    <div class="panel-header bg-white border-bottom-0 pb-0">
-                        <span class="text-primary"><i class="bi bi-calendar-check me-2"></i>Advance Shipments</span>
-                        <span class="badge bg-primary" id="badgeAdv">0</span>
-                    </div>
-                    <div class="p-3">
-                        <div class="text-muted small">Manage these in the <strong>Advance Records</strong> tab.</div>
+                <div class="panel-card h-100">
+                    <div class="panel-header"><i class="bi bi-trophy-fill me-2 text-warning"></i>Top Staff (Today)</div>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 align-middle">
+                            <thead class="bg-light"><tr><th>Staff Name</th><th class="text-end">Actions</th></tr></thead>
+                            <tbody id="tblStaffPerf"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -895,6 +895,12 @@
 // =======================================================
 const MOCK_MODE = false;
 
+// ⚡ Bolt: Global Safe Display Helper
+function safeDisplay(id, val) {
+    const el = document.getElementById(id);
+    if(el) el.style.display = val;
+}
+
 // ⚡ Bolt Optimization: Debounce for search inputs
 function debounce(func, wait) {
     let timeout;
@@ -972,7 +978,7 @@ function closeSidebar() {
 }
 
 function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('show'); document.getElementById('sidebarBackdrop').classList.toggle('show'); }
-function showSpin(x){document.getElementById('spinner').style.display=x?'flex':'none';}
+function showSpin(x){safeDisplay('spinner', x?'flex':'none');}
 function toast(msg, type='success'){
    const t=document.createElement('div'); t.className=`toast align-items-center text-white bg-${type} border-0 show`; t.innerHTML=`<div class="d-flex"><div class="toast-body">${msg}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
    document.getElementById('toastContainer').appendChild(t); setTimeout(()=>t.remove(),3000);
@@ -1013,11 +1019,11 @@ window.doLogin=async function(){
   if(r.result==="success"){
      curUser=r.username; curRole=r.role;
      document.getElementById('userDisplay').textContent=r.name;
-     document.getElementById('loginSection').style.display='none';
-     document.getElementById('appSection').style.display='flex';
+     safeDisplay('loginSection', 'none');
+     safeDisplay('appSection', 'flex');
      syncData(true);
      if (curRole.toLowerCase() === 'staff') { switchTab('inbound'); }
-  } else { showSpin(false); document.getElementById('loginError').textContent=r.message; document.getElementById('loginError').style.display='block'; }
+  } else { showSpin(false); document.getElementById('loginError').textContent=r.message; safeDisplay('loginError', 'block'); }
 }
 window.logout=function(){location.reload();}
 window.refreshApp=async function(){ showSpin(true); await syncData(false); showSpin(false); toast("Data Refreshed"); }
@@ -1064,8 +1070,7 @@ async function syncData(init=false){
                 swAwb.checked = conf.autoAwb;
                 document.getElementById('autoAwbLabel').textContent = conf.autoAwb ? "Enabled" : "Disabled";
             }
-            const btnAwb = document.getElementById('btnAutoAwb');
-            if(btnAwb) btnAwb.style.display = conf.autoAwb ? 'block' : 'none';
+            safeDisplay('btnAutoAwb', conf.autoAwb ? 'block' : 'none');
 
             // Transfer Toggle
             const swTr = document.getElementById('allowTransferSwitch');
@@ -1086,9 +1091,8 @@ function updateNavVisibility() {
     const role = curRole.toLowerCase();
     const p = curPerms;
     const show = (id, permName) => {
-        const el = document.getElementById(id);
-        if(role.includes('owner') || role.includes('admin') || p.includes(permName)) el.style.display='flex';
-        else el.style.display='none';
+        if(role.includes('owner') || role.includes('admin') || p.includes(permName)) safeDisplay(id, 'flex');
+        else safeDisplay(id, 'none');
     };
 
     show('nav-inbound', 'inbound');
@@ -1100,9 +1104,9 @@ function updateNavVisibility() {
 
     // ⚡ Bolt Fix: Hide Receivers Slip from Admin/Staff
     if(role.includes('owner')) {
-        document.getElementById('nav-receivers').style.display = 'flex';
+        safeDisplay('nav-receivers', 'flex');
     } else {
-        document.getElementById('nav-receivers').style.display = 'none';
+        safeDisplay('nav-receivers', 'none');
     }
 
     const taskLabel = document.getElementById('taskLabel');
@@ -1112,9 +1116,9 @@ function updateNavVisibility() {
     }
 
     if(role.includes('owner') || role.includes('admin')) {
-        document.getElementById('adminNavGroup').style.display='block';
+        safeDisplay('adminNavGroup', 'block');
     } else {
-        document.getElementById('adminNavGroup').style.display='none';
+        safeDisplay('adminNavGroup', 'none');
     }
 }
 
@@ -1128,25 +1132,16 @@ function renderUI(){
   document.getElementById('totalHoldings').textContent=s.holdings;
   document.getElementById('ovHoldings').textContent=s.holdings;
 
-  // ⚡ Bolt: Update New Badges
-  document.getElementById('badgeDirect').textContent = (d.directPaper || []).length;
-  document.getElementById('badgeAdv').textContent = (window.APP_DATA.advance || []).length;
+  // ⚡ Bolt: Render Analytics Tables
+  const renderTable = (id, data, emptyMsg) => {
+      const el = document.getElementById(id);
+      if(!data || !data.length) el.innerHTML = `<tr><td colspan="2" class="text-center text-muted small py-3">${emptyMsg}</td></tr>`;
+      else el.innerHTML = data.map(x => `<tr><td>${x.name}</td><td class="text-end fw-bold font-monospace">${x.count}</td></tr>`).join('');
+  };
 
-  // Render Direct List
-  const ld = document.getElementById('listDirect');
-  const directItems = d.directPaper || [];
-  if(!directItems.length) ld.innerHTML = '<div class="text-center text-muted small py-3">No Direct Shipments Pending</div>';
-  else {
-      ld.innerHTML = directItems.map(x => `
-        <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-            <div>
-                <div class="fw-bold small">${x.id}</div>
-                <div class="text-muted" style="font-size:0.75rem">${x.client} ➔ ${x.net}</div>
-            </div>
-            <span class="badge bg-light text-dark border">Wait Paperwork</span>
-        </div>
-      `).join('');
-  }
+  const ana = window.APP_DATA.analytics || {};
+  renderTable('tblBranchPerf', ana.branchPerf, 'No Data Today');
+  renderTable('tblStaffPerf', ana.staffPerf, 'No Data Today');
 
   const la=document.getElementById('listAuto');
   if(!d.auto.length) la.innerHTML='<div class="text-center p-5 text-muted small">No Pending Automation</div>';
@@ -1195,12 +1190,12 @@ function renderUI(){
   }
 
   renderTaskHub();
-  if(document.getElementById('manifest-tab').style.display==='block') renderManifest();
-  if(document.getElementById('man-daily-view').style.display==='block') renderDailyManifest();
-  if(document.getElementById('holdings-tab').style.display==='block') renderHoldings();
-  if(document.getElementById('receivers-tab').style.display==='block') renderReceivers();
-  if(document.getElementById('admin-tab').style.display==='block') renderAdminPanel();
-  if(document.getElementById('advance-tab').style.display==='block') renderAdvance();
+  const checkVis = (id) => { const el = document.getElementById(id); return el && el.style.display !== 'none'; };
+  if(checkVis('manifest-tab')) renderManifest();
+  if(checkVis('holdings-tab')) renderHoldings();
+  if(checkVis('receivers-tab')) renderReceivers();
+  if(checkVis('admin-tab')) renderAdminPanel();
+  if(checkVis('advance-tab')) renderAdvance();
 }
 
 window.renderAdvance = function() {
@@ -1217,10 +1212,10 @@ window.renderAdvance = function() {
 
     if(!filtered.length) {
         list.innerHTML = '';
-        document.getElementById('advanceEmpty').style.display='block';
+        safeDisplay('advanceEmpty', 'block');
         return;
     }
-    document.getElementById('advanceEmpty').style.display='none';
+    safeDisplay('advanceEmpty', 'none');
 
     list.innerHTML = filtered.map(x => `
         <tr>
@@ -1258,7 +1253,8 @@ window.actReceiveAdvance = async function(id) {
 function renderTaskHub(){
    const role = curRole.toLowerCase();
    if(role === 'admin' || role === 'owner') {
-      document.getElementById('adminTaskView').style.display = 'block'; document.getElementById('staffTaskView').style.display = 'none';
+      safeDisplay('adminTaskView', 'block');
+      safeDisplay('staffTaskView', 'none');
       const pt=document.getElementById('poolBody'); let opts=`<option value="">Select Staff...</option>`; if(window.APP_DATA.static && window.APP_DATA.static.staff) window.APP_DATA.static.staff.forEach(s=>opts+=`<option value="${s}">${s}</option>`);
       pt.innerHTML = window.APP_DATA.adminPool.map(x => {
           let autoBy = x.autoDoer || "";
@@ -1269,7 +1265,8 @@ function renderTaskHub(){
           return `<tr><td class="fw-bold font-monospace">${x.id}</td><td>${x.netNo||'-'}</td><td>${x.net}</td><td>${x.chgWgt}</td><td><small class="text-muted">${x.details}</small></td><td>${x.client.slice(-4)}</td><td class="text-center">${autoBy}</td><td class="text-center">${assignee}</td><td><div class="d-flex gap-2 align-items-center"><select id="adm_as_${x.id}" class="form-select form-select-sm" style="width:120px">${opts}</select></div></td></tr>`;
       }).join('');
    } else {
-      document.getElementById('adminTaskView').style.display = 'none'; document.getElementById('staffTaskView').style.display = 'block';
+      safeDisplay('adminTaskView', 'none');
+      safeDisplay('staffTaskView', 'block');
       const wf=window.APP_DATA.workflow; const ca=document.getElementById('contAssign');
 
       const allowTransfer = window.APP_DATA.static.config.allowTransfer;
@@ -1284,11 +1281,10 @@ function renderTaskHub(){
             <div class="panel-card p-3 border-info border-start border-4">
                 <div class="fw-bold">${x.id}</div>
                 <div class="small text-muted mb-2">${x.client} • ${x.net}</div>
-                ${allowTransfer ? `
                 <div class="input-group input-group-sm">
                     <select id="direct_tr_${x.id}" class="form-select">${opts}</select>
                     <button class="btn btn-primary" onclick="actDirectTransfer('${x.id}')">Assign</button>
-                </div>` : `<div class="small text-muted fst-italic">Transfers disabled</div>`}
+                </div>
             </div>
           </div>`).join('');
       }
@@ -1379,9 +1375,8 @@ window.renderHoldings = function() {
 window.searchHoldings = function() {
     const awb = document.getElementById('holdSearchAwb').value.toLowerCase().trim();
     const netSearch = document.getElementById('holdSearchNet').value.toLowerCase().trim();
-    const resPanel = document.getElementById('holdResultPanel');
 
-    if(!awb && !netSearch) { resPanel.style.display='none'; return; }
+    if(!awb && !netSearch) { safeDisplay('holdResultPanel', 'none'); return; }
 
     let match = null;
     const sources = [
@@ -1434,7 +1429,9 @@ window.searchHoldings = function() {
             actionBtn = `<button class="btn btn-danger btn-lg w-100" onclick="openHoldModal('${match.id}', '${match.netNo||'-'}')">Put On Hold</button>`;
         }
 
-        resPanel.innerHTML = `
+        const resPanel = document.getElementById('holdResultPanel');
+        if(resPanel) {
+            resPanel.innerHTML = `
             <div class="panel-card border-2 ${isOnHold ? 'border-warning' : 'border-success'} p-4">
                 <div class="row align-items-center">
                     <div class="col-md-8">
@@ -1456,7 +1453,8 @@ window.searchHoldings = function() {
                 </div>
             </div>
         `;
-        resPanel.style.display='block';
+        }
+        safeDisplay('holdResultPanel', 'block');
 
         if(isNA && isOnHold) {
              const fn = document.getElementById('fix_net');
@@ -1465,15 +1463,16 @@ window.searchHoldings = function() {
              if(fd && match.dest !== "NA" && match.dest !== "N/A") fd.value = match.dest;
         }
     } else {
-        resPanel.innerHTML = `<div class="alert alert-secondary text-center py-4">No shipment found matching your search.</div>`;
-        resPanel.style.display='block';
+        const resPanel = document.getElementById('holdResultPanel');
+        if(resPanel) resPanel.innerHTML = `<div class="alert alert-secondary text-center py-4">No shipment found matching your search.</div>`;
+        safeDisplay('holdResultPanel', 'block');
     }
 }
 
 window.clearHoldSearch = function() {
     document.getElementById('holdSearchAwb').value='';
     document.getElementById('holdSearchNet').value='';
-    document.getElementById('holdResultPanel').style.display='none';
+    safeDisplay('holdResultPanel', 'none');
 }
 
 window.openHoldAction = function(id) {
@@ -1516,8 +1515,8 @@ function showHoldActionModal(match) {
     document.getElementById('ham_net').textContent = match.netNo || '-';
 
     // Reset sections
-    document.getElementById('ham_na_section').style.display = 'none';
-    document.getElementById('ham_norm_section').style.display = 'none';
+    safeDisplay('ham_na_section', 'none');
+    safeDisplay('ham_norm_section', 'none');
 
     // Fill NA dropdowns if needed
     if(isNA) {
@@ -1529,9 +1528,9 @@ function showHoldActionModal(match) {
         // Pre-fill if not completely empty
         if(match.net && match.net !== 'NA') document.getElementById('ham_sel_net').value = match.net;
 
-        document.getElementById('ham_na_section').style.display = 'block';
+        safeDisplay('ham_na_section', 'block');
     } else {
-        document.getElementById('ham_norm_section').style.display = 'block';
+        safeDisplay('ham_norm_section', 'block');
     }
 
     // Show Modal
@@ -1618,7 +1617,7 @@ window.submitHoldFromModal = async function() {
     if(!r) return alert("Select Reason");
 
     bootstrap.Modal.getInstance(document.getElementById('holdModal')).hide();
-    document.getElementById('holdResultPanel').style.display='none';
+    safeDisplay('holdResultPanel', 'none');
 
     await callApi({action:"manageHold", subAction:"set", awb:selectedHoldAwb, reason:r, remarks:rem, user: curUser});
     syncData(false); toast("Shipment put on Hold");
@@ -1676,7 +1675,7 @@ window.submitActionFromModal = async function() {
     if(!rem.trim()) return alert("Remarks are mandatory");
 
     bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
-    document.getElementById('holdResultPanel').style.display='none';
+    safeDisplay('holdResultPanel', 'none');
 
     await callApi({action:"manageHold", subAction:currentActionType, awb:selectedHoldAwb, remarks:rem, user: curUser});
     syncData(false); toast("Action Completed");
@@ -1795,13 +1794,16 @@ async function actComplete(id){ if(!confirm(`Complete paperwork for ${id}?`)) re
 
 window.switchTab=function(t){
    document.querySelectorAll('.nav-item-custom').forEach(e=>e.classList.remove('active'));
-   document.getElementById('nav-'+t).classList.add('active');
+   const navEl = document.getElementById('nav-'+t);
+   if(navEl) navEl.classList.add('active');
+
    document.querySelectorAll('.tab-view').forEach(e=>e.style.display='none');
-   document.getElementById(t+'-tab').style.display='block';
+   safeDisplay(t+'-tab', 'block');
 
    // ⚡ Bolt Fix: Reset Inbound Entry Mode to Normal on Tab Switch
    if(t === 'inbound') {
-       document.getElementById('f_category').value = "Normal";
+       const catEl = document.getElementById('f_category');
+       if(catEl) catEl.value = "Normal";
        toggleNetNo();
    }
 
@@ -1811,7 +1813,8 @@ window.switchTab=function(t){
        title = (r==='admin' || r==='owner') ? 'Task Manager' : 'My Tasks';
    }
    if(t==='receivers') title = "Receivers Slip";
-   document.getElementById('pageTitle').textContent = title;
+   const pt = document.getElementById('pageTitle');
+   if(pt) pt.textContent = title;
    
    // Auto-close sidebar on mobile/small screens when an item is selected
    closeSidebar();
@@ -1843,7 +1846,7 @@ function updDd(){
    const r = curRole.toLowerCase();
    if(r==='admin' || r==='owner'){
      const cat=document.getElementById('dd_cat').value;
-     if(cat==="hold") document.getElementById('dd_desc').style.display='block'; else document.getElementById('dd_desc').style.display='none';
+     if(cat==="hold") safeDisplay('dd_desc', 'block'); else safeDisplay('dd_desc', 'none');
      let targetList = [];
      if(cat==="hold") targetList = dd.holdReasons ? dd.holdReasons.map(x=>x.code) : [];
      else targetList = dd[{'network':'networks','client':'clients','destination':'destinations','extra':'extraCharges'}[cat]];
@@ -1889,12 +1892,12 @@ document.getElementById('shipForm').onsubmit = async (e)=>{
 // ⚡ Bolt: Toggle Net No Field
 window.toggleNetNo = function() {
     const val = document.getElementById('f_category').value;
-    const div = document.getElementById('div_net_no');
     if(val === 'Direct_Skip' || val === 'Direct_Paperwork') {
-        div.style.display = 'block';
+        safeDisplay('div_net_no', 'block');
     } else {
-        div.style.display = 'none';
-        document.getElementById('f_net_no').value = '';
+        safeDisplay('div_net_no', 'none');
+        const fnn = document.getElementById('f_net_no');
+        if(fnn) fnn.value = '';
     }
 }
 
@@ -1963,8 +1966,8 @@ window.switchManifestView = function(view) {
    document.querySelectorAll('#manTabs .nav-link').forEach(el => el.classList.remove('active'));
    const idx = view === 'pending' ? 0 : 1;
    document.querySelectorAll('#manTabs .nav-link')[idx].classList.add('active');
-   document.getElementById('man-pending-view').style.display = view === 'pending' ? 'block' : 'none';
-   document.getElementById('man-history-view').style.display = view === 'history' ? 'block' : 'none';
+   safeDisplay('man-pending-view', view === 'pending' ? 'block' : 'none');
+   safeDisplay('man-history-view', view === 'history' ? 'block' : 'none');
    if(view === 'pending') renderManifest();
    if(view === 'history') renderManifestHistory();
 }
@@ -1994,10 +1997,10 @@ window.renderManifest = function() {
 
     if (filtered.length === 0) {
         list.innerHTML = '';
-        document.getElementById('manifestEmptyState').style.display = 'block';
+        safeDisplay('manifestEmptyState', 'block');
         return;
     }
-    document.getElementById('manifestEmptyState').style.display = 'none';
+    safeDisplay('manifestEmptyState', 'none');
     list.innerHTML = filtered.map(x => {
         const badge = x.batchNo ? `<span class="badge bg-secondary" title="In Batch: ${x.batchNo}">History</span>` : `<span class="badge bg-success">Ready</span>`;
 
@@ -2045,11 +2048,11 @@ window.renderManifestHistory = function() {
     const keys = Object.keys(batches).reverse(); // Show newest first
 
     if(keys.length === 0) {
-        document.getElementById('batchEmptyState').style.display = 'block';
+        safeDisplay('batchEmptyState', 'block');
         list.innerHTML = '';
         return;
     }
-    document.getElementById('batchEmptyState').style.display = 'none';
+    safeDisplay('batchEmptyState', 'none');
 
     list.innerHTML = keys.map(b => {
          const batch = batches[b];
@@ -2085,9 +2088,9 @@ window.switchInboundMode = function(mode) {
     document.getElementById('f_active_mode').value = mode;
 
     // Reset Views
-    document.getElementById('form_main_fields').style.display = 'none';
-    document.getElementById('view_connected').style.display = 'none';
-    document.getElementById('view_automation_search').style.display = 'none';
+    safeDisplay('form_main_fields', 'none');
+    safeDisplay('view_connected', 'none');
+    safeDisplay('view_automation_search', 'none');
 
     // Reset Form
     document.getElementById('shipForm').reset();
@@ -2096,7 +2099,7 @@ window.switchInboundMode = function(mode) {
     document.getElementById('f_category').value = "Normal"; // Default backend category placeholder
 
     if(mode === 'Normal' || mode === 'Advance') {
-        document.getElementById('form_main_fields').style.display = 'block';
+        safeDisplay('form_main_fields', 'block');
         if(mode === 'Advance') document.getElementById('f_category').value = "Advance";
 
         // ⚡ Bolt Fix: Reset date to today on mode switch
@@ -2107,11 +2110,11 @@ window.switchInboundMode = function(mode) {
         document.getElementById('f_date').value = `${y}-${m}-${d}`;
     }
     else if(mode === 'Connected') {
-        document.getElementById('view_connected').style.display = 'block';
+        safeDisplay('view_connected', 'block');
         setTimeout(()=>document.getElementById('conn_net_no').focus(), 100);
     }
     else if(mode === 'Automation') {
-        document.getElementById('view_automation_search').style.display = 'block';
+        safeDisplay('view_automation_search', 'block');
         // Show main form but hide/disable some parts? No, show form ONLY after search found
         // Logic: Scan -> Fill Form -> Show Form for Edit -> Submit
         setTimeout(()=>document.getElementById('auto_net_no').focus(), 100);
@@ -2155,8 +2158,8 @@ window.handleAutomationScan = async function(el) {
         document.getElementById('f_net_no_hidden').value = val; // Store for submit
 
         // Unhide form
-        document.getElementById('view_automation_search').style.display = 'none';
-        document.getElementById('form_main_fields').style.display = 'block';
+        safeDisplay('view_automation_search', 'none');
+        safeDisplay('form_main_fields', 'block');
 
         // Fill details
         if(d.awb) document.getElementById('f_awb').value = d.awb;
@@ -2594,8 +2597,7 @@ window.toggleConfig = function(key, el) {
     if(label) label.textContent = el.checked ? "Enabled" : "Disabled";
 
     if(key === 'AUTO_AWB') {
-        const btn = document.getElementById('btnAutoAwb');
-        if(btn) btn.style.display = el.checked ? 'block' : 'none';
+        safeDisplay('btnAutoAwb', el.checked ? 'block' : 'none');
     }
 
     // Update local state immediately
