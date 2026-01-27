@@ -163,6 +163,7 @@
     .clickable-cell { cursor: pointer; color: var(--brand-blue); font-weight: 600; text-decoration: underline; }
     .clickable-cell:hover { color: var(--brand-red); }
     .ts-dropdown, .ts-wrapper.single.input-active .ts-control { z-index: 10000 !important; }
+    .ts-wrapper { width: 100% !important; }
     .btn-primary { background-color: var(--brand-blue) !important; border-color: var(--brand-blue) !important; color: white !important; }
     .btn-danger { background-color: var(--brand-red) !important; border-color: var(--brand-red) !important; color: white !important; }
     .btn-warning { background-color: var(--brand-yellow) !important; border-color: var(--brand-yellow) !important; color: black !important; }
@@ -1814,6 +1815,11 @@ window.switchTab=function(t){
        const catEl = document.getElementById('f_category');
        if(catEl) catEl.value = "Normal";
        toggleNetNo();
+       // ⚡ Bolt Fix: Force TomSelect sync to prevent invisible dropdowns (Wrapped in timeout)
+       setTimeout(() => {
+           if(window.tomInstances.client) window.tomInstances.client.sync();
+           if(window.tomInstances.dest) window.tomInstances.dest.sync();
+       }, 50);
    }
 
    let title = t.charAt(0).toUpperCase() + t.slice(1);

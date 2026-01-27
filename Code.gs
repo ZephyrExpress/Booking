@@ -478,6 +478,7 @@ function getAllData(username) {
             if (!isNaN(parsed.getTime())) ts = parsed.getTime();
         }
 
+        // ⚡ Bolt: Analytics Filter (Strict 9:00 AM Shift Logic)
         if (ts >= shiftStartTime) {
              inboundTodayCount++; // Count for stats
 
@@ -501,6 +502,7 @@ function getAllData(username) {
         const autoStatus = String(r[14] || "").trim();
         const batchNo = r[24];
     const manifestDate = r[25] instanceof Date ? r[25].toLocaleDateString() : String(r[25]);
+    const dateVal = r[25] instanceof Date ? getNormDate(r[25]) : 0;
 
     // Check if Active
     const isHold = holdStatus === "On Hold";
