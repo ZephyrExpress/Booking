@@ -1040,9 +1040,18 @@ async function syncData(init=false){
   try {
      const r = await fetchGet('getAllData');
      if(r.result==="success"){
-        // ⚡ Bolt Optimization: Pre-calculate formatted dates to avoid O(N) re-parsing during render loops
+        // ⚡ Bolt Optimization: Pre-calculate formatted dates and search strings to avoid O(N) ops during render/filter loops
         const fmt = (d) => d ? new Date(d).toLocaleDateString() : '';
-        const processList = (list) => { if(list) list.forEach(x => x.fmtDate = fmt(x.date)); };
+        const processList = (list) => {
+            if(list) list.forEach(x => {
+                x.fmtDate = fmt(x.date);
+                // Pre-calc search string: ID | NetNo | Net | Client
+                const safeVal = (v) => (v === undefined || v === null) ? '' : String(v);
+                x.searchStr = (safeVal(x.id) + '|' + safeVal(x.netNo) + '|' + safeVal(x.net) + '|' + safeVal(x.client)).toLowerCase();
+                x.idLower = safeVal(x.id).toLowerCase();
+                x.netNoLower = safeVal(x.netNo).toLowerCase();
+            });
+        };
 
         processList(r.manifest);
         processList(r.holdings);
@@ -1213,10 +1222,7 @@ window.renderAdvance = function() {
     const items = window.APP_DATA.advance || [];
 
     const filtered = items.filter(x =>
-        !term ||
-        x.id.toLowerCase().includes(term) ||
-        (x.client||'').toLowerCase().includes(term) ||
-        (x.net||'').toLowerCase().includes(term)
+        !term || (x.searchStr || '').includes(term)
     );
 
     if(!filtered.length) {
@@ -1398,7 +1404,7 @@ window.searchHoldings = function() {
     ];
     for(const source of sources) {
         if(!source) continue;
-        match = source.find(x => (awb && String(x.id).toLowerCase().includes(awb)) || (netSearch && x.netNo && String(x.netNo).toLowerCase().includes(netSearch)));
+        match = source.find(x => (awb && (x.idLower || String(x.id).toLowerCase()).includes(awb)) || (netSearch && x.netNo && (x.netNoLower || String(x.netNo).toLowerCase()).includes(netSearch)));
         if(match) break;
     }
 
@@ -2003,7 +2009,8 @@ window.renderManifest = function() {
 
     const filtered = items.filter(x => {
         const matchesNet = net ? x.net === net : true;
-        const matchesTerm = term ? (x.id.toLowerCase().includes(term) || (x.netNo||'').toLowerCase().includes(term) || x.net.toLowerCase().includes(term)) : false;
+        // ⚡ Bolt Optimization: Use pre-calc searchStr
+        const matchesTerm = term ? (x.searchStr || '').includes(term) : false;
         const shouldShow = (!x.batchNo) || (term && matchesTerm);
         return matchesNet && shouldShow && (!term || matchesTerm);
     });
@@ -2412,9 +2419,7 @@ window.renderReceivers = function() {
     // ⚡ Bolt Fix: Implement filtering for searchbar
     const filtered = uniqueItems.filter(x => {
         if(!term) return true;
-        return x.id.toLowerCase().includes(term) ||
-               (x.client||'').toLowerCase().includes(term) ||
-               (x.netNo||'').toLowerCase().includes(term);
+        return (x.searchStr || '').includes(term);
     });
 
     if(!filtered.length) {
