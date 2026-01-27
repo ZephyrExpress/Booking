@@ -15,12 +15,10 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  const lock = LockService.getScriptLock();
-  let hasLock = false;
-
+  // ⚡ Bolt Optimization: Early Argument Parsing to bypass Lock for Login
+  let body = {};
+  let act = "";
   try {
-    let body = {};
-    // Handle JSON payloads vs Form Data
     if (e.postData && e.postData.contents) {
         try {
             const content = e.postData.contents;
@@ -29,31 +27,28 @@ function doPost(e) {
             } else {
                  body = e.parameter;
             }
-        } catch (err) {
-            body = e.parameter;
-        }
-    } else {
-        body = e.parameter;
-    }
-
+        } catch (err) { body = e.parameter; }
+    } else { body = e.parameter; }
     if (!body) body = {};
-
-    // ⚡ Bolt Fix: Robust Action Parsing & Normalization
-    let act = body.action;
-    if (!act && e.parameter && e.parameter.action) act = e.parameter.action; // Fallback
+    act = body.action;
+    if (!act && e.parameter && e.parameter.action) act = e.parameter.action;
     act = String(act || "").trim();
+  } catch(e) {}
 
+  // ⚡ CRITICAL: Login must NEVER block
+  if (act === "login") return handleLogin(body.username, body.password);
+
+  const lock = LockService.getScriptLock();
+  let hasLock = false;
+
+  try {
     // ⚡ Bolt Optimization: Only lock for Write operations to prevent 'System Busy' on concurrent reads
-    const READ_ACTIONS = ['login', 'getAllData', 'getAdminRequests', 'getUsers', 'getRecent', 'getShipmentDetails', 'getBillingData'];
+    const READ_ACTIONS = ['getAllData', 'getAdminRequests', 'getUsers', 'getRecent', 'getShipmentDetails', 'getBillingData'];
     if (!READ_ACTIONS.includes(act)) {
         // Only try to lock if it's NOT a read action.
-        // If action is unknown or empty, we lock to be safe (prevent concurrent writes).
         if (!lock.tryLock(10000)) return jsonResponse("error", "System Busy");
         hasLock = true;
     }
-
-    // --- 1. AUTH ---
-    if (act === "login") return handleLogin(body.username, body.password);
 
     // --- 2. DATA RETRIEVAL ---
     if (act === 'getAllData') return getAllData(body.user);
@@ -151,7 +146,8 @@ function getUserMap() {
                     username: data[i][0], // Keep original case
                     name: data[i][2],
                     role: data[i][3],
-                    perms: data[i][4] || ""
+                    perms: data[i][4] || "",
+                    branch: data[i][5] || "Naraina Vihar"
                 };
             }
         }
@@ -241,12 +237,14 @@ function getAllData(username) {
   let role = "Staff";
   let perms = [];
   let targetName = "";
+  let branch = "Naraina Vihar";
 
   // 1. Try Optimized Map Lookup
   const userMap = getUserMap();
   if (userMap[targetUser]) {
       role = userMap[targetUser].role;
       targetName = String(userMap[targetUser].name || "").trim().toLowerCase();
+      branch = userMap[targetUser].branch || "Naraina Vihar";
       const pStr = userMap[targetUser].perms;
       perms = pStr.split(',').map(s=>s.trim()).filter(Boolean);
   }
@@ -260,6 +258,7 @@ function getAllData(username) {
          for(let i=1; i<uData.length; i++) {
              if(String(uData[i][0]).trim().toLowerCase() === targetUser) {
                  role = uData[i][3];
+                 branch = uData[i][5] || "Naraina Vihar";
                  perms = (uData[i][4]||"").split(',').map(s=>s.trim()).filter(Boolean);
                  break;
              }
@@ -493,8 +492,10 @@ function getAllData(username) {
     }
 
     const category = "Normal";
-    const dateVal = getNormDate(r[1]);
-    if(dateVal === todayTime) inboundTodayCount++;
+    // ⚡ Bolt Fix: Shift Logic using Timestamp (Col J / 9)
+    // Explicitly define timestamp for safety to avoid ReferenceError
+    const entryTs = r[9] instanceof Date ? r[9].getTime() : 0;
+    if (entryTs >= shiftStartTime) inboundTodayCount++;
 
     const holdStatus = r[27];
     const paperStatus = r[16];
@@ -610,6 +611,7 @@ function getAllData(username) {
   return jsonResponse("success", "OK", {
     role: role,
     perms: perms,
+    branch: branch,
     static: staticData,
     analytics: { branchPerf: branchPerf, staffPerf: staffPerf },
     stats: { inbound: inboundTodayCount, auto: pendingAuto.length, paper: pendingPaper.length, requests: reqList.length, holdings: holdings.length },
@@ -964,7 +966,7 @@ function handleSubmit(body){
       autoStatus, autoDoer, "", "", "", "", body.netNo,
       body.payTotal, body.payPaid, body.payPending, "", "", body.paperwork,
       holdStatus, holdReason, "", (holdStatus==="On Hold" ? body.username : ""), body.payeeName, body.payeeContact,
-      category, "" // Col 33 (AH) = Category, 34 (AI) = Hold Date (Empty initially)
+      category, "", body.branch || "Naraina Vihar" // Col 33 (AH)=Cat, 34 (AI)=HoldDate, 35 (AJ)=Branch
   ];
 
   if(category === "Normal") {
@@ -1387,15 +1389,16 @@ function handleLogin(u,p){
         const storedVal = d[i][1];
         const storedStr = String(storedVal).trim();
 
+        const br = d[i][5] || "Naraina Vihar";
         // 1. Check Hash Match
         if (storedStr === hashedInput) {
-             return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
+             return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3],branch:br});
         }
 
         // 2. Check Plain Text Match
         if (storedStr === inputStr) {
             s.getRange(i+1, 2).setValue(hashedInput);
-            return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3]});
+            return jsonResponse("success","OK",{username:d[i][0],name:d[i][2],role:d[i][3],branch:br});
         }
     }
   }
