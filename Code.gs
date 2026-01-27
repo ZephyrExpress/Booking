@@ -36,6 +36,7 @@ function doPost(e) {
   } catch(e) {}
 
   // ⚡ CRITICAL: Login must NEVER block
+  // Moved to the very top to ensure no lock delays
   if (act === "login") return handleLogin(body.username, body.password);
 
   const lock = LockService.getScriptLock();
@@ -220,8 +221,12 @@ function getAllData(username) {
       };
       let staff = [];
       try {
-        const remoteSS = getTaskSS();
-        const stSh = remoteSS ? remoteSS.getSheetByName("Subordinate Staff") : null;
+        // ⚡ Bolt Fix: Look for Staff sheet in local SS first, then remote
+        let stSh = ss.getSheetByName("Subordinate Staff");
+        if (!stSh) {
+            const remoteSS = getTaskSS();
+            stSh = remoteSS ? remoteSS.getSheetByName("Subordinate Staff") : null;
+        }
         if(stSh) staff = stSh.getRange(2,1,50).getValues().flat().filter(String);
       } catch(e) { console.error(e); }
 
@@ -486,12 +491,18 @@ function getAllData(username) {
              const branch = String(r[35] || "Unknown").trim();
              if (branch) branchMap[branch] = (branchMap[branch] || 0) + 1;
 
-             // Staff Performance
+             // Staff Performance (With Whitelist Filter)
+             const allowedStaff = (staticData.staff || []).map(s => String(s).trim().toLowerCase());
+
              const autoDoer = String(r[15]).trim();
-             if (autoDoer) staffMap[autoDoer] = (staffMap[autoDoer] || 0) + 1;
+             if (autoDoer && allowedStaff.includes(autoDoer.toLowerCase())) {
+                 staffMap[autoDoer] = (staffMap[autoDoer] || 0) + 1;
+             }
 
              const assignee = String(r[17]).trim();
-             if (assignee) staffMap[assignee] = (staffMap[assignee] || 0) + 1;
+             if (assignee && allowedStaff.includes(assignee.toLowerCase())) {
+                 staffMap[assignee] = (staffMap[assignee] || 0) + 1;
+             }
         }
 
         const category = "Normal";
