@@ -465,42 +465,41 @@ function getAllData(username) {
   // Skip old completed shipments to reduce payload size.
 
   data.forEach(r => {
-    const rId = String(r[0]).replace(/'/g, "").trim();
-    if(rId) allAwbs.push(rId);
+    try {
+        const rId = String(r[0]).replace(/'/g, "").trim();
+        if(rId) allAwbs.push(rId);
 
-    // ⚡ Bolt Analytics: Check Timestamp (Col J / 9)
-    const ts = r[9] instanceof Date ? r[9].getTime() : 0;
-    if (ts >= shiftStartTime) {
-         // Branch Performance (Col AJ / 35)
-         const branch = String(r[35] || "Unknown").trim();
-         if (branch) branchMap[branch] = (branchMap[branch] || 0) + 1;
+        // ⚡ Bolt Fix: Robust Date Parsing for Timestamp (Col J / 9)
+        let ts = 0;
+        if (r[9] instanceof Date) {
+            ts = r[9].getTime();
+        } else if (r[9]) {
+            const parsed = new Date(r[9]);
+            if (!isNaN(parsed.getTime())) ts = parsed.getTime();
+        }
 
-         // Staff Performance (Automation Doer Col P/15 + Paperwork Assignee Col R/17)
-         // Note: We count ACTIONS, so one shipment could credit two people if both actions happened today.
-         // However, we only have the "Entry" timestamp here readily available in `ts`.
-         // Ideally we check Action Dates, but for simplicity/performance in this structure (since we don't store separate action logs per row easily accessible),
-         // we credit the "Doer" if the shipment ENTRY is today. This is a proxy.
-         // If precise "Action Time" is needed, we'd need more columns.
-         // Given "Top staff who did most automation", assuming "on today's shipments" or "actions done today".
-         // Using Entry Time is the standard proxy in this system.
+        if (ts >= shiftStartTime) {
+             inboundTodayCount++; // Count for stats
 
-         const autoDoer = String(r[15]).trim();
-         if (autoDoer) staffMap[autoDoer] = (staffMap[autoDoer] || 0) + 1;
+             // Branch Performance (Col AJ / 35)
+             const branch = String(r[35] || "Unknown").trim();
+             if (branch) branchMap[branch] = (branchMap[branch] || 0) + 1;
 
-         const assignee = String(r[17]).trim();
-         if (assignee) staffMap[assignee] = (staffMap[assignee] || 0) + 1;
-    }
+             // Staff Performance
+             const autoDoer = String(r[15]).trim();
+             if (autoDoer) staffMap[autoDoer] = (staffMap[autoDoer] || 0) + 1;
 
-    const category = "Normal";
-    // ⚡ Bolt Fix: Shift Logic using Timestamp (Col J / 9)
-    // Explicitly define timestamp for safety to avoid ReferenceError
-    const entryTs = r[9] instanceof Date ? r[9].getTime() : 0;
-    if (entryTs >= shiftStartTime) inboundTodayCount++;
+             const assignee = String(r[17]).trim();
+             if (assignee) staffMap[assignee] = (staffMap[assignee] || 0) + 1;
+        }
 
-    const holdStatus = r[27];
-    const paperStatus = r[16];
-    const autoStatus = r[14];
-    const batchNo = r[24];
+        const category = "Normal";
+
+        // ⚡ Bolt Fix: Robust Status Trimming
+        const holdStatus = String(r[27] || "").trim();
+        const paperStatus = String(r[16] || "").trim();
+        const autoStatus = String(r[14] || "").trim();
+        const batchNo = r[24];
     const manifestDate = r[25] instanceof Date ? r[25].toLocaleDateString() : String(r[25]);
 
     // Check if Active
@@ -562,6 +561,7 @@ function getAllData(username) {
             }
         }
     }
+    } catch(e){ console.error("Row Processing Error", e); }
   });
 
   // Process Advance/Direct Data (Advance_Records Sheet)
