@@ -349,11 +349,19 @@
                  <div class="col-md-4"><label class="fun-label">Dox/Ndox *</label>
                     <select id="f_type" class="form-select fun-input" onchange="chkDox()" required><option value="" selected disabled>Select...</option><option>Dox</option><option>Ndox</option></select>
                  </div>
-                 <div class="col-md-4"><label class="fun-label">Network *</label>
+                 <div class="col-md-3"><label class="fun-label">Network *</label>
                     <select id="f_net" class="form-select fun-input" required><option value="" selected disabled>Select...</option></select>
                  </div>
-                 <div class="col-md-4"><label class="fun-label">Client *</label><select id="f_client" required></select></div>
-                 <div class="col-md-4"><label class="fun-label">Destination *</label><select id="f_dest" required></select></div>
+                 <div class="col-md-3">
+                    <label class="fun-label">Branch *</label>
+                    <select id="f_branch" class="form-select fun-input" required>
+                        <option value="Naraina Vihar">Naraina Vihar</option>
+                        <option value="Mahipalpur">Mahipalpur</option>
+                        <option value="Santnagar">Santnagar</option>
+                    </select>
+                 </div>
+                 <div class="col-md-3"><label class="fun-label">Client *</label><select id="f_client" required></select></div>
+                 <div class="col-md-3"><label class="fun-label">Destination *</label><select id="f_dest" required></select></div>
                </div>
 
                <div class="mb-4 p-3 border rounded bg-white">
@@ -934,7 +942,7 @@ window.d_searchHoldings = debounce(() => searchHoldings(), 300);
 const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbwBjoV46m3wTuitwgaTGunQd9KvltP27be_oKn_6ZeSAwK7qna1B99AxtEu44QR_98EGQ/exec";
 let API_URL = localStorage.getItem("ZEPHYR_API_URL") || DEFAULT_API_URL;
 
-let curUser="", curRole="", curReassign={}, curPerms=[];
+let curUser="", curRole="", curReassign={}, curPerms=[], curBranch="";
 let lastReqCount = 0;
 let selectedHoldAwb = "";
 let html5QrcodeScanner = null;
@@ -1017,7 +1025,7 @@ window.doLogin=async function(){
   showSpin(true); const u=document.getElementById('uIn').value, p=document.getElementById('pIn').value;
   const r=await callApi({action:"login",username:u,password:p});
   if(r.result==="success"){
-     curUser=r.username; curRole=r.role;
+     curUser=r.username; curRole=r.role; curBranch=r.branch||"Naraina Vihar";
      document.getElementById('userDisplay').textContent=r.name;
      safeDisplay('loginSection', 'none');
      safeDisplay('appSection', 'flex');
@@ -1050,6 +1058,7 @@ async function syncData(init=false){
 
         window.APP_DATA = r;
         if(r.role) curRole = r.role;
+        if(r.branch) curBranch = r.branch;
         curPerms = r.perms || [];
 
         if(curRole === 'Admin' || curRole === 'Owner') {
@@ -1829,6 +1838,7 @@ window.switchTab=function(t){
 function initForms(){
    const dd=window.APP_DATA.static.dropdowns;
    if(dd) { fillSel('f_net', dd.networks); window.tomInstances.client = new TomSelect("#f_client",{create:false, maxOptions: null, dropdownParent:'body', placeholder:"Select Client..."}); window.tomInstances.dest = new TomSelect("#f_dest",{create:false, maxOptions: null, dropdownParent:'body', placeholder:"Select Destination..."}); updDd(); }
+   const brEl = document.getElementById('f_branch'); if(brEl) brEl.value = curBranch || "Naraina Vihar";
 }
 function updDd(){
    if(!window.APP_DATA.static) return;
@@ -1885,7 +1895,8 @@ document.getElementById('shipForm').onsubmit = async (e)=>{
        if(hiddenNet) netNo = hiddenNet;
    }
 
-   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', '), category: cat, netNo: netNo, isAutomationMode: isAuto });
+   const branch = document.getElementById('f_branch').value;
+   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', '), category: cat, netNo: netNo, isAutomationMode: isAuto, branch: branch });
    showSpin(false); if(r.result==='success') { toast("Entry Saved"); resetForm(); syncData(false); } else alert(r.message);
 };
 
@@ -1913,6 +1924,8 @@ function resetForm(){
     document.getElementById('f_payeeContact').value = "";
     if(window.tomInstances.client) window.tomInstances.client.clear();
     if(window.tomInstances.dest) window.tomInstances.dest.clear();
+
+    const brEl = document.getElementById('f_branch'); if(brEl) brEl.value = curBranch || "Naraina Vihar";
 
     // ⚡ Bolt Fix: Robust Date Setting (YYYY-MM-DD)
     // Default to Today for Inbound/Advance
