@@ -163,7 +163,7 @@
     .clickable-cell { cursor: pointer; color: var(--brand-blue); font-weight: 600; text-decoration: underline; }
     .clickable-cell:hover { color: var(--brand-red); }
     .ts-dropdown, .ts-wrapper.single.input-active .ts-control { z-index: 10000 !important; }
-    .ts-wrapper { width: 100% !important; }
+    .ts-wrapper { width: 100% !important; min-height: 38px; }
     .btn-primary { background-color: var(--brand-blue) !important; border-color: var(--brand-blue) !important; color: white !important; }
     .btn-danger { background-color: var(--brand-red) !important; border-color: var(--brand-red) !important; color: white !important; }
     .btn-warning { background-color: var(--brand-yellow) !important; border-color: var(--brand-yellow) !important; color: black !important; }
@@ -904,7 +904,7 @@
 // =======================================================
 const MOCK_MODE = false;
 
-// ⚡ Bolt: Global Safe Display Helper
+// ⚡ Bolt: Global Safe Display Helper (Prevents Null Style Crash)
 function safeDisplay(id, val) {
     const el = document.getElementById(id);
     if(el) el.style.display = val;
@@ -1807,7 +1807,7 @@ window.switchTab=function(t){
    const navEl = document.getElementById('nav-'+t);
    if(navEl) navEl.classList.add('active');
 
-   document.querySelectorAll('.tab-view').forEach(e=>e.style.display='none');
+   document.querySelectorAll('.tab-view').forEach(e=>safeDisplay(e.id, 'none'));
    safeDisplay(t+'-tab', 'block');
 
    // ⚡ Bolt Fix: Reset Inbound Entry Mode to Normal on Tab Switch
