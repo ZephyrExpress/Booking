@@ -369,7 +369,7 @@
                   <label class="fun-label d-block mb-2">Shipment Type *</label>
                   <div class="d-flex gap-4">
                       <div class="form-check"><input class="form-check-input" type="checkbox" name="stype" value="Regular" id="st_reg" onchange="chkStype(this)" checked><label class="form-check-label fw-bold" for="st_reg">Regular</label></div>
-                      <div class="form-check"><input class="form-check-input" type="checkbox" name="stype" value="CBV 5" id="st_cbv" onchange="chkStype(this)"><label class="form-check-label fw-bold" for="st_cbv">CBV 5</label></div>
+                      <div class="form-check"><input class="form-check-input" type="checkbox" name="stype" value="CSB 5" id="st_csb" onchange="chkStype(this)"><label class="form-check-label fw-bold" for="st_csb">CSB 5</label></div>
                       <div class="form-check"><input class="form-check-input" type="checkbox" name="stype" value="Commercial" id="st_com" onchange="chkStype(this)"><label class="form-check-label fw-bold" for="st_com">Commercial</label></div>
                   </div>
                </div>
@@ -2616,13 +2616,16 @@ window.chkStype = function(el) {
         document.querySelectorAll('input[name="stype"]').forEach(c => { if(c!==el) c.checked=false; });
         const f = document.getElementById('f_awb');
         if(f && f.value) {
-            let val = f.value.replace(/-FRT|-CBV|-COM/g, ''); // Clean existing
+            let val = f.value.replace(/-FRT| CSBV|-COM/g, ''); // Clean existing suffixes
 
             if(el.value === "Regular") {
                 f.value = val;
             }
-            else if(el.value === "CBV 5" || el.value === "Commercial") {
+            else if(el.value === "Commercial") {
                 f.value = val + "-FRT";
+            }
+            else if(el.value === "CSB 5") {
+                f.value = val + " CSBV";
             }
         }
     }
