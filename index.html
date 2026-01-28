@@ -934,6 +934,26 @@ window.checkDuplicateAwb = function(el) {
     }
 }
 
+// ⚡ Bolt: User Busy Logic (Prevents Auto-Sync from wiping data)
+function isUserBusy() {
+    // 1. Check if typing
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) {
+        return true;
+    }
+
+    // 2. Check Admin Task Dropdowns (Critical for Bulk Assign)
+    const adminSelects = document.querySelectorAll('select[id^="adm_as_"]');
+    for (let s of adminSelects) {
+        if (s.value !== "") return true; // User has selected a staff member but not saved yet
+    }
+
+    // 3. Check Checkboxes (Manifest/Receivers)
+    if (document.querySelector('input[type="checkbox"]:checked')) return true;
+
+    return false;
+}
+
 // Debounced wrappers
 window.d_renderManifest = debounce(() => renderManifest(), 300);
 window.d_renderDailyManifest = debounce(() => renderDailyManifest(), 300);
@@ -975,7 +995,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
   // Auto Sync (1 min)
   setInterval(() => {
       if (curUser && document.getElementById('appSection').style.display !== 'none') {
-          syncData(false);
+          if (isUserBusy()) {
+              console.log("Auto-sync skipped: User is busy.");
+          } else {
+              syncData(false);
+          }
       }
   }, 60000);
 });
