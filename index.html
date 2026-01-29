@@ -291,8 +291,7 @@
            <ul class="nav nav-pills nav-fill mb-3 p-2 bg-light rounded" id="inboundModeTabs">
                <li class="nav-item"><button class="nav-link active fw-bold" onclick="switchInboundMode('Normal')">Normal</button></li>
                <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Advance')">Advance</button></li>
-               <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Connected')">Connected by Client</button></li>
-               <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Automation')">Automation by Client</button></li>
+               <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Auto')">Auto Inbound</button></li>
            </ul>
 
            <div class="fun-header">
@@ -306,23 +305,25 @@
                <input type="hidden" id="f_active_mode" value="Normal">
                <input type="hidden" id="f_category" value="Normal">
 
-               <!-- Connected Mode View -->
-               <div id="view_connected" style="display:none;" class="text-center py-5">
+               <!-- Auto Inbound Unified View -->
+               <div id="view_auto_inbound" style="display:none;" class="text-center py-5">
                    <h4 class="text-primary fw-bold mb-4">Scan Network Number</h4>
-                   <div class="input-group input-group-lg mx-auto" style="max-width:500px;">
-                       <input id="conn_net_no" class="form-control" placeholder="Scan or Enter Network No..." onchange="handleConnectedScan(this)">
-                       <button type="button" class="btn btn-dark" onclick="startScanner('conn_net_no')"><i class="bi bi-qr-code-scan"></i></button>
+                   <div class="input-group input-group-lg mx-auto mb-4" style="max-width:500px;">
+                       <input id="auto_inbound_input" class="form-control" placeholder="Scan or Enter Network No...">
+                       <button type="button" class="btn btn-dark" onclick="startScanner('auto_inbound_input')"><i class="bi bi-qr-code-scan"></i></button>
                    </div>
-                   <div id="conn_result" class="mt-4"></div>
-               </div>
 
-               <!-- Automation Mode Search -->
-               <div id="view_automation_search" style="display:none;" class="text-center py-4 border-bottom mb-4">
-                   <h5 class="text-info fw-bold mb-3">Lookup Shipment</h5>
-                   <div class="input-group input-group-lg mx-auto" style="max-width:500px;">
-                       <input id="auto_net_no" class="form-control" placeholder="Scan Network No..." onchange="handleAutomationScan(this)">
-                       <button type="button" class="btn btn-dark" onclick="startScanner('auto_net_no')"><i class="bi bi-qr-code-scan"></i></button>
+                   <div class="d-flex justify-content-center gap-3">
+                       <button type="button" class="btn btn-lg btn-success fw-bold px-4" onclick="handleConnectedScan(document.getElementById('auto_inbound_input'))">
+                           <i class="bi bi-arrow-down-circle me-2"></i>Process as Connected
+                       </button>
+                       <button type="button" class="btn btn-lg btn-info text-white fw-bold px-4" onclick="handleAutomationScan(document.getElementById('auto_inbound_input'))">
+                           <i class="bi bi-robot me-2"></i>Process as Automation
+                       </button>
                    </div>
+
+                   <!-- Result container for Connected Scan messages -->
+                   <div id="conn_result" class="mt-4"></div>
                </div>
 
                <!-- Main Form Fields (Hidden for Connected) -->
@@ -2095,8 +2096,7 @@ window.switchInboundMode = function(mode) {
 
     // Reset Views
     safeDisplay('form_main_fields', 'none');
-    safeDisplay('view_connected', 'none');
-    safeDisplay('view_automation_search', 'none');
+    safeDisplay('view_auto_inbound', 'none');
 
     // Reset Form
     document.getElementById('shipForm').reset();
@@ -2115,15 +2115,10 @@ window.switchInboundMode = function(mode) {
         const d = String(today.getDate()).padStart(2, '0');
         document.getElementById('f_date').value = `${y}-${m}-${d}`;
     }
-    else if(mode === 'Connected') {
-        safeDisplay('view_connected', 'block');
-        setTimeout(()=>document.getElementById('conn_net_no').focus(), 100);
-    }
-    else if(mode === 'Automation') {
-        safeDisplay('view_automation_search', 'block');
-        // Show main form but hide/disable some parts? No, show form ONLY after search found
-        // Logic: Scan -> Fill Form -> Show Form for Edit -> Submit
-        setTimeout(()=>document.getElementById('auto_net_no').focus(), 100);
+    else if(mode === 'Auto') {
+        safeDisplay('view_auto_inbound', 'block');
+        document.getElementById('inboundTitle').textContent = "Auto Inbound";
+        setTimeout(()=>document.getElementById('auto_inbound_input').focus(), 100);
     }
 }
 
