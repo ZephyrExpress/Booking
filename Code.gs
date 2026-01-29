@@ -35,16 +35,17 @@ function doPost(e) {
     act = String(act || "").trim();
   } catch(e) {}
 
-  // ⚡ CRITICAL: Login must NEVER block
+  // ⚡ CRITICAL: Login & Data Refresh must NEVER block
   // Moved to the very top to ensure no lock delays
   if (act === "login") return handleLogin(body.username, body.password);
+  if (act === "getAllData" || act === "refresh") return getAllData(body.user);
 
   const lock = LockService.getScriptLock();
   let hasLock = false;
 
   try {
     // ⚡ Bolt Optimization: Only lock for Write operations to prevent 'System Busy' on concurrent reads
-    const READ_ACTIONS = ['getAllData', 'getAdminRequests', 'getUsers', 'getRecent', 'getShipmentDetails', 'getBillingData'];
+    const READ_ACTIONS = ['getAdminRequests', 'getUsers', 'getRecent', 'getShipmentDetails', 'getBillingData'];
     if (!READ_ACTIONS.includes(act)) {
         // Only try to lock if it's NOT a read action.
         if (!lock.tryLock(10000)) return jsonResponse("error", "System Busy");
@@ -52,7 +53,6 @@ function doPost(e) {
     }
 
     // --- 2. DATA RETRIEVAL ---
-    if (act === 'getAllData') return getAllData(body.user);
     if (act === 'getAdminRequests') return getAdminRequests();
     if (act === 'getUsers') return getUsersJson(body.user);
     if (act === 'getRecent') return getRecentShipments();
@@ -483,7 +483,7 @@ function getAllData(username) {
             if (!isNaN(parsed.getTime())) ts = parsed.getTime();
         }
 
-        // ⚡ Bolt: Analytics Filter (Strict 9:00 AM Shift Logic)
+        // --- LOGIC A (Analytics): ONLY calculate if Entry is Today (>= 9:00 AM) ---
         if (ts >= shiftStartTime) {
              inboundTodayCount++; // Count for stats
 
@@ -505,6 +505,7 @@ function getAllData(username) {
              }
         }
 
+        // --- LOGIC B (Workflows): Populating Tables (ALL Data - No Date Filter) ---
         const category = "Normal";
 
         // ⚡ Bolt Fix: Robust Status Trimming
@@ -512,68 +513,66 @@ function getAllData(username) {
         const paperStatus = String(r[16] || "").trim();
         const autoStatus = String(r[14] || "").trim();
         const batchNo = r[24];
-    const manifestDate = r[25] instanceof Date ? r[25].toLocaleDateString() : String(r[25]);
-    const dateVal = r[25] instanceof Date ? getNormDate(r[25]) : 0;
+        const manifestDate = r[25] instanceof Date ? r[25].toLocaleDateString() : String(r[25]);
+        const dateVal = r[25] instanceof Date ? getNormDate(r[25]) : 0;
 
-    // Check if Active
-    const isHold = holdStatus === "On Hold";
-    const isRTO = holdStatus === "RTO";
-    const isPending = (autoStatus === "Pending" || autoStatus === "") || (paperStatus !== "Completed");
+        // Check if Active
+        const isHold = holdStatus === "On Hold";
+        const isRTO = holdStatus === "RTO";
+        const isPending = (autoStatus === "Pending" || autoStatus === "") || (paperStatus !== "Completed");
 
-    // ⚡ Bolt Fix: Include items that are Completed but NOT yet in a batch (Pending Manifest)
-    // Also include items manifested TODAY.
-    const isPendingManifest = (paperStatus === "Completed" && !batchNo);
-    const isTodayManifest = (paperStatus === "Completed" && (manifestDate === todayStr || dateVal === todayTime));
+        // ⚡ Bolt Fix: Include items that are Completed but NOT yet in a batch (Pending Manifest)
+        // Also include items manifested TODAY.
+        const isPendingManifest = (paperStatus === "Completed" && !batchNo);
+        const isTodayManifest = (paperStatus === "Completed" && (manifestDate === todayStr || dateVal === todayTime));
 
-    // if (isRTO) return; // Allow RTO in data for search, filter in UI active views
+        if (isHold || isPending || isPendingManifest || isTodayManifest || isRTO) {
+            const item = {
+              id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
+              details: `${r[6]} Boxes | ${num(r[12])} Kg`,
+              user: r[8], autoDoer: r[15], assignee: r[17], assigner: r[18],
+              actWgt: num(r[10]), volWgt: num(r[11]), chgWgt: num(r[12]), type: r[2], boxes: r[6], extra: r[7], rem: r[13],
+              netNo: r[20], payTotal: num(r[21]), payPaid: num(r[22]), payPending: num(r[23]),
+              batchNo: batchNo, manifestDate: manifestDate, paperwork: r[26],
+              holdStatus: holdStatus, holdReason: r[28], holdRem: r[29], heldBy: r[30],
+              category: category, holdDate: r[34],
+              paperStatus: r[16] // ⚡ Bolt Fix: Explicitly store paperStatus for filtering
+            };
 
-    if (isHold || isPending || isPendingManifest || isTodayManifest || isRTO) {
-        const item = {
-          id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
-          details: `${r[6]} Boxes | ${num(r[12])} Kg`,
-          user: r[8], autoDoer: r[15], assignee: r[17], assigner: r[18],
-          actWgt: num(r[10]), volWgt: num(r[11]), chgWgt: num(r[12]), type: r[2], boxes: r[6], extra: r[7], rem: r[13],
-          netNo: r[20], payTotal: num(r[21]), payPaid: num(r[22]), payPending: num(r[23]),
-          batchNo: batchNo, manifestDate: manifestDate, paperwork: r[26],
-          holdStatus: holdStatus, holdReason: r[28], holdRem: r[29], heldBy: r[30],
-          category: category, holdDate: r[34],
-          paperStatus: r[16] // ⚡ Bolt Fix: Explicitly store paperStatus for filtering
-        };
+            if (isHold) {
+                holdings.push(item);
+            } else {
+                // ⚡ Bolt Fix: Trim inputs to prevent "invisible" tasks due to whitespace
+                const assignee = String(r[17]).trim().toLowerCase();
+                const autoBy = String(r[15]).trim().toLowerCase();
+                // const entryUser = String(r[8]).trim().toLowerCase(); // Not used for status logic anymore
 
-        if (isHold) {
-            holdings.push(item);
-        } else {
-            // ⚡ Bolt Fix: Trim inputs to prevent "invisible" tasks due to whitespace
-            const assignee = String(r[17]).trim().toLowerCase();
-            const autoBy = String(r[15]).trim().toLowerCase();
-            // const entryUser = String(r[8]).trim().toLowerCase(); // Not used for status logic anymore
+                if (paperStatus === "Completed") {
+                    completedManifest.push(item);
+                }
+                // ⚡ Bolt Fix: Prioritize Auto Doer (Col P) presence.
+                // If Auto Doer is present (Col P), treat as Done even if Status is Pending.
+                // Reverted fallback to Entry User to ensure Pending Automation list is populated correctly.
+                else if ((autoStatus === "Pending" || autoStatus === "") && !autoBy) {
+                    pendingAuto.push(item);
+                }
+                else {
+                    pendingPaper.push(item);
+                    // ⚡ Bolt Logic: Staff see ONLY tasks they automated. Admin see all (handled in adminPool).
+                    // Broadened check to include Name to prevent missing tasks.
+                    const isMyAuto = (autoBy === targetUser) || (targetName && autoBy === targetName);
 
-            if (paperStatus === "Completed") {
-                completedManifest.push(item);
-            }
-            // ⚡ Bolt Fix: Prioritize Auto Doer (Col P) presence.
-            // If Auto Doer is present (Col P), treat as Done even if Status is Pending.
-            // Reverted fallback to Entry User to ensure Pending Automation list is populated correctly.
-            else if ((autoStatus === "Pending" || autoStatus === "") && !autoBy) {
-                pendingAuto.push(item);
-            }
-            else {
-                pendingPaper.push(item);
-                // ⚡ Bolt Logic: Staff see ONLY tasks they automated. Admin see all (handled in adminPool).
-                // Broadened check to include Name to prevent missing tasks.
-                const isMyAuto = (autoBy === targetUser) || (targetName && autoBy === targetName);
+                    // ⚡ Bolt Fix: Staff see only tasks they Automated (Col P/I). Unassigned check uses PaperStatus (Col Q).
+                    // If PaperStatus is empty or Pending (not Assigned), show in pool.
+                    // Robust check: trim and lowercase. Also check if assignee is empty (fallback for inconsistent data).
+                    const paperStatusNorm = String(paperStatus || "").trim().toLowerCase();
+                    const isUnassigned = (paperStatusNorm !== "assigned") || (assignee === "");
 
-                // ⚡ Bolt Fix: Staff see only tasks they Automated (Col P/I). Unassigned check uses PaperStatus (Col Q).
-                // If PaperStatus is empty or Pending (not Assigned), show in pool.
-                // Robust check: trim and lowercase. Also check if assignee is empty (fallback for inconsistent data).
-                const paperStatusNorm = String(paperStatus || "").trim().toLowerCase();
-                const isUnassigned = (paperStatusNorm !== "assigned") || (assignee === "");
-
-                if (isMyAuto && isUnassigned) toAssign.push(item);
-                if (assignee === targetUser) myToDo.push({...item, subtitle: `Assigned by ${r[18]}`});
+                    if (isMyAuto && isUnassigned) toAssign.push(item);
+                    if (assignee === targetUser) myToDo.push({...item, subtitle: `Assigned by ${r[18]}`});
+                }
             }
         }
-    }
     } catch(e){ console.error("Row Processing Error", e); }
   });
 
