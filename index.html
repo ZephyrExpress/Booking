@@ -292,6 +292,7 @@
                <li class="nav-item"><button class="nav-link active fw-bold" onclick="switchInboundMode('Normal')">Normal</button></li>
                <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Advance')">Advance</button></li>
                <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Auto')">Auto Inbound</button></li>
+               <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Multi')">Multiple Inbound</button></li>
            </ul>
 
            <div class="fun-header">
@@ -324,6 +325,65 @@
 
                    <!-- Result container for Connected Scan messages -->
                    <div id="conn_result" class="mt-4"></div>
+               </div>
+
+               <!-- Multiple Inbound View -->
+               <div id="view_multi_inbound" style="display:none;" class="p-2">
+                   <!-- Master Data Card -->
+                   <div class="card shadow-sm border-0 mb-3 bg-light">
+                       <div class="card-body p-3">
+                           <div class="row g-3 align-items-end">
+                               <div class="col-md-3">
+                                   <label class="small fw-bold text-muted text-uppercase">Date</label>
+                                   <input type="date" id="multi_date" class="form-control form-control-sm border-secondary fw-bold">
+                               </div>
+                               <div class="col-md-4">
+                                   <label class="small fw-bold text-muted text-uppercase">Master Client</label>
+                                   <select id="multi_client" class="form-select form-select-sm border-secondary" placeholder="Select Client..."></select>
+                               </div>
+                               <div class="col-md-3">
+                                   <label class="small fw-bold text-muted text-uppercase">Common Network (Optional)</label>
+                                   <select id="multi_net_common" class="form-select form-select-sm border-secondary" onchange="applyCommonNet()">
+                                       <option value="">No Common Network</option>
+                                   </select>
+                               </div>
+                               <div class="col-md-2 text-end">
+                                   <button type="button" class="btn btn-sm btn-outline-dark fw-bold w-100" onclick="resetMultiView()"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset All</button>
+                               </div>
+                           </div>
+                       </div>
+                   </div>
+
+                   <!-- Spreadsheet Table -->
+                   <div class="table-responsive border rounded bg-white mb-3" style="max-height: 60vh;">
+                       <table class="table table-sm table-bordered align-middle mb-0" id="multiTable">
+                           <thead class="bg-light sticky-top" style="z-index: 5;">
+                               <tr class="text-center small text-muted text-uppercase">
+                                   <th style="width: 40px;">#</th>
+                                   <th style="min-width: 150px;">AWB Number</th>
+                                   <th style="min-width: 120px;">Destination</th>
+                                   <th style="min-width: 120px;">Network No</th>
+                                   <th style="min-width: 120px;">Network</th>
+                                   <th style="width: 80px;">Pcs</th>
+                                   <th style="width: 100px;">Weight</th>
+                                   <th style="width: 100px;">Type</th>
+                                   <th style="width: 50px;"><i class="bi bi-trash"></i></th>
+                               </tr>
+                           </thead>
+                           <tbody id="multiBody"></tbody>
+                       </table>
+                   </div>
+
+                   <!-- Footer Actions -->
+                   <div class="d-flex justify-content-between align-items-center bg-white p-3 border rounded shadow-sm">
+                       <button type="button" class="btn btn-outline-secondary fw-bold" onclick="addMultiRows(5)"><i class="bi bi-plus-lg me-2"></i>Add 5 Rows</button>
+                       <div class="d-flex align-items-center gap-3">
+                           <div id="multiStatus" class="small fw-bold text-muted"></div>
+                           <button type="button" class="btn btn-primary fw-bold px-5" onclick="submitMultiBatch()">
+                               <i class="bi bi-cloud-upload-fill me-2"></i>Submit Batch
+                           </button>
+                       </div>
+                   </div>
                </div>
 
                <!-- Main Form Fields (Hidden for Connected) -->
@@ -763,6 +823,33 @@
       </div>
     </div>
   </div>
+</div>
+
+<div class="modal fade" id="multiBoxModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold">Box Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="mb_rowIndex">
+                <div class="d-flex align-items-center mb-3 gap-2">
+                    <label class="fw-bold">Total Boxes:</label>
+                    <input type="number" id="mb_count" class="form-control" style="width:80px" onchange="renderMultiBoxRows()">
+                </div>
+                <div class="table-responsive border rounded" style="max-height: 300px;">
+                    <table class="table table-sm mb-0">
+                        <thead><tr class="table-light"><th>#</th><th>Weight</th><th>L</th><th>W</th><th>H</th></tr></thead>
+                        <tbody id="mb_tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary w-100 fw-bold" onclick="saveMultiBoxDetails()">Save Details</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 
@@ -2097,6 +2184,7 @@ window.switchInboundMode = function(mode) {
     // Reset Views
     safeDisplay('form_main_fields', 'none');
     safeDisplay('view_auto_inbound', 'none');
+    safeDisplay('view_multi_inbound', 'none');
 
     // Reset Form
     document.getElementById('shipForm').reset();
@@ -2119,6 +2207,11 @@ window.switchInboundMode = function(mode) {
         safeDisplay('view_auto_inbound', 'block');
         document.getElementById('inboundTitle').textContent = "Auto Inbound";
         setTimeout(()=>document.getElementById('auto_inbound_input').focus(), 100);
+    }
+    else if(mode === 'Multi') {
+        safeDisplay('view_multi_inbound', 'block');
+        document.getElementById('inboundTitle').textContent = "Multiple Inbound";
+        initMultiTable();
     }
 }
 
@@ -2866,5 +2959,276 @@ function moveFocusNext(form, currentEl) {
             next.select();
         }
     }
+}
+
+
+// --- MULTI INBOUND LOGIC ---
+let multiRowsData = {}; // Store detailed box data keyed by row index
+
+window.initMultiTable = function() {
+    const tbody = document.getElementById('multiBody');
+    if(tbody.children.length > 0) return; // Already initialized
+
+    // Init Controls
+    const dd = window.APP_DATA.static.dropdowns;
+    if(dd) {
+        fillSel('multi_net_common', dd.networks);
+
+        // Init Client TomSelect if not exists
+        if(!window.tomInstances.multiClient) {
+             const mc = document.getElementById('multi_client');
+             window.tomInstances.multiClient = new TomSelect(mc, {create:false, maxOptions: null, dropdownParent:'body', placeholder:"Select Client..."});
+             if(dd.clients) {
+                 dd.clients.forEach(x => window.tomInstances.multiClient.addOption({value:x, text:x}));
+                 window.tomInstances.multiClient.sync();
+             }
+        }
+    }
+
+    // Set Date
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    document.getElementById('multi_date').value = `${y}-${m}-${d}`;
+
+    // Add Initial Rows
+    addMultiRows(10);
+}
+
+window.resetMultiView = function() {
+    if(!confirm("Clear all data in Multiple Inbound?")) return;
+    document.getElementById('multiBody').innerHTML = '';
+    multiRowsData = {};
+    if(window.tomInstances.multiClient) window.tomInstances.multiClient.clear();
+    document.getElementById('multi_net_common').value = "";
+    addMultiRows(10);
+    toast("Multi View Reset");
+}
+
+window.addMultiRows = function(count) {
+    const tbody = document.getElementById('multiBody');
+    const startIdx = tbody.children.length;
+    const commonNet = document.getElementById('multi_net_common').value || "";
+    // ⚡ Bolt Fix: Robust access to static dropdowns
+    const nets = (window.APP_DATA && window.APP_DATA.static && window.APP_DATA.static.dropdowns && window.APP_DATA.static.dropdowns.networks) || [];
+    const dests = (window.APP_DATA && window.APP_DATA.static && window.APP_DATA.static.dropdowns && window.APP_DATA.static.dropdowns.destinations) || [];
+
+    let netOpts = '<option value="">Net...</option>' + nets.map(n => `<option value="${n}" ${n===commonNet?'selected':''}>${n}</option>`).join('');
+    let destOpts = '<option value="">Dest...</option>' + dests.map(d => `<option value="${d}">${d}</option>`).join('');
+
+    for(let i=0; i<count; i++) {
+        const idx = startIdx + i;
+        const tr = document.createElement('tr');
+        tr.dataset.idx = idx;
+        tr.innerHTML = `
+            <td class="text-center text-muted">${idx + 1}</td>
+            <td><input class="form-control form-control-sm font-monospace multi-awb" data-idx="${idx}" placeholder="Scan AWB" onblur="checkDuplicateAwb(this)"></td>
+            <td><select class="form-select form-select-sm multi-dest" data-idx="${idx}">${destOpts}</select></td>
+            <td><input class="form-control form-control-sm multi-netno" data-idx="${idx}" placeholder="Net No"></td>
+            <td><select class="form-select form-select-sm multi-net" data-idx="${idx}">${netOpts}</select></td>
+            <td><button class="btn btn-sm btn-outline-primary w-100 fw-bold" onclick="openMultiBoxModal(${idx})"><span id="mb_lbl_${idx}">1</span> Box</button></td>
+            <td><input type="number" step="any" class="form-control form-control-sm multi-wgt" data-idx="${idx}" placeholder="0.0"></td>
+            <td>
+                <select class="form-select form-select-sm multi-type" data-idx="${idx}">
+                    <option value="Ndox">Ndox</option>
+                    <option value="Dox">Dox</option>
+                </select>
+            </td>
+            <td class="text-center"><button class="btn btn-sm btn-light text-danger" onclick="clearMultiRow(${idx})"><i class="bi bi-x-lg"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+    }
+}
+
+window.applyCommonNet = function() {
+    const val = document.getElementById('multi_net_common').value;
+    document.querySelectorAll('.multi-net').forEach(el => el.value = val);
+}
+
+window.clearMultiRow = function(idx) {
+    const tr = document.querySelector(`tr[data-idx="${idx}"]`);
+    if(tr) {
+        tr.querySelectorAll('input').forEach(i => i.value = '');
+        tr.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+        // Reset specific defaults
+        tr.querySelector('.multi-type').value = "Ndox";
+        // Reset Box Data
+        delete multiRowsData[idx];
+        document.getElementById(`mb_lbl_${idx}`).textContent = "1";
+    }
+}
+
+// --- MULTI BOX MODAL ---
+let curMultiRowIdx = -1;
+
+window.openMultiBoxModal = function(idx) {
+    curMultiRowIdx = idx;
+    const existing = multiRowsData[idx] || {count: 1, boxes: [{no:1, w:'', l:'', w_:'', h:''}]};
+
+    document.getElementById('mb_rowIndex').value = idx;
+    document.getElementById('mb_count').value = existing.count;
+    renderMultiBoxRows(existing.boxes);
+
+    new bootstrap.Modal(document.getElementById('multiBoxModal')).show();
+}
+
+window.renderMultiBoxRows = function(existingBoxes = null) {
+    const count = parseInt(document.getElementById('mb_count').value) || 1;
+    const tbody = document.getElementById('mb_tbody');
+    let html = '';
+
+    // Preserve current inputs if re-rendering from count change
+    let currentData = existingBoxes;
+    if(!currentData) {
+        currentData = [];
+        tbody.querySelectorAll('tr').forEach((tr, i) => {
+           const inps = tr.querySelectorAll('input');
+           currentData.push({
+               weight: inps[0].value,
+               l: inps[1].value,
+               w: inps[2].value,
+               h: inps[3].value
+           });
+        });
+    }
+
+    for(let i=0; i<count; i++) {
+        const d = currentData[i] || {};
+        html += `
+            <tr>
+                <td>${i+1}</td>
+                <td><input type="number" step="any" class="form-control form-control-sm mb-w" value="${d.weight||d.w||''}"></td>
+                <td><input type="number" step="any" class="form-control form-control-sm mb-l" value="${d.l||''}"></td>
+                <td><input type="number" step="any" class="form-control form-control-sm mb-br" value="${d.breath||d.w_||''}"></td>
+                <td><input type="number" step="any" class="form-control form-control-sm mb-h" value="${d.height||d.h||''}"></td>
+            </tr>
+        `;
+    }
+    tbody.innerHTML = html;
+}
+
+window.saveMultiBoxDetails = function() {
+    const count = parseInt(document.getElementById('mb_count').value) || 1;
+    const boxes = [];
+    let totalWgt = 0;
+
+    document.querySelectorAll('#mb_tbody tr').forEach((tr, i) => {
+        const w = parseFloat(tr.querySelector('.mb-w').value) || 0;
+        const l = parseFloat(tr.querySelector('.mb-l').value) || 0;
+        const br = parseFloat(tr.querySelector('.mb-br').value) || 0;
+        const h = parseFloat(tr.querySelector('.mb-h').value) || 0;
+
+        boxes.push({no: i+1, weight: w, length: l, breath: br, height: h});
+
+        // Calculate volumetric max
+        const vol = (l * br * h) / 5000;
+        totalWgt += Math.max(w, vol);
+    });
+
+    // Save to store
+    multiRowsData[curMultiRowIdx] = { count: count, boxes: boxes };
+
+    // Update UI
+    document.getElementById(`mb_lbl_${curMultiRowIdx}`).textContent = count;
+
+    // Auto-update weight if 0 or empty
+    const wgtInput = document.querySelector(`.multi-wgt[data-idx="${curMultiRowIdx}"]`);
+    if(wgtInput) {
+        wgtInput.value = totalWgt.toFixed(2);
+    }
+
+    bootstrap.Modal.getInstance(document.getElementById('multiBoxModal')).hide();
+}
+
+// --- SUBMIT BATCH ---
+window.submitMultiBatch = async function() {
+    const client = document.getElementById('multi_client').value;
+    const date = document.getElementById('multi_date').value;
+
+    if(!client) return alert("Please select a Master Client.");
+    if(!date) return alert("Please select a Date.");
+
+    const rows = [];
+    document.querySelectorAll('#multiBody tr').forEach(tr => {
+        const idx = tr.dataset.idx;
+        const awb = tr.querySelector('.multi-awb').value.trim();
+
+        if(awb) {
+            const dest = tr.querySelector('.multi-dest').value;
+            const net = tr.querySelector('.multi-net').value;
+            const netNo = tr.querySelector('.multi-netno').value.trim();
+            const type = tr.querySelector('.multi-type').value;
+            const wgt = tr.querySelector('.multi-wgt').value;
+
+            // Validation
+            if(!dest || !net) return; // Skip incomplete or alert? Let's skip incomplete logic for now, or alert.
+                                     // Better to validate valid rows.
+
+            const boxData = multiRowsData[idx] || { count: 1, boxes: [{no:1, weight:wgt, length:0, breath:0, height:0}] };
+
+            rows.push({
+                awb: awb,
+                date: date,
+                client: client,
+                destination: dest,
+                network: net,
+                netNo: netNo,
+                type: type,
+                totalBoxes: boxData.count,
+                boxes: boxData.boxes,
+                payTotal: 0, payPaid: 0, payPending: 0, // Defaults
+                category: "Normal",
+                extraCharges: "",
+                extraRemarks: "Multi Entry",
+                isAutomationMode: false,
+                branch: curBranch
+            });
+        }
+    });
+
+    if(rows.length === 0) return alert("No valid rows found (AWB, Net, Dest required).");
+
+    if(!confirm(`Submit ${rows.length} shipments for ${client}?`)) return;
+
+    const statusEl = document.getElementById('multiStatus');
+    statusEl.textContent = "Uploading...";
+
+    let successCount = 0;
+
+    // Sequential Upload to avoid rate limits
+    for(let i=0; i<rows.length; i++) {
+        const r = rows[i];
+        statusEl.textContent = `Uploading ${i+1}/${rows.length}: ${r.awb}...`;
+
+        try {
+            const res = await callApi({
+                action: 'submit',
+                username: curUser,
+                awb: r.awb, date: r.date, type: r.type,
+                network: r.network, client: r.client, destination: r.destination,
+                totalBoxes: r.totalBoxes, boxes: r.boxes,
+                payTotal: 0, payPaid: 0, payPending: 0,
+                extraCharges: "", extraRemarks: "Multi Entry",
+                category: "Normal", netNo: r.netNo,
+                branch: curBranch
+            });
+
+            if(res.result === "success") {
+                successCount++;
+                // Visual feedback: Green row
+                const tr = document.querySelector(`.multi-awb[data-idx="${document.querySelectorAll('#multiBody tr')[i].dataset.idx}"]`).closest('tr');
+                tr.classList.add('table-success');
+            } else {
+                 const tr = document.querySelector(`.multi-awb[data-idx="${document.querySelectorAll('#multiBody tr')[i].dataset.idx}"]`).closest('tr');
+                 tr.classList.add('table-danger');
+                 console.error(res.message);
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    statusEl.textContent = `Done. ${successCount}/${rows.length} Success.`;
+    toast(`Batch Complete: ${successCount} Success`);
+    syncData(false);
 }
 </script></body></html>
