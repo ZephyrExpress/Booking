@@ -176,6 +176,9 @@
     .list-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 600; margin-right: 0.5rem; }
     .list-val { font-size: 0.9rem; font-weight: 500; color: #1e293b; }
     .list-val-bold { font-weight: 700; color: var(--brand-blue); font-family: monospace; font-size: 1rem; }
+
+    .fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body style="width:100%; overflow-x:hidden;">
@@ -186,7 +189,7 @@
 <!-- LOGIN -->
 <div id="loginSection" class="login-wrapper">
   <div class="login-overlay"></div>
-  <div class="login-card">
+  <div class="login-card fade-in-up">
     <div class="text-center">
         <img src="https://raw.githubusercontent.com/zephyrexpress/Booking/main/logo.png" class="d-block mx-auto">
     </div>
@@ -196,7 +199,7 @@
     <form onsubmit="event.preventDefault(); doLogin();" autocomplete="off">
       <div class="mb-3 text-start">
           <label class="small fw-bold text-muted ms-1 mb-1">USERNAME</label>
-          <input type="text" id="uIn" class="form-control login-input" required autocomplete="username">
+          <input type="text" id="uIn" class="form-control login-input" required autocomplete="off">
       </div>
       <div class="mb-4 text-start">
           <label class="small fw-bold text-muted ms-1 mb-1">PASSWORD</label>
@@ -1882,8 +1885,16 @@ window.switchTab=function(t){
    const navEl = document.getElementById('nav-'+t);
    if(navEl) navEl.classList.add('active');
 
-   document.querySelectorAll('.tab-view').forEach(e=>safeDisplay(e.id, 'none'));
+   document.querySelectorAll('.tab-view').forEach(e=>{
+       safeDisplay(e.id, 'none');
+       e.classList.remove('fade-in-up'); // Reset animation
+   });
+
+   const targetTab = document.getElementById(t+'-tab');
    safeDisplay(t+'-tab', 'block');
+   // Trigger reflow to restart animation
+   void targetTab.offsetWidth;
+   targetTab.classList.add('fade-in-up');
 
    // ⚡ Bolt Fix: Reset Inbound Entry Mode to Normal on Tab Switch
    if(t === 'inbound') {
@@ -3004,15 +3015,24 @@ window.addMultiRows = function(count) {
         const idx = startIdx + i;
         const tr = document.createElement('tr');
         tr.dataset.idx = idx;
+        tr.classList.add('fade-in-up'); // Animate new row
 
-        // ⚡ Bolt: Copy Down Button Logic
-        let idxHtml = `${idx + 1}`;
-        if(idx === 1) {
-             idxHtml = `<div class="d-flex align-items-center justify-content-center gap-1">${idx+1} <i class="bi bi-arrow-down-square-fill text-primary" style="cursor:pointer" onclick="copyDown()" title="Copy Row 1 Down"></i></div>`;
+        // Actions Column Logic
+        let actionHtml = `<button class="btn btn-sm btn-light text-danger" onclick="clearMultiRow(${idx})"><i class="bi bi-x-lg"></i></button>`;
+
+        // Add Copy Button for Row 2+ (Index > 0)
+        if(idx > 0) {
+            actionHtml = `
+            <div class="d-flex justify-content-end gap-1">
+                <button class="btn btn-sm btn-success fw-bold py-0 px-2" style="font-size:0.75rem" onclick="copyFromAbove(${idx})" title="Copy from Row Above">
+                    <i class="bi bi-arrow-up-short"></i> Copy
+                </button>
+                ${actionHtml}
+            </div>`;
         }
 
         tr.innerHTML = `
-            <td class="text-center text-muted small">${idxHtml}</td>
+            <td class="text-center text-muted small">${idx + 1}</td>
             <td><input class="form-control form-control-sm font-monospace multi-awb" data-idx="${idx}" placeholder="Scan AWB" onblur="checkDuplicateAwb(this)"></td>
             <td><select class="form-select form-select-sm multi-dest" data-idx="${idx}">${destOpts}</select></td>
             <td><input class="form-control form-control-sm multi-netno" data-idx="${idx}" placeholder="Net No"></td>
@@ -3025,43 +3045,50 @@ window.addMultiRows = function(count) {
                     <option value="Dox">Dox</option>
                 </select>
             </td>
-            <td class="text-center"><button class="btn btn-sm btn-light text-danger" onclick="clearMultiRow(${idx})"><i class="bi bi-x-lg"></i></button></td>
+            <td class="text-center" style="min-width:100px;">${actionHtml}</td>
         `;
         tbody.appendChild(tr);
     }
 }
 
-window.copyDown = function() {
-    const r0 = document.querySelector('tr[data-idx="0"]');
-    if(!r0) return;
+window.copyFromAbove = function(idx) {
+    if(idx <= 0) return;
+    const prevIdx = idx - 1;
 
-    // Get source values from Row 1 (Index 0)
-    const dest = r0.querySelector('.multi-dest').value;
-    const net = r0.querySelector('.multi-net').value;
-    const type = r0.querySelector('.multi-type').value;
-    const wgt = r0.querySelector('.multi-wgt').value;
-    const boxData = multiRowsData[0] ? JSON.parse(JSON.stringify(multiRowsData[0])) : null;
+    const rPrev = document.querySelector(`tr[data-idx="${prevIdx}"]`);
+    const rCurr = document.querySelector(`tr[data-idx="${idx}"]`);
 
-    if(!dest && !wgt) return alert("Row 1 is empty.");
+    if(!rPrev || !rCurr) return;
 
-    if(!confirm("Copy details from Row 1 to ALL subsequent rows?")) return;
+    // Fields to Copy: Dest, Net, Type, Wgt
+    const dest = rPrev.querySelector('.multi-dest').value;
+    const net = rPrev.querySelector('.multi-net').value;
+    const type = rPrev.querySelector('.multi-type').value;
+    const wgt = rPrev.querySelector('.multi-wgt').value;
 
-    // Apply to all other rows
-    document.querySelectorAll('#multiBody tr').forEach(tr => {
-        const idx = parseInt(tr.dataset.idx);
-        if(idx === 0) return;
+    if(!dest && !wgt) return alert("Previous row is empty.");
 
-        tr.querySelector('.multi-dest').value = dest;
-        tr.querySelector('.multi-net').value = net;
-        tr.querySelector('.multi-type').value = type;
-        tr.querySelector('.multi-wgt').value = wgt;
+    rCurr.querySelector('.multi-dest').value = dest;
+    rCurr.querySelector('.multi-net').value = net;
+    rCurr.querySelector('.multi-type').value = type;
+    rCurr.querySelector('.multi-wgt').value = wgt;
 
-        if(boxData) {
-            multiRowsData[idx] = JSON.parse(JSON.stringify(boxData));
-            document.getElementById(`mb_lbl_${idx}`).textContent = boxData.count;
-        }
-    });
-    toast("Copied details to all rows");
+    // Copy Box Data
+    const boxData = multiRowsData[prevIdx];
+    if(boxData) {
+        multiRowsData[idx] = JSON.parse(JSON.stringify(boxData));
+        document.getElementById(`mb_lbl_${idx}`).textContent = boxData.count;
+    } else {
+        // Reset if empty above
+        delete multiRowsData[idx];
+        document.getElementById(`mb_lbl_${idx}`).textContent = "1";
+    }
+
+    // Flash effect
+    rCurr.classList.remove('fade-in-up');
+    void rCurr.offsetWidth;
+    rCurr.classList.add('table-success'); // Temp highlight
+    setTimeout(() => rCurr.classList.remove('table-success'), 500);
 }
 
 window.applyCommonNet = function() {
