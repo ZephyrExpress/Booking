@@ -204,7 +204,7 @@
       </div>
       <button class="btn btn-primary w-100 login-btn text-white mb-4">SIGN IN</button>
     </form>
-    <div class="text-muted" style="font-size:0.7rem; opacity:0.6;">ZEPHYR PORTAL v1.3.23</div>
+    <div class="text-muted" style="font-size:0.7rem; opacity:0.6;">ZEPHYR PORTAL v1.4.0</div>
     <div id="loginError" class="alert alert-danger mt-3 small text-center" style="display:none;"></div>
   </div>
 </div>
@@ -316,10 +316,10 @@
 
                    <div class="d-flex justify-content-center gap-3">
                        <button type="button" class="btn btn-lg btn-success fw-bold px-4" onclick="handleConnectedScan(document.getElementById('auto_inbound_input'))">
-                           <i class="bi bi-arrow-down-circle me-2"></i>Process as Connected
+                           <i class="bi bi-arrow-down-circle me-2"></i>Direct Connection
                        </button>
                        <button type="button" class="btn btn-lg btn-info text-white fw-bold px-4" onclick="handleAutomationScan(document.getElementById('auto_inbound_input'))">
-                           <i class="bi bi-robot me-2"></i>Process as Automation
+                           <i class="bi bi-robot me-2"></i>Automation Done - Zephyr Process Required
                        </button>
                    </div>
 
@@ -2246,32 +2246,15 @@ window.handleAutomationScan = async function(el) {
     const r = await callApi({action: 'handleAutomationScan', netNo: val});
     showSpin(false);
 
+    const resDiv = document.getElementById('conn_result'); // Reuse connection result container
     if(r.result === 'success') {
-        // Populate Form
-        const d = r.data;
-        document.getElementById('f_net_no_hidden').value = val; // Store for submit
-
-        // Unhide form
-        safeDisplay('view_automation_search', 'none');
-        safeDisplay('form_main_fields', 'block');
-
-        // Fill details
-        if(d.awb) document.getElementById('f_awb').value = d.awb;
-        if(d.net) {
-             const netSel = document.getElementById('f_net');
-             if(netSel) netSel.value = d.net;
-        }
-        if(d.client && window.tomInstances.client) window.tomInstances.client.setValue(d.client);
-        if(d.dest && window.tomInstances.dest) window.tomInstances.dest.setValue(d.dest);
-
-        document.getElementById('f_type').value = d.type || "Ndox";
-        chkDox();
-
-        // Focus on Weight for editing
-        toast("Details Found. Please verify Weight/Boxes.");
-
+        resDiv.innerHTML = `<div class="alert alert-info fw-bold"><i class="bi bi-check-circle-fill me-2"></i>Automation Logged!<br>AWB: ${r.awb}</div>`;
+        el.value = '';
+        toast("Automation Status Updated");
+        // No form population anymore as per new requirement (Action only)
+        setTimeout(()=>el.focus(), 100);
     } else {
-        alert(r.message);
+        resDiv.innerHTML = `<div class="alert alert-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>${r.message}</div>`;
         el.select();
     }
 }
@@ -3021,8 +3004,15 @@ window.addMultiRows = function(count) {
         const idx = startIdx + i;
         const tr = document.createElement('tr');
         tr.dataset.idx = idx;
+
+        // ⚡ Bolt: Copy Down Button Logic
+        let idxHtml = `${idx + 1}`;
+        if(idx === 1) {
+             idxHtml = `<div class="d-flex align-items-center justify-content-center gap-1">${idx+1} <i class="bi bi-arrow-down-square-fill text-primary" style="cursor:pointer" onclick="copyDown()" title="Copy Row 1 Down"></i></div>`;
+        }
+
         tr.innerHTML = `
-            <td class="text-center text-muted">${idx + 1}</td>
+            <td class="text-center text-muted small">${idxHtml}</td>
             <td><input class="form-control form-control-sm font-monospace multi-awb" data-idx="${idx}" placeholder="Scan AWB" onblur="checkDuplicateAwb(this)"></td>
             <td><select class="form-select form-select-sm multi-dest" data-idx="${idx}">${destOpts}</select></td>
             <td><input class="form-control form-control-sm multi-netno" data-idx="${idx}" placeholder="Net No"></td>
@@ -3039,6 +3029,39 @@ window.addMultiRows = function(count) {
         `;
         tbody.appendChild(tr);
     }
+}
+
+window.copyDown = function() {
+    const r0 = document.querySelector('tr[data-idx="0"]');
+    if(!r0) return;
+
+    // Get source values from Row 1 (Index 0)
+    const dest = r0.querySelector('.multi-dest').value;
+    const net = r0.querySelector('.multi-net').value;
+    const type = r0.querySelector('.multi-type').value;
+    const wgt = r0.querySelector('.multi-wgt').value;
+    const boxData = multiRowsData[0] ? JSON.parse(JSON.stringify(multiRowsData[0])) : null;
+
+    if(!dest && !wgt) return alert("Row 1 is empty.");
+
+    if(!confirm("Copy details from Row 1 to ALL subsequent rows?")) return;
+
+    // Apply to all other rows
+    document.querySelectorAll('#multiBody tr').forEach(tr => {
+        const idx = parseInt(tr.dataset.idx);
+        if(idx === 0) return;
+
+        tr.querySelector('.multi-dest').value = dest;
+        tr.querySelector('.multi-net').value = net;
+        tr.querySelector('.multi-type').value = type;
+        tr.querySelector('.multi-wgt').value = wgt;
+
+        if(boxData) {
+            multiRowsData[idx] = JSON.parse(JSON.stringify(boxData));
+            document.getElementById(`mb_lbl_${idx}`).textContent = boxData.count;
+        }
+    });
+    toast("Copied details to all rows");
 }
 
 window.applyCommonNet = function() {
