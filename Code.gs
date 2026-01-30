@@ -15,6 +15,13 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  // ⚡ CRITICAL: Login Optimization (Absolute Top)
+  try {
+      if (e && e.parameter && e.parameter.action === 'login') {
+          return handleLogin(e.parameter.username, e.parameter.password);
+      }
+  } catch(err) {}
+
   // ⚡ Bolt Optimization: Early Argument Parsing to bypass Lock for Login
   let body = {};
   let act = "";
@@ -1504,11 +1511,11 @@ function handleConnectedScan(b) {
 
     const rowData = [
         "'"+res.awb, new Date(), res.type || "Ndox", "DHL", res.client, res.dest, // Assuming Net=DHL default if missing
-        res.boxes, "", b.user, new Date(),
+        res.boxes, "", res.client, new Date(), // ⚡ Bolt Fix: Entry User forced to Client
         res.wgt, res.wgt, res.wgt, "Connected Scan",
-        "Done", res.client, "Pending", "", // Auto Done (by Client), Paper Pending
+        "Done", res.client, "Completed", "", // Auto Done (by Client), Paperwork Completed
         "", "", res.netNo, "0", "0", "0",
-        "", "", "N/A",
+        "", "", "Completed",
         "", "", "", "", "", "",
         "Connected", ""
     ];
@@ -1530,6 +1537,18 @@ function handleConnectedScan(b) {
 function handleAutomationScan(b) {
     const res = searchBookingReport(b.netNo);
     if(!res) return jsonResponse("error", "Network No not found in Booking Report");
-    return jsonResponse("success", "Found", { data: res });
+
+    // ⚡ Bolt Fix: Automation Done Action (Does NOT write to Shipments)
+    // Only writes to FMS. Status: "Automation Done", Paperwork: "Pending"
+    addToFMS({
+        awb: res.awb, date: new Date(), type: res.type || "Ndox", net: "DHL",
+        client: res.client, dest: res.dest, boxes: res.boxes,
+        wgt: res.wgt, user: b.user, // Entry user logged as staff in FMS
+        status: "Automation Done", doer: res.client // or b.user? Requirement says "Doer as 'Client Name'" for Connected. For Automation, assuming same or staff?
+        // Wait, "Automation Done - Zephyr Process Required". Usually implies Client did it.
+        // Let's stick to Client as doer to be consistent with "Automation by Client".
+    });
+
+    return jsonResponse("success", "Automation Marked Done", { awb: res.awb });
 }
 
