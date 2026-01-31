@@ -295,7 +295,8 @@ function getAllData(username) {
   // ⚡ Bolt: Read Advance Data
   const advLast = advSh.getLastRow();
   // ⚡ Bolt: Read 36 columns from Advance sheet too
-  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 36).getDisplayValues() : [];
+  // ⚡ Bolt Optimization: Use getValues() for speed instead of slow getDisplayValues()
+  const advData = advLast>1 ? advSh.getRange(2, 1, advLast-1, 36).getValues() : [];
 
   // ⚡ Bolt Optimization: FMS updates aggregation
   let fmsUpdates = [];
@@ -307,6 +308,8 @@ function getAllData(username) {
   const shouldSync = !lastSync;
 
   if (shouldSync) {
+      // ⚡ Bolt Optimization: Set cache FIRST to prevent race conditions on concurrent reads
+      try { cache.put(SYNC_CACHE_KEY, 'true', 300); } catch(e){}
       try {
           const brSheet = ss.getSheetByName("Booking_Report") || (taskSS ? taskSS.getSheetByName("Booking_Report") : null);
           if(brSheet) {
@@ -388,8 +391,6 @@ function getAllData(username) {
               if(hasChange && range) {
                   range.setValues(data);
               }
-              // Set Cache (5 mins)
-              try { cache.put(SYNC_CACHE_KEY, 'true', 300); } catch(e){}
           }
       } catch(e) { console.error("Sync BR Error", e); }
   }
@@ -468,7 +469,8 @@ function getAllData(username) {
   const staffMap = {};
 
   // ⚡ Bolt Helper: Format raw numbers to fixed decimals (simulate getDisplayValues)
-  const num = (v) => { const n = parseFloat(v); return isNaN(n) ? v : n.toFixed(2); };
+  // ⚡ Bolt Optimization: Check type before parsing
+  const num = (v) => { const n = typeof v === 'number' ? v : parseFloat(v); return isNaN(n) ? v : n.toFixed(2); };
 
   // ⚡ Bolt Optimization: Filter data processing
   // Only process rows that are ACTIVE or RECENT.
@@ -592,19 +594,22 @@ function getAllData(username) {
       const rId = String(r[0]).replace(/'/g, "").trim();
       if(rId) allAwbs.push(rId); // Add to global duplicate check list
 
-      const holdStatus = r[27];
+      const holdStatus = String(r[27] || "").trim();
       // if (holdStatus === "RTO") return; // Allow RTO for search
 
       // ⚡ Bolt Fix: Category is at Index 33 (Col 34/AH), fallback 32
       const category = (r[33] || r[32]) ? String(r[33] || r[32]).trim() : "Advance";
 
+      // ⚡ Bolt Fix: Apply num() and safe Date format since we switched to getValues()
+      const manifestDate = r[25] instanceof Date ? r[25].toLocaleDateString() : String(r[25] || "");
+
       const item = {
         id: r[0], date: r[1], net: r[3], client: r[4], dest: r[5],
-        details: `${r[6]} Boxes | ${r[12]} Kg`,
+        details: `${r[6]} Boxes | ${num(r[12])} Kg`,
         user: r[8],
-        actWgt: r[10], volWgt: r[11], chgWgt: r[12], type: r[2], boxes: r[6], extra: r[7], rem: r[13],
-        netNo: r[20], payTotal: r[21], payPaid: r[22], payPending: r[23],
-        batchNo: r[24], manifestDate: r[25], paperwork: r[26],
+        actWgt: num(r[10]), volWgt: num(r[11]), chgWgt: num(r[12]), type: r[2], boxes: r[6], extra: r[7], rem: r[13],
+        netNo: r[20], payTotal: num(r[21]), payPaid: num(r[22]), payPending: num(r[23]),
+        batchNo: r[24], manifestDate: manifestDate, paperwork: r[26],
         holdStatus: holdStatus, holdReason: r[28], holdRem: r[29], heldBy: r[30],
         category: category, holdDate: r[34] || r[1] // Use entry date as fallback
       };
