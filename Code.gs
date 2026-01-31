@@ -1065,7 +1065,7 @@ function findRow(sheet, id) {
 function syncFMS(id, data) {
     try {
         const fms = SpreadsheetApp.openById(TASK_SHEET_ID).getSheetByName("FMS");
-        if(fms.getLastRow() < 7) return;
+        if(fms.getLastRow() < 7) return false;
         const ids = fms.getRange(7, 2, fms.getLastRow()-6, 1).getValues().flat();
         const idx = ids.findIndex(x => String(x).replace(/'/g,"").trim().toLowerCase() === String(id).replace(/'/g,"").trim().toLowerCase());
         if(idx > -1) {
@@ -1075,16 +1075,25 @@ function syncFMS(id, data) {
             if(data.assigner) fms.getRange(row, 22).setValue(data.assigner); // V (was T/20)
             if(data.autoDoer) fms.getRange(row, 16).setValue(data.autoDoer); // P (was N/14)
             if(data.paperStatus) fms.getRange(row, 19).setValue(data.paperStatus); // S (was Q/17)
+            return true;
         }
     } catch(e){}
+    return false;
 }
 
 function handleAssignTask(b) {
   const ss = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Shipments");
   const row = findRow(ss, b.id);
-  if (row === -1) return jsonResponse("error", "AWB Not Found");
-  ss.getRange(row, 17, 1, 3).setValues([["Assigned", b.staff, b.assigner]]);
-  syncFMS(b.id, { assignee: b.staff, assigner: b.assigner });
+
+  if (row !== -1) {
+      ss.getRange(row, 17, 1, 3).setValues([["Assigned", b.staff, b.assigner]]);
+      syncFMS(b.id, { assignee: b.staff, assigner: b.assigner });
+  } else {
+      // ⚡ Bolt: Support FMS-Only Assignment (e.g. from Auto Inbound Force Assign)
+      const fmsSuccess = syncFMS(b.id, { assignee: b.staff, assigner: b.assigner });
+      if(!fmsSuccess) return jsonResponse("error", "AWB Not Found (Local or FMS)");
+  }
+
   return jsonResponse("success", "Task Assigned");
 }
 
@@ -1584,8 +1593,12 @@ function handleSaveTempEntry(b) {
     }
 
     const boxesStr = JSON.stringify(b.boxes);
-    // [AWB, Date, Client, Boxes, Weight, Status, User]
-    sh.appendRow([b.awb, b.date, b.client, boxesStr, b.weight, "Active", b.user]);
+    // [AWB, Date, Client, Boxes, Weight, Status, User, Branch]
+    // ⚡ Bolt: Ensure header has Branch
+    if (sh.getLastColumn() < 8) {
+        sh.getRange(1, 8).setValue("Branch");
+    }
+    sh.appendRow([b.awb, b.date, b.client, boxesStr, b.weight, "Active", b.user, b.branch]);
 
     return jsonResponse("success", "Temp Entry Saved");
 }
@@ -1598,10 +1611,13 @@ function handleGetTempEntries() {
     const lastRow = sh.getLastRow();
     if (lastRow < 2) return jsonResponse("success", "No Data", { data: [] });
 
-    const data = sh.getRange(2, 1, lastRow - 1, 7).getValues();
+    // ⚡ Bolt: Read up to column 8 (Branch)
+    const lastCol = sh.getLastColumn();
+    const numCols = lastCol < 8 ? lastCol : 8;
+    const data = sh.getRange(2, 1, lastRow - 1, numCols).getValues();
     const active = [];
 
-    // AWB=0, Date=1, Client=2, Boxes=3, Weight=4, Status=5, User=6
+    // AWB=0, Date=1, Client=2, Boxes=3, Weight=4, Status=5, User=6, Branch=7
     data.forEach(r => {
         if (String(r[5]) === "Active") {
             let boxes = [];
@@ -1612,7 +1628,8 @@ function handleGetTempEntries() {
                 client: r[2],
                 boxes: boxes,
                 weight: r[4],
-                user: r[6]
+                user: r[6],
+                branch: r[7] || ""
             });
         }
     });
