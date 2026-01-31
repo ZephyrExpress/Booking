@@ -109,6 +109,10 @@ function doPost(e) {
     if (act === "handleConnectedScan") return handleConnectedScan(body);
     if (act === "handleAutomationScan") return handleAutomationScan(body);
 
+    // Temp Entry Features
+    if (act === "saveTempEntry") return handleSaveTempEntry(body);
+    if (act === "getTempEntries") return handleGetTempEntries();
+
     if (act === "bulkPaperDone") return handleBulkPaperDone(body);
 
     return jsonResponse("error", "Unknown Action: " + act);
@@ -1008,6 +1012,24 @@ function handleSubmit(body){
       status: autoStatus, doer: autoDoer
   });
 
+  // ⚡ Bolt: Mark Temp Entry Converted if Ref exists
+  if (body.tempRef) {
+      try {
+          const tempSh = ss.getSheetByName("Temp_Shipments");
+          if (tempSh) {
+              const tData = tempSh.getDataRange().getValues();
+              for (let i = 1; i < tData.length; i++) {
+                  if (String(tData[i][0]) === String(body.tempRef)) {
+                      tempSh.getRange(i + 1, 6).setValue("Converted"); // Col 6 = Status (F)
+                      break;
+                  }
+              }
+          }
+      } catch (e) {
+          console.error("Temp Conversion Error", e);
+      }
+  }
+
   return jsonResponse("success","Saved");
 }
 
@@ -1552,3 +1574,48 @@ function handleAutomationScan(b) {
     return jsonResponse("success", "Automation Marked Done", { awb: res.awb });
 }
 
+// --- TEMP ENTRY HANDLERS ---
+function handleSaveTempEntry(b) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sh = ss.getSheetByName("Temp_Shipments");
+    if (!sh) {
+        sh = ss.insertSheet("Temp_Shipments");
+        sh.appendRow(["Temp AWB", "Date", "Client", "Boxes JSON", "Weight", "Status", "User"]);
+    }
+
+    const boxesStr = JSON.stringify(b.boxes);
+    // [AWB, Date, Client, Boxes, Weight, Status, User]
+    sh.appendRow([b.awb, b.date, b.client, boxesStr, b.weight, "Active", b.user]);
+
+    return jsonResponse("success", "Temp Entry Saved");
+}
+
+function handleGetTempEntries() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sh = ss.getSheetByName("Temp_Shipments");
+    if (!sh) return jsonResponse("success", "No Data", { data: [] });
+
+    const lastRow = sh.getLastRow();
+    if (lastRow < 2) return jsonResponse("success", "No Data", { data: [] });
+
+    const data = sh.getRange(2, 1, lastRow - 1, 7).getValues();
+    const active = [];
+
+    // AWB=0, Date=1, Client=2, Boxes=3, Weight=4, Status=5, User=6
+    data.forEach(r => {
+        if (String(r[5]) === "Active") {
+            let boxes = [];
+            try { boxes = JSON.parse(r[3]); } catch(e) {}
+            active.push({
+                awb: r[0],
+                date: r[1],
+                client: r[2],
+                boxes: boxes,
+                weight: r[4],
+                user: r[6]
+            });
+        }
+    });
+
+    return jsonResponse("success", "OK", { data: active });
+}
