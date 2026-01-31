@@ -420,14 +420,14 @@
                                    </div>
                                    <div class="table-responsive border rounded bg-light" style="max-height: 200px;">
                                        <table class="table table-sm table-bordered align-middle mb-0 small text-center" style="font-size:0.8rem;">
-                                           <thead class="bg-white"><tr><th style="width:30px">#</th><th>L</th><th>W</th><th>H</th><th>Wgt</th><th style="width:30px"></th></tr></thead>
+                                           <thead class="bg-white"><tr><th style="width:30px">#</th><th>Length (cm)</th><th>Breadth (cm)</th><th>Height (cm)</th><th>Act Wgt (kg)</th><th style="width:30px"></th></tr></thead>
                                            <tbody id="tempBoxTable"></tbody>
                                        </table>
                                    </div>
                                </div>
 
                                <div class="mb-3">
-                                   <label class="fun-label">Total Weight (Kg)</label>
+                                   <label class="fun-label">Total Chargeable Weight (Kg)</label>
                                    <input type="number" step="any" id="temp_weight" class="form-control fun-input fw-bold fs-5 bg-light" readonly placeholder="0.00">
                                </div>
 
@@ -456,6 +456,7 @@
                                        <tr>
                                            <th>Temp AWB</th>
                                            <th>Date</th>
+                                           <th>Branch</th>
                                            <th>Client</th>
                                            <th>Wgt</th>
                                            <th class="text-end">Action</th>
@@ -2364,9 +2365,9 @@ window.addTempBoxRow = function() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
         <td class="text-muted">${idx}</td>
-        <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 t-l" placeholder="0"></td>
-        <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 t-w" placeholder="0"></td>
-        <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 t-h" placeholder="0"></td>
+        <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 t-l" placeholder="0" oninput="updateTempTotal()"></td>
+        <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 t-w" placeholder="0" oninput="updateTempTotal()"></td>
+        <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 t-h" placeholder="0" oninput="updateTempTotal()"></td>
         <td class="p-0"><input type="number" step="any" class="form-control form-control-sm border-0 text-center p-1 fw-bold t-wgt" placeholder="0.0" oninput="updateTempTotal()"></td>
         <td class="p-0"><button type="button" class="btn btn-link text-danger p-0" onclick="removeTempBoxRow(this)"><i class="bi bi-x"></i></button></td>
     `;
@@ -2383,9 +2384,18 @@ window.removeTempBoxRow = function(btn) {
 };
 
 window.updateTempTotal = function() {
-    let tot = 0;
-    document.querySelectorAll('.t-wgt').forEach(i => tot += (parseFloat(i.value) || 0));
-    document.getElementById('temp_weight').value = tot.toFixed(2);
+    let totChg = 0;
+    document.querySelectorAll('#tempBoxTable tr').forEach(tr => {
+        const l = parseFloat(tr.querySelector('.t-l').value) || 0;
+        const b = parseFloat(tr.querySelector('.t-w').value) || 0;
+        const h = parseFloat(tr.querySelector('.t-h').value) || 0;
+        const act = parseFloat(tr.querySelector('.t-wgt').value) || 0;
+
+        const vol = (l * b * h) / 5000;
+        const chg = Math.max(act, vol);
+        totChg += chg;
+    });
+    document.getElementById('temp_weight').value = totChg.toFixed(2);
 };
 
 window.refreshTempList = async function() {
@@ -2410,6 +2420,7 @@ window.refreshTempList = async function() {
                 <tr>
                     <td class="font-monospace fw-bold text-primary">${x.awb}</td>
                     <td>${new Date(x.date).toLocaleDateString()}</td>
+                    <td>${x.branch || '-'}</td>
                     <td>${x.client}</td>
                     <td>${x.weight}</td>
                     <td class="text-end">
@@ -2491,37 +2502,37 @@ window.convertToRegular = function(tempData) {
 
     // Pre-fill Data
     if(window.tomInstances.client) window.tomInstances.client.setValue(tempData.client);
+
+    const branchEl = document.getElementById('f_branch');
+    if(branchEl && tempData.branch) branchEl.value = tempData.branch;
+
     document.getElementById('f_boxes').value = tempData.boxes.length || 1;
 
     // Set hidden reference
     document.getElementById('f_temp_ref').value = tempData.awb;
 
+    // Generate Box Rows first using existing logic to ensure structure
+    genBoxes();
+
     // Populate Box Table
-    const tb = document.getElementById('boxTable');
-    let html = '';
+    const rows = document.querySelectorAll('#boxTable tr');
     let totalWgt = 0;
 
     tempData.boxes.forEach((b, i) => {
-        const w = parseFloat(b.weight) || 0;
-        const l = parseFloat(b.length) || 0;
-        const br = parseFloat(b.breath) || 0;
-        const h = parseFloat(b.height) || 0;
-        const vol = (l * br * h) / 5000;
-        const chg = Math.max(w, vol).toFixed(2);
-        totalWgt += parseFloat(chg);
+        if(rows[i]) {
+            const inputs = rows[i].querySelectorAll('input');
+            if(inputs[0]) inputs[0].value = b.weight; // Weight
+            if(inputs[1]) inputs[1].value = b.length; // L
+            if(inputs[2]) inputs[2].value = b.breath; // W
+            if(inputs[3]) inputs[3].value = b.height; // H
 
-        html += `<tr>
-            <td>${i+1}</td>
-            <td><input type="number" step="any" class="form-control form-control-sm" required oninput="cBox(this)" value="${w}"></td>
-            <td><input type="number" step="any" class="form-control form-control-sm" oninput="cBox(this)" value="${l||''}"></td>
-            <td><input type="number" step="any" class="form-control form-control-sm" oninput="cBox(this)" value="${br||''}"></td>
-            <td><input type="number" step="any" class="form-control form-control-sm" oninput="cBox(this)" value="${h||''}"></td>
-            <td class="val-chg">${chg}</td>
-        </tr>`;
+            // Trigger calculation for this row
+            cBox(inputs[0]);
+        }
     });
 
-    tb.innerHTML = html;
-    document.getElementById('f_totalChg').value = totalWgt.toFixed(2);
+    // cBox updates individual row and total sum, but let's ensure total is correct
+    // (cBox is triggered on input, calling it manually works)
 
     toast("Data Pre-filled from Temp Entry");
 
