@@ -296,6 +296,7 @@
                <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Advance')">Advance</button></li>
                <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Auto')">Auto Inbound</button></li>
                <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Multi')">Multiple Inbound</button></li>
+               <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Temp')">Temp Entry</button></li>
            </ul>
 
            <div class="fun-header">
@@ -308,6 +309,7 @@
              <form id="shipForm">
                <input type="hidden" id="f_active_mode" value="Normal">
                <input type="hidden" id="f_category" value="Normal">
+               <input type="hidden" id="f_temp_ref">
 
                <!-- Auto Inbound Unified View -->
                <div id="view_auto_inbound" style="display:none;" class="text-center py-5">
@@ -385,6 +387,72 @@
                            <button type="button" class="btn btn-primary fw-bold px-5" onclick="submitMultiBatch()">
                                <i class="bi bi-cloud-upload-fill me-2"></i>Submit Batch
                            </button>
+                       </div>
+                   </div>
+               </div>
+
+               <!-- Temp Inbound View -->
+               <div id="view_temp_inbound" style="display:none;" class="row g-4">
+                   <!-- Left Column: Entry Form -->
+                   <div class="col-md-5">
+                       <div class="card shadow-sm border-0 bg-light">
+                           <div class="card-header bg-primary text-white fw-bold"><i class="bi bi-box-seam me-2"></i>Unidentified Shipment Entry</div>
+                           <div class="card-body p-4">
+                               <div class="mb-3">
+                                   <label class="fun-label">Client *</label>
+                                   <select id="temp_client" class="form-select" placeholder="Select Client..."></select>
+                               </div>
+                               <div class="mb-3">
+                                   <label class="fun-label">Total Weight (Kg) *</label>
+                                   <input type="number" step="any" id="temp_weight" class="form-control fun-input fw-bold fs-5" placeholder="0.00">
+                               </div>
+
+                               <div class="fun-section border bg-white mb-3 p-3">
+                                   <h6 class="fw-bold text-muted mb-2 small text-uppercase">Box Dimensions (Optional)</h6>
+                                   <div class="row g-2">
+                                       <div class="col-3"><input type="number" id="temp_box_qty" class="form-control form-control-sm" placeholder="Qty" value="1"></div>
+                                       <div class="col-3"><input type="number" id="temp_box_l" class="form-control form-control-sm" placeholder="L"></div>
+                                       <div class="col-3"><input type="number" id="temp_box_b" class="form-control form-control-sm" placeholder="B"></div>
+                                       <div class="col-3"><input type="number" id="temp_box_h" class="form-control form-control-sm" placeholder="H"></div>
+                                   </div>
+                               </div>
+
+                               <div class="mb-4">
+                                   <label class="fun-label">Temp AWB (Generated)</label>
+                                   <input id="temp_awb_display" class="form-control fun-input bg-light text-muted fst-italic" readonly placeholder="Generated on Submit">
+                               </div>
+
+                               <button type="button" class="btn btn-primary w-100 fw-bold py-2 shadow-sm" onclick="submitTempEntry()">
+                                   <i class="bi bi-save-fill me-2"></i>Save as Temp
+                               </button>
+                           </div>
+                       </div>
+                   </div>
+
+                   <!-- Right Column: Pending List -->
+                   <div class="col-md-7">
+                       <div class="panel-card h-100">
+                           <div class="panel-header bg-warning bg-opacity-10 text-dark border-warning border-opacity-25">
+                               <span class="fw-bold"><i class="bi bi-hourglass-split me-2"></i>Pending Temp Shipments</span>
+                               <button type="button" class="btn btn-sm btn-outline-dark" onclick="refreshTempList()"><i class="bi bi-arrow-clockwise"></i></button>
+                           </div>
+                           <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                               <table class="table table-hover align-middle mb-0 small">
+                                   <thead class="bg-light sticky-top">
+                                       <tr>
+                                           <th>Temp AWB</th>
+                                           <th>Date</th>
+                                           <th>Client</th>
+                                           <th>Wgt</th>
+                                           <th class="text-end">Action</th>
+                                       </tr>
+                                   </thead>
+                                   <tbody id="tempListBody"></tbody>
+                               </table>
+                           </div>
+                           <div id="tempListEmpty" class="text-center py-5" style="display:none;">
+                               <div class="text-muted small">No Pending Temp Shipments</div>
+                           </div>
                        </div>
                    </div>
                </div>
@@ -1988,7 +2056,8 @@ document.getElementById('shipForm').onsubmit = async (e)=>{
    }
 
    const branch = document.getElementById('f_branch').value;
-   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', '), category: cat, netNo: netNo, isAutomationMode: isAuto, branch: branch });
+   const tempRef = document.getElementById('f_temp_ref').value;
+   const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', '), category: cat, netNo: netNo, isAutomationMode: isAuto, branch: branch, tempRef: tempRef });
    showSpin(false); if(r.result==='success') { toast("Entry Saved"); resetForm(); syncData(false); } else alert(r.message);
 };
 
@@ -2196,12 +2265,14 @@ window.switchInboundMode = function(mode) {
     safeDisplay('form_main_fields', 'none');
     safeDisplay('view_auto_inbound', 'none');
     safeDisplay('view_multi_inbound', 'none');
+    safeDisplay('view_temp_inbound', 'none');
 
     // Reset Form
     document.getElementById('shipForm').reset();
     document.getElementById('f_active_mode').value = mode; // Re-set after reset()
     document.getElementById('boxTable').innerHTML='';
     document.getElementById('f_category').value = "Normal"; // Default backend category placeholder
+    document.getElementById('f_temp_ref').value = ""; // Clear Temp Ref
 
     if(mode === 'Normal' || mode === 'Advance') {
         safeDisplay('form_main_fields', 'block');
@@ -2224,7 +2295,187 @@ window.switchInboundMode = function(mode) {
         document.getElementById('inboundTitle').textContent = "Multiple Inbound";
         initMultiTable();
     }
+    else if(mode === 'Temp') {
+        safeDisplay('view_temp_inbound', 'block');
+        document.getElementById('inboundTitle').textContent = "Temp Entry";
+        initTempView();
+    }
 }
+
+// --- TEMP ENTRY LOGIC ---
+window.initTempView = function() {
+    if (!window.tomInstances.tempClient) {
+        window.tomInstances.tempClient = new TomSelect("#temp_client", {
+            create: false,
+            maxOptions: null,
+            dropdownParent: 'body',
+            placeholder: "Select Client..."
+        });
+        const dd = window.APP_DATA.static.dropdowns;
+        if (dd && dd.clients) {
+            dd.clients.forEach(x => window.tomInstances.tempClient.addOption({value: x, text: x}));
+            window.tomInstances.tempClient.sync();
+        }
+    }
+    refreshTempList();
+};
+
+window.refreshTempList = async function() {
+    const list = document.getElementById('tempListBody');
+    const empty = document.getElementById('tempListEmpty');
+
+    showSpin(true);
+    const r = await callApi({ action: 'getTempEntries' });
+    showSpin(false);
+
+    if (r.result === 'success') {
+        const entries = r.data || [];
+        if (entries.length === 0) {
+            list.innerHTML = '';
+            safeDisplay('tempListEmpty', 'block');
+        } else {
+            safeDisplay('tempListEmpty', 'none');
+            // Sort by Date Desc
+            entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+            list.innerHTML = entries.map(x => `
+                <tr>
+                    <td class="font-monospace fw-bold text-primary">${x.awb}</td>
+                    <td>${new Date(x.date).toLocaleDateString()}</td>
+                    <td>${x.client}</td>
+                    <td>${x.weight}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-success rounded-pill fw-bold px-3" onclick='convertToRegular(${JSON.stringify(x).replace(/'/g, "&#39;")})'>
+                            <i class="bi bi-arrow-right-circle me-1"></i> Convert
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } else {
+        console.error(r.message);
+    }
+};
+
+window.generateTempAwb = function(clientName) {
+    const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,"");
+    const safeClient = (clientName || "UKNW").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    const clientSuffix = safeClient.length > 4 ? safeClient.slice(-4) : safeClient.padEnd(4, 'X');
+    const randomSeq = Math.floor(Math.random() * 1000).toString().padStart(3, '0'); // Random 000-999
+    return `TEMP-${dateStr}-${clientSuffix}-${randomSeq}`;
+};
+
+window.submitTempEntry = async function() {
+    const client = document.getElementById('temp_client').value;
+    const weight = document.getElementById('temp_weight').value;
+
+    if (!client) return alert("Please select a Client.");
+    if (!weight || parseFloat(weight) <= 0) return alert("Please enter a valid weight.");
+
+    const boxes = [];
+    const qty = parseInt(document.getElementById('temp_box_qty').value) || 1;
+    const l = document.getElementById('temp_box_l').value;
+    const b = document.getElementById('temp_box_b').value;
+    const h = document.getElementById('temp_box_h').value;
+
+    if (l && b && h) {
+        for(let i=0; i<qty; i++) {
+            boxes.push({ no: i+1, weight: (parseFloat(weight)/qty).toFixed(2), length: l, breath: b, height: h });
+        }
+    } else {
+        // Just weight distribution if dims missing
+        for(let i=0; i<qty; i++) {
+            boxes.push({ no: i+1, weight: (parseFloat(weight)/qty).toFixed(2), length: 0, breath: 0, height: 0 });
+        }
+    }
+
+    const tempAwb = generateTempAwb(client);
+    document.getElementById('temp_awb_display').value = tempAwb;
+
+    if(!confirm(`Save Temp Entry?\nAWB: ${tempAwb}`)) return;
+
+    showSpin(true);
+    const r = await callApi({
+        action: 'saveTempEntry',
+        awb: tempAwb,
+        date: new Date().toISOString(), // Full ISO string for backend parsing
+        client: client,
+        weight: weight,
+        boxes: boxes,
+        user: curUser
+    });
+    showSpin(false);
+
+    if(r.result === 'success') {
+        toast("Temp Entry Saved");
+        // Reset Inputs
+        if(window.tomInstances.tempClient) window.tomInstances.tempClient.clear();
+        document.getElementById('temp_weight').value = '';
+        document.getElementById('temp_box_qty').value = '1';
+        document.getElementById('temp_box_l').value = '';
+        document.getElementById('temp_box_b').value = '';
+        document.getElementById('temp_box_h').value = '';
+        document.getElementById('temp_awb_display').value = '';
+
+        refreshTempList();
+    } else {
+        alert("Error: " + r.message);
+    }
+};
+
+window.convertToRegular = function(tempData) {
+    if(!confirm(`Convert ${tempData.awb} to Regular Shipment?`)) return;
+
+    // Switch to Normal Mode
+    switchInboundMode('Normal');
+
+    // Pre-fill Data
+    if(window.tomInstances.client) window.tomInstances.client.setValue(tempData.client);
+    document.getElementById('f_boxes').value = tempData.boxes.length || 1;
+
+    // Set hidden reference
+    document.getElementById('f_temp_ref').value = tempData.awb;
+
+    // Populate Box Table
+    const tb = document.getElementById('boxTable');
+    let html = '';
+    let totalWgt = 0;
+
+    tempData.boxes.forEach((b, i) => {
+        const w = parseFloat(b.weight) || 0;
+        const l = parseFloat(b.length) || 0;
+        const br = parseFloat(b.breath) || 0;
+        const h = parseFloat(b.height) || 0;
+        const vol = (l * br * h) / 5000;
+        const chg = Math.max(w, vol).toFixed(2);
+        totalWgt += parseFloat(chg);
+
+        html += `<tr>
+            <td>${i+1}</td>
+            <td><input type="number" step="any" class="form-control form-control-sm" required oninput="cBox(this)" value="${w}"></td>
+            <td><input type="number" step="any" class="form-control form-control-sm" oninput="cBox(this)" value="${l||''}"></td>
+            <td><input type="number" step="any" class="form-control form-control-sm" oninput="cBox(this)" value="${br||''}"></td>
+            <td><input type="number" step="any" class="form-control form-control-sm" oninput="cBox(this)" value="${h||''}"></td>
+            <td class="val-chg">${chg}</td>
+        </tr>`;
+    });
+
+    tb.innerHTML = html;
+    document.getElementById('f_totalChg').value = totalWgt.toFixed(2);
+
+    toast("Data Pre-filled from Temp Entry");
+
+    // Focus on missing fields
+    setTimeout(() => {
+        // Use logic similar to TomSelect open if available or focus select
+        const fDest = document.getElementById('f_dest');
+        fDest.focus();
+        if(window.tomInstances.dest) {
+             window.tomInstances.dest.focus();
+             window.tomInstances.dest.open();
+        }
+    }, 500);
+};
 
 // ⚡ Bolt: Handle Connected Scan
 window.handleConnectedScan = async function(el) {
