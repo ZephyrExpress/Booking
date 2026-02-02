@@ -1570,18 +1570,8 @@ function handleAutomationScan(b) {
     const res = searchBookingReport(b.netNo);
     if(!res) return jsonResponse("error", "Network No not found in Booking Report");
 
-    // ⚡ Bolt Fix: Automation Done Action (Does NOT write to Shipments)
-    // Only writes to FMS. Status: "Automation Done", Paperwork: "Pending"
-    addToFMS({
-        awb: res.awb, date: new Date(), type: res.type || "Ndox", net: "DHL",
-        client: res.client, dest: res.dest, boxes: res.boxes,
-        wgt: res.wgt, user: b.user, // Entry user logged as staff in FMS
-        status: "Automation Done", doer: res.client // or b.user? Requirement says "Doer as 'Client Name'" for Connected. For Automation, assuming same or staff?
-        // Wait, "Automation Done - Zephyr Process Required". Usually implies Client did it.
-        // Let's stick to Client as doer to be consistent with "Automation by Client".
-    });
-
-    return jsonResponse("success", "Automation Marked Done", { awb: res.awb });
+    // Return the data for frontend pre-fill. No FMS write.
+    return jsonResponse("success", "Data Found", { data: res });
 }
 
 // --- TEMP ENTRY HANDLERS ---

@@ -2145,7 +2145,26 @@ document.getElementById('shipForm').onsubmit = async (e)=>{
    const branch = document.getElementById('f_branch').value;
    const tempRef = document.getElementById('f_temp_ref').value;
    const r = await callApi({ action: 'submit', username: curUser, awb: document.getElementById('f_awb').value, date: document.getElementById('f_date').value, type: document.getElementById('f_type').value, network: document.getElementById('f_net').value, client: document.getElementById('f_client').value, destination: document.getElementById('f_dest').value, totalBoxes: document.getElementById('f_boxes').value, extraCharges: extra.join(', '), extraRemarks: document.getElementById('f_remarks').value, boxes: boxes, payTotal: document.getElementById('f_payTotal').value || 0, payPaid: document.getElementById('f_payPaid').value || 0, payPending: document.getElementById('f_payPending').value || 0, payeeName: payeeName, payeeContact: payeeContact, paperwork: pw.join(', '), category: cat, netNo: netNo, isAutomationMode: isAuto, branch: branch, tempRef: tempRef });
-   showSpin(false); if(r.result==='success') { toast("Entry Saved"); resetForm(); syncData(false); } else alert(r.message);
+   showSpin(false);
+   if(r.result==='success') {
+       if (window.isAutoZephyrFlow) {
+           currentAutoAwb = document.getElementById('f_awb').value;
+           document.getElementById('fa_awb').textContent = currentAutoAwb;
+
+           // Populate Staff for Force Assign Modal
+           const s = document.getElementById('force_assign_staff');
+           let opts = '<option value="">Select Staff...</option>';
+           if (window.APP_DATA.static && window.APP_DATA.static.staff) {
+               opts += window.APP_DATA.static.staff.map(st => `<option value="${st}">${st}</option>`).join('');
+           }
+           s.innerHTML = opts;
+
+           new bootstrap.Modal(document.getElementById('forceAssignModal')).show();
+           // Note: Do NOT reset form or show toast yet. Wait for assignment.
+       } else {
+           toast("Entry Saved"); resetForm(); syncData(false);
+       }
+   } else alert(r.message);
 };
 
 // ⚡ Bolt: Toggle Net No Field
@@ -2793,24 +2812,80 @@ window.handleAutomationScan = async function(el) {
     if(!val) return;
 
     showSpin(true);
+    // Backend now returns data instead of modifying FMS
     const r = await callApi({action: 'handleAutomationScan', netNo: val});
     showSpin(false);
 
     const resDiv = document.getElementById('conn_result');
     if(r.result === 'success') {
-        // Force Assignment Workflow
-        currentAutoAwb = r.awb;
-        document.getElementById('fa_awb').textContent = r.awb;
+        const data = r.data;
+        if(!data) return alert("No Data Returned");
 
-        // Populate Staff
-        const s = document.getElementById('force_assign_staff');
-        let opts = '<option value="">Select Staff...</option>';
-        if (window.APP_DATA.static && window.APP_DATA.static.staff) {
-            opts += window.APP_DATA.static.staff.map(st => `<option value="${st}">${st}</option>`).join('');
+        // Set Flag
+        window.isAutoZephyrFlow = true;
+
+        // Switch to Inbound -> Normal
+        switchTab('inbound');
+        switchInboundMode('Normal');
+
+        // Unhide and Set Network No (Override normal hiding logic)
+        safeDisplay('div_net_no', 'block');
+        const fnn = document.getElementById('f_net_no');
+        if(fnn) fnn.value = data.netNo || val;
+
+        // Pre-fill fields
+        document.getElementById('f_awb').value = data.awb || "";
+        // Keep Category Normal for standard submission
+        document.getElementById('f_category').value = "Normal";
+
+        // Net
+        if(data.net) {
+             const fNet = document.getElementById('f_net');
+             if(fNet) fNet.value = data.net;
         }
-        s.innerHTML = opts;
 
-        new bootstrap.Modal(document.getElementById('forceAssignModal')).show();
+        // Client (TomSelect)
+        if(window.tomInstances.client && data.client) {
+             window.tomInstances.client.setValue(data.client);
+        }
+
+        // Destination (TomSelect)
+        if(window.tomInstances.dest && data.dest) {
+             window.tomInstances.dest.setValue(data.dest);
+        }
+
+        // Type
+        if(data.type) {
+             const fType = document.getElementById('f_type');
+             if(fType) {
+                 fType.value = data.type;
+                 chkDox(); // Trigger logic (sets boxes=1 if Dox)
+             }
+        }
+
+        // Boxes & Weight
+        const boxesCount = parseInt(data.boxes) || 1;
+        document.getElementById('f_boxes').value = boxesCount;
+        genBoxes(); // Generate rows
+
+        // Populate first row weight if singular
+        if (boxesCount === 1) {
+             const row = document.querySelector('#boxTable tr');
+             if(row) {
+                 const inputs = row.querySelectorAll('input');
+                 if(inputs[0]) {
+                     inputs[0].value = data.wgt || 0;
+                     cBox(inputs[0]); // Trigger calc
+                 }
+             }
+        }
+
+        // Trigger Duplicate Check
+        const awbEl = document.getElementById('f_awb');
+        if(awbEl) checkDuplicateAwb(awbEl);
+
+        toast("Data Pre-filled from Automation");
+
     } else {
         resDiv.innerHTML = `<div class="alert alert-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>${r.message}</div>`;
         el.select();
@@ -2830,6 +2905,13 @@ window.submitForceAssign = async function() {
     if(r.result === "success") {
         bootstrap.Modal.getInstance(document.getElementById('forceAssignModal')).hide();
         toast("Task Assigned Successfully");
+
+        if(window.isAutoZephyrFlow) {
+            window.isAutoZephyrFlow = false;
+            resetForm();
+            switchInboundMode('Auto');
+            syncData(false);
+        }
 
         // Reset Auto Inbound Form
         document.getElementById('auto_inbound_input').value = "";
