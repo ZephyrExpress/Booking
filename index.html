@@ -297,6 +297,7 @@
                <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Auto')">Auto Inbound</button></li>
                <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Multi')">Multiple Inbound</button></li>
                <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Temp')">Temp Entry</button></li>
+               <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('BulkTemp')">Bulk Temp Entry</button></li>
            </ul>
 
            <div class="fun-header">
@@ -436,11 +437,6 @@
                                    <input id="temp_awb_display" class="form-control fun-input bg-light text-muted fst-italic" readonly placeholder="Generated on Submit">
                                </div>
 
-                               <div class="form-check mb-4">
-                                   <input class="form-check-input" type="checkbox" id="temp_is_bulk">
-                                   <label class="form-check-label small fw-bold" for="temp_is_bulk">Bulk Shipment (-A)</label>
-                               </div>
-
                                <button type="button" class="btn btn-primary w-100 fw-bold py-2 shadow-sm" onclick="submitTempEntry()">
                                    <i class="bi bi-save-fill me-2"></i>Save as Temp
                                </button>
@@ -473,6 +469,62 @@
                            <div id="tempListEmpty" class="text-center py-5" style="display:none;">
                                <div class="text-muted small">No Pending Temp Shipments</div>
                            </div>
+                       </div>
+                   </div>
+               </div>
+
+               <!-- Bulk Temp View -->
+               <div id="view_bulk_temp" style="display:none;" class="p-2">
+                   <!-- Master Data Card -->
+                   <div class="card shadow-sm border-0 mb-3 bg-light">
+                       <div class="card-body p-3">
+                           <div class="row g-3 align-items-end">
+                               <div class="col-md-4">
+                                   <label class="small fw-bold text-muted text-uppercase">Client</label>
+                                   <select id="bulk_temp_client" class="form-select form-select-sm border-secondary" placeholder="Select Client..."></select>
+                               </div>
+                               <div class="col-md-4">
+                                   <label class="small fw-bold text-muted text-uppercase">Branch</label>
+                                   <select id="bulk_temp_branch" class="form-select form-select-sm border-secondary">
+                                       <option value="Naraina Vihar">Naraina Vihar</option>
+                                       <option value="Mahipalpur">Mahipalpur</option>
+                                       <option value="Santnagar">Santnagar</option>
+                                   </select>
+                               </div>
+                               <div class="col-md-4">
+                                   <label class="small fw-bold text-muted text-uppercase">Total Rows</label>
+                                   <input type="number" id="bulk_temp_count" class="form-control form-control-sm border-secondary fw-bold bg-white" readonly value="0">
+                               </div>
+                           </div>
+                       </div>
+                   </div>
+
+                   <!-- Grid Table -->
+                   <div class="table-responsive border rounded bg-white mb-3" style="max-height: 60vh;">
+                       <table class="table table-sm table-bordered align-middle mb-0" id="bulkTempTable">
+                           <thead class="bg-light sticky-top" style="z-index: 5;">
+                               <tr class="text-center small text-muted text-uppercase">
+                                   <th style="width: 40px;">#</th>
+                                   <th style="width: 100px;">Weight (kg)</th>
+                                   <th style="width: 80px;">L (cm)</th>
+                                   <th style="width: 80px;">W (cm)</th>
+                                   <th style="width: 80px;">H (cm)</th>
+                                   <th style="width: 100px;">Vol Wgt</th>
+                                   <th style="width: 50px;"><i class="bi bi-trash"></i></th>
+                               </tr>
+                           </thead>
+                           <tbody id="bulkTempBody"></tbody>
+                       </table>
+                   </div>
+
+                   <!-- Footer Actions -->
+                   <div class="d-flex justify-content-between align-items-center bg-white p-3 border rounded shadow-sm">
+                       <button type="button" class="btn btn-outline-secondary fw-bold" onclick="addBulkTempRows(5)"><i class="bi bi-plus-lg me-2"></i>Add 5 Rows</button>
+                       <div class="d-flex align-items-center gap-3">
+                           <div id="bulkTempStatus" class="small fw-bold text-muted"></div>
+                           <button type="button" class="btn btn-primary fw-bold px-5" onclick="submitBulkTempBatch()">
+                               <i class="bi bi-cloud-upload-fill me-2"></i>Submit Bulk Batch
+                           </button>
                        </div>
                    </div>
                </div>
@@ -2303,6 +2355,7 @@ window.switchInboundMode = function(mode) {
     safeDisplay('view_auto_inbound', 'none');
     safeDisplay('view_multi_inbound', 'none');
     safeDisplay('view_temp_inbound', 'none');
+    safeDisplay('view_bulk_temp', 'none');
 
     // Reset Form
     document.getElementById('shipForm').reset();
@@ -2336,6 +2389,11 @@ window.switchInboundMode = function(mode) {
         safeDisplay('view_temp_inbound', 'block');
         document.getElementById('inboundTitle').textContent = "Temp Entry";
         initTempView();
+    }
+    else if(mode === 'BulkTemp') {
+        safeDisplay('view_bulk_temp', 'block');
+        document.getElementById('inboundTitle').textContent = "Bulk Temp Entry";
+        initBulkTempView();
     }
 }
 
@@ -2441,17 +2499,142 @@ window.refreshTempList = async function() {
     }
 };
 
+// --- BULK TEMP LOGIC ---
+window.initBulkTempView = function() {
+    if (!window.tomInstances.bulkTempClient) {
+        window.tomInstances.bulkTempClient = new TomSelect("#bulk_temp_client", {
+            create: false,
+            maxOptions: null,
+            dropdownParent: 'body',
+            placeholder: "Select Client..."
+        });
+        const dd = window.APP_DATA.static.dropdowns;
+        if (dd && dd.clients) {
+            dd.clients.forEach(x => window.tomInstances.bulkTempClient.addOption({value: x, text: x}));
+            window.tomInstances.bulkTempClient.sync();
+        }
+    }
+    const br = document.getElementById('bulk_temp_branch');
+    if(br && !br.value) br.value = curBranch || "Naraina Vihar";
+
+    if(document.getElementById('bulkTempBody').children.length === 0) {
+        addBulkTempRows(10);
+    }
+};
+
+window.addBulkTempRows = function(count) {
+    const tbody = document.getElementById('bulkTempBody');
+    const startIdx = tbody.children.length;
+    for(let i=0; i<count; i++) {
+        const idx = startIdx + i + 1;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="text-muted text-center">${idx}</td>
+            <td class="p-0"><input type="number" step="any" class="form-control form-control-sm border-0 text-center p-1 fw-bold bt-wgt" placeholder="0.0"></td>
+            <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 bt-l" placeholder="0" oninput="calculateBulkTempVol(this)"></td>
+            <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 bt-w" placeholder="0" oninput="calculateBulkTempVol(this)"></td>
+            <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 bt-h" placeholder="0" oninput="calculateBulkTempVol(this)"></td>
+            <td class="p-0"><input type="text" class="form-control form-control-sm border-0 text-center p-1 text-muted bt-vol" readonly placeholder="0.0"></td>
+            <td class="p-0 text-center"><button type="button" class="btn btn-link text-danger p-0" onclick="removeBulkTempRow(this)"><i class="bi bi-x"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+    }
+    updateBulkTempCount();
+};
+
+window.removeBulkTempRow = function(btn) {
+    btn.closest('tr').remove();
+    updateBulkTempCount();
+    // Re-index
+    document.querySelectorAll('#bulkTempBody tr').forEach((tr, i) => {
+        tr.querySelector('td').textContent = i + 1;
+    });
+};
+
+window.updateBulkTempCount = function() {
+    const count = document.getElementById('bulkTempBody').children.length;
+    document.getElementById('bulk_temp_count').value = count;
+};
+
+window.calculateBulkTempVol = function(el) {
+    const tr = el.closest('tr');
+    const l = parseFloat(tr.querySelector('.bt-l').value) || 0;
+    const w = parseFloat(tr.querySelector('.bt-w').value) || 0;
+    const h = parseFloat(tr.querySelector('.bt-h').value) || 0;
+    const vol = (l * w * h) / 5000;
+    tr.querySelector('.bt-vol').value = vol.toFixed(2);
+};
+
+window.submitBulkTempBatch = async function() {
+    const client = document.getElementById('bulk_temp_client').value;
+    const branch = document.getElementById('bulk_temp_branch').value;
+    if(!client) return alert("Select Client");
+
+    const rows = [];
+    document.querySelectorAll('#bulkTempBody tr').forEach((tr, i) => {
+        const wgt = parseFloat(tr.querySelector('.bt-wgt').value) || 0;
+        if(wgt > 0) {
+            rows.push({
+                wgt: wgt,
+                l: parseFloat(tr.querySelector('.bt-l').value) || 0,
+                w: parseFloat(tr.querySelector('.bt-w').value) || 0,
+                h: parseFloat(tr.querySelector('.bt-h').value) || 0,
+                vol: parseFloat(tr.querySelector('.bt-vol').value) || 0
+            });
+        }
+    });
+
+    if(rows.length === 0) return alert("No rows with weight entered.");
+    if(!confirm(`Submit ${rows.length} temp shipments for ${client}?`)) return;
+
+    // Generate Batch ID (HHMMSS)
+    const now = new Date();
+    const batchId = now.toTimeString().split(' ')[0].replace(/:/g, "");
+    const dateStr = now.toISOString().slice(0,10).replace(/-/g,"");
+    const safeClient = (client || "UKNW").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    const clientSuffix = safeClient.length > 4 ? safeClient.slice(-4) : safeClient.padEnd(4, 'X');
+
+    const payload = rows.map((r, i) => {
+        const seq = String(i + 1).padStart(3, '0');
+        const awb = `TEMP-${dateStr}-${clientSuffix}-${batchId}-${seq}`;
+        return {
+            awb: awb,
+            date: now.toISOString(),
+            client: client,
+            weight: r.wgt, // Use weight directly
+            // For Bulk Temp, it's 1 box per shipment.
+            // Backend expects 'boxes' as array of objects.
+            boxes: [{no: 1, weight: r.wgt, length: r.l, breath: r.w, height: r.h}],
+            user: curUser,
+            branch: branch
+        };
+    });
+
+    showSpin(true);
+    const r = await callApi({
+        action: 'saveTempEntryBatch',
+        shipments: payload
+    });
+    showSpin(false);
+
+    if(r.result === 'success') {
+        toast(`Submitted ${rows.length} Temp Shipments`);
+        // Reset
+        document.getElementById('bulkTempBody').innerHTML = '';
+        addBulkTempRows(10);
+        if(window.tomInstances.bulkTempClient) window.tomInstances.bulkTempClient.clear();
+        refreshTempList();
+    } else {
+        alert("Error: " + r.message);
+    }
+};
+
 window.generateTempAwb = function(clientName) {
     const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,"");
     const safeClient = (clientName || "UKNW").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
     const clientSuffix = safeClient.length > 4 ? safeClient.slice(-4) : safeClient.padEnd(4, 'X');
     const randomSeq = Math.floor(Math.random() * 1000).toString().padStart(3, '0'); // Random 000-999
-    let awb = `TEMP-${dateStr}-${clientSuffix}-${randomSeq}`;
-
-    if (document.getElementById('temp_is_bulk').checked) {
-        awb += "-A";
-    }
-    return awb;
+    return `TEMP-${dateStr}-${clientSuffix}-${randomSeq}`;
 };
 
 window.submitTempEntry = async function() {
@@ -2516,31 +2699,38 @@ window.convertToRegular = function(tempData) {
     const branchEl = document.getElementById('f_branch');
     if(branchEl && tempData.branch) branchEl.value = tempData.branch;
 
-    document.getElementById('f_boxes').value = tempData.boxes.length || 1;
+    // Explicit Reset
+    document.getElementById('boxTable').innerHTML = '';
+
+    // Set Count
+    const count = (tempData.boxes && tempData.boxes.length) ? tempData.boxes.length : 1;
+    document.getElementById('f_boxes').value = count;
 
     // Set hidden reference
     document.getElementById('f_temp_ref').value = tempData.awb;
 
-    // Generate Box Rows first using existing logic to ensure structure
+    // Trigger Gen
     genBoxes();
 
     // Populate Box Table
     // Must re-query rows after genBoxes() as DOM updated
     const rows = document.querySelectorAll('#boxTable tr');
 
-    tempData.boxes.forEach((b, i) => {
-        if(rows[i]) {
-            const inputs = rows[i].querySelectorAll('input');
-            // Standard Form Order: [0]=Weight, [1]=Length, [2]=Width, [3]=Height
-            if(inputs[0]) inputs[0].value = b.weight || 0;
-            if(inputs[1]) inputs[1].value = b.length || 0;
-            if(inputs[2]) inputs[2].value = b.breath || 0;
-            if(inputs[3]) inputs[3].value = b.height || 0;
+    if (tempData.boxes && Array.isArray(tempData.boxes)) {
+        tempData.boxes.forEach((b, i) => {
+            if(rows[i]) {
+                const inputs = rows[i].querySelectorAll('input');
+                // Standard Form Order: [0]=Weight, [1]=Length, [2]=Width, [3]=Height
+                if(inputs[0]) inputs[0].value = b.weight || 0;
+                if(inputs[1]) inputs[1].value = b.length || 0;
+                if(inputs[2]) inputs[2].value = b.breath || 0;
+                if(inputs[3]) inputs[3].value = b.height || 0;
 
-            // Trigger calculation for this row to update volumetric and chargeable
-            cBox(inputs[0]);
-        }
-    });
+                // Trigger calculation for this row to update volumetric and chargeable
+                cBox(inputs[0]);
+            }
+        });
+    }
 
     toast("Data Pre-filled from Temp Entry");
 

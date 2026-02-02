@@ -111,6 +111,7 @@ function doPost(e) {
 
     // Temp Entry Features
     if (act === "saveTempEntry") return handleSaveTempEntry(body);
+    if (act === "saveTempEntryBatch") return handleSaveTempEntryBatch(body);
     if (act === "getTempEntries") return handleGetTempEntries();
 
     if (act === "bulkPaperDone") return handleBulkPaperDone(body);
@@ -1635,4 +1636,34 @@ function handleGetTempEntries() {
     });
 
     return jsonResponse("success", "OK", { data: active });
+}
+
+function handleSaveTempEntryBatch(b) {
+    if (typeof b.shipments === 'string') {
+        try { b.shipments = JSON.parse(b.shipments); } catch(e){}
+    }
+    const shipments = b.shipments;
+    if(!shipments || !Array.isArray(shipments) || !shipments.length) return jsonResponse("error", "No data");
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sh = ss.getSheetByName("Temp_Shipments");
+    if (!sh) {
+        sh = ss.insertSheet("Temp_Shipments");
+        sh.appendRow(["Temp AWB", "Date", "Client", "Boxes JSON", "Weight", "Status", "User", "Branch"]);
+    }
+    // Ensure header has Branch
+    if (sh.getLastColumn() < 8) {
+        sh.getRange(1, 8).setValue("Branch");
+    }
+
+    const rows = shipments.map(s => {
+        const boxesStr = JSON.stringify(s.boxes); // Array of 1 box
+        return [s.awb, s.date, s.client, boxesStr, s.weight, "Active", s.user, s.branch];
+    });
+
+    // Write in batch
+    const lr = sh.getLastRow();
+    sh.getRange(lr + 1, 1, rows.length, 8).setValues(rows);
+
+    return jsonResponse("success", "Batch Saved");
 }
