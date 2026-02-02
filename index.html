@@ -2701,8 +2701,19 @@ window.convertToRegular = function(tempData) {
     // Explicit Reset
     document.getElementById('boxTable').innerHTML = '';
 
+    // Robust JSON Parsing for Boxes
+    let boxesData = tempData.boxes;
+    if (typeof boxesData === 'string') {
+        try {
+            boxesData = JSON.parse(boxesData);
+        } catch(e) {
+            console.error("Box Parse Error", e);
+            boxesData = [];
+        }
+    }
+
     // Set Count
-    const count = (tempData.boxes && tempData.boxes.length) ? tempData.boxes.length : 1;
+    const count = (boxesData && boxesData.length) ? boxesData.length : 1;
     document.getElementById('f_boxes').value = count;
 
     // Set hidden reference
@@ -2715,20 +2726,27 @@ window.convertToRegular = function(tempData) {
     // Must re-query rows after genBoxes() as DOM updated
     const rows = document.querySelectorAll('#boxTable tr');
 
-    if (tempData.boxes && Array.isArray(tempData.boxes)) {
-        tempData.boxes.forEach((b, i) => {
+    if (boxesData && Array.isArray(boxesData)) {
+        boxesData.forEach((src, i) => {
             if(rows[i]) {
                 const inputs = rows[i].querySelectorAll('input');
                 // Standard Form Order: [0]=Weight, [1]=Length, [2]=Width, [3]=Height
-                // Ensure we use the correct property names from the box object (length, breath, height)
-                // Note: 'breath' is the key used in the backend/temp object for Width
-                if(inputs[0]) inputs[0].value = b.weight || 0;
-                if(inputs[1]) inputs[1].value = b.length || 0;
-                if(inputs[2]) inputs[2].value = b.breath || 0;
-                if(inputs[3]) inputs[3].value = b.height || 0;
+
+                // Map Data with Fallbacks
+                // Input[0]: Weight
+                if(inputs[0]) inputs[0].value = src.weight || 0;
+
+                // Input[1]: Length
+                if(inputs[1]) inputs[1].value = src.length || src.l || 0;
+
+                // Input[2]: Width (Backend uses 'breath', 'breadth', or 'b')
+                if(inputs[2]) inputs[2].value = src.breath || src.breadth || src.b || 0;
+
+                // Input[3]: Height
+                if(inputs[3]) inputs[3].value = src.height || src.h || 0;
 
                 // Trigger calculation for this row to update volumetric and chargeable
-                cBox(inputs[0]);
+                if(inputs[0]) cBox(inputs[0]);
             }
         });
     }
