@@ -2720,6 +2720,8 @@ window.convertToRegular = function(tempData) {
             if(rows[i]) {
                 const inputs = rows[i].querySelectorAll('input');
                 // Standard Form Order: [0]=Weight, [1]=Length, [2]=Width, [3]=Height
+                // Ensure we use the correct property names from the box object (length, breath, height)
+                // Note: 'breath' is the key used in the backend/temp object for Width
                 if(inputs[0]) inputs[0].value = b.weight || 0;
                 if(inputs[1]) inputs[1].value = b.length || 0;
                 if(inputs[2]) inputs[2].value = b.breath || 0;
