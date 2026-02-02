@@ -224,7 +224,7 @@
       <div class="nav-label">Main Menu</div>
       <a class="nav-item-custom active" id="nav-overview" onclick="switchTab('overview')" style="display:none"><i class="bi bi-grid-1x2 me-2"></i> Overview</a>
       <a class="nav-item-custom" id="nav-inbound" onclick="switchTab('inbound')" style="display:none"><i class="bi bi-box-seam me-2"></i> Inbound</a>
-      <a class="nav-item-custom" id="nav-advance" onclick="switchTab('advance')" style="display:none"><i class="bi bi-calendar-plus me-2"></i> Advance Records</a>
+      <a class="nav-item-custom" id="nav-advance" onclick="switchTab('advance')" style="display:none"><i class="bi bi-calendar-plus me-2"></i> Advance / Temp</a>
       <a class="nav-item-custom" id="nav-taskhub" onclick="switchTab('taskhub')" style="display:none"><i class="bi bi-check-circle me-2"></i> <span id="taskLabel">My Tasks</span></a>
       <a class="nav-item-custom" id="nav-manifest" onclick="switchTab('manifest')" style="display:none"><i class="bi bi-file-earmark-spreadsheet me-2"></i> Manifest</a>
       <a class="nav-item-custom" id="nav-receivers" onclick="switchTab('receivers')" style="display:none"><i class="bi bi-printer me-2"></i> Receivers Slip</a>
@@ -263,7 +263,7 @@
 
       <!-- ADVANCE TAB -->
       <div id="advance-tab" class="tab-view" style="display:none;">
-         <div class="panel-card p-4">
+         <div class="panel-card p-4 mb-4">
              <div class="d-flex justify-content-between align-items-center mb-4">
                  <div>
                      <h5 class="m-0 fw-bold text-primary"><i class="bi bi-calendar-plus me-2"></i>Advance Shipments</h5>
@@ -274,7 +274,7 @@
                      <input id="adv_search" class="form-control" placeholder="Search..." oninput="renderAdvance()">
                  </div>
              </div>
-             <div class="table-responsive border rounded" style="max-height: 600px; overflow-y: auto;">
+             <div class="table-responsive border rounded" style="max-height: 400px; overflow-y: auto;">
                  <table class="table table-hover align-middle mb-0 small">
                      <thead class="bg-light sticky-top"><tr><th>AWB</th><th>Date (Entry)</th><th>Client</th><th>Network</th><th>Boxes</th><th>Wgt</th><th>Dest</th><th class="text-end">Action</th></tr></thead>
                      <tbody id="advanceList"></tbody>
@@ -282,6 +282,32 @@
              </div>
              <div id="advanceEmpty" class="text-center py-5" style="display:none">
                  <div class="text-muted"><i class="bi bi-inbox fs-1 opacity-50"></i><div class="mt-2 fw-bold">No Advance Records</div></div>
+             </div>
+         </div>
+
+         <!-- Moved Temp Shipments List -->
+         <div class="panel-card p-4">
+             <div class="panel-header bg-warning bg-opacity-10 text-dark border-warning border-opacity-25 mb-3">
+                 <span class="fw-bold"><i class="bi bi-hourglass-split me-2"></i>Pending Temp Shipments</span>
+                 <button type="button" class="btn btn-sm btn-outline-dark" onclick="refreshTempList()"><i class="bi bi-arrow-clockwise"></i></button>
+             </div>
+             <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                 <table class="table table-hover align-middle mb-0 small">
+                     <thead class="bg-light sticky-top">
+                         <tr>
+                             <th>Temp AWB</th>
+                             <th>Date</th>
+                             <th>Branch</th>
+                             <th>Client</th>
+                             <th>Wgt</th>
+                             <th class="text-end">Action</th>
+                         </tr>
+                     </thead>
+                     <tbody id="tempListBody"></tbody>
+                 </table>
+             </div>
+             <div id="tempListEmpty" class="text-center py-5" style="display:none;">
+                 <div class="text-muted small">No Pending Temp Shipments</div>
              </div>
          </div>
       </div>
@@ -393,9 +419,9 @@
                </div>
 
                <!-- Temp Inbound View -->
-               <div id="view_temp_inbound" style="display:none;" class="row g-4">
-                   <!-- Left Column: Entry Form -->
-                   <div class="col-md-5">
+               <div id="view_temp_inbound" style="display:none;" class="row justify-content-center g-4">
+                   <!-- Center Column: Entry Form -->
+                   <div class="col-md-8">
                        <div class="card shadow-sm border-0 bg-light">
                            <div class="card-header bg-primary text-white fw-bold"><i class="bi bi-box-seam me-2"></i>Unidentified Shipment Entry</div>
                            <div class="card-body p-4">
@@ -440,34 +466,6 @@
                                <button type="button" class="btn btn-primary w-100 fw-bold py-2 shadow-sm" onclick="submitTempEntry()">
                                    <i class="bi bi-save-fill me-2"></i>Save as Temp
                                </button>
-                           </div>
-                       </div>
-                   </div>
-
-                   <!-- Right Column: Pending List -->
-                   <div class="col-md-7">
-                       <div class="panel-card h-100">
-                           <div class="panel-header bg-warning bg-opacity-10 text-dark border-warning border-opacity-25">
-                               <span class="fw-bold"><i class="bi bi-hourglass-split me-2"></i>Pending Temp Shipments</span>
-                               <button type="button" class="btn btn-sm btn-outline-dark" onclick="refreshTempList()"><i class="bi bi-arrow-clockwise"></i></button>
-                           </div>
-                           <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                               <table class="table table-hover align-middle mb-0 small">
-                                   <thead class="bg-light sticky-top">
-                                       <tr>
-                                           <th>Temp AWB</th>
-                                           <th>Date</th>
-                                           <th>Branch</th>
-                                           <th>Client</th>
-                                           <th>Wgt</th>
-                                           <th class="text-end">Action</th>
-                                       </tr>
-                                   </thead>
-                                   <tbody id="tempListBody"></tbody>
-                               </table>
-                           </div>
-                           <div id="tempListEmpty" class="text-center py-5" style="display:none;">
-                               <div class="text-muted small">No Pending Temp Shipments</div>
                            </div>
                        </div>
                    </div>
@@ -2082,7 +2080,7 @@ window.switchTab=function(t){
    if(t==='admin') renderAdminPanel();
    if(t==='holdings') renderHoldings();
    if(t==='receivers') renderReceivers();
-   if(t==='advance') renderAdvance();
+   if(t==='advance') { renderAdvance(); refreshTempList(); }
 }
 function initForms(){
    const dd=window.APP_DATA.static.dropdowns;
@@ -2690,7 +2688,8 @@ window.submitTempEntry = async function() {
 window.convertToRegular = function(tempData) {
     if(!confirm(`Convert ${tempData.awb} to Regular Shipment?`)) return;
 
-    // Switch to Normal Mode
+    // Switch to Inbound Tab and Normal Mode
+    switchTab('inbound');
     switchInboundMode('Normal');
 
     // Pre-fill Data
