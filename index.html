@@ -431,9 +431,14 @@
                                    <input type="number" step="any" id="temp_weight" class="form-control fun-input fw-bold fs-5 bg-light" readonly placeholder="0.00">
                                </div>
 
-                               <div class="mb-4">
+                               <div class="mb-3">
                                    <label class="fun-label">Temp AWB (Generated)</label>
                                    <input id="temp_awb_display" class="form-control fun-input bg-light text-muted fst-italic" readonly placeholder="Generated on Submit">
+                               </div>
+
+                               <div class="form-check mb-4">
+                                   <input class="form-check-input" type="checkbox" id="temp_is_bulk">
+                                   <label class="form-check-label small fw-bold" for="temp_is_bulk">Bulk Shipment (-A)</label>
                                </div>
 
                                <button type="button" class="btn btn-primary w-100 fw-bold py-2 shadow-sm" onclick="submitTempEntry()">
@@ -2441,7 +2446,12 @@ window.generateTempAwb = function(clientName) {
     const safeClient = (clientName || "UKNW").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
     const clientSuffix = safeClient.length > 4 ? safeClient.slice(-4) : safeClient.padEnd(4, 'X');
     const randomSeq = Math.floor(Math.random() * 1000).toString().padStart(3, '0'); // Random 000-999
-    return `TEMP-${dateStr}-${clientSuffix}-${randomSeq}`;
+    let awb = `TEMP-${dateStr}-${clientSuffix}-${randomSeq}`;
+
+    if (document.getElementById('temp_is_bulk').checked) {
+        awb += "-A";
+    }
+    return awb;
 };
 
 window.submitTempEntry = async function() {
@@ -2515,24 +2525,22 @@ window.convertToRegular = function(tempData) {
     genBoxes();
 
     // Populate Box Table
+    // Must re-query rows after genBoxes() as DOM updated
     const rows = document.querySelectorAll('#boxTable tr');
-    let totalWgt = 0;
 
     tempData.boxes.forEach((b, i) => {
         if(rows[i]) {
             const inputs = rows[i].querySelectorAll('input');
-            if(inputs[0]) inputs[0].value = b.weight; // Weight
-            if(inputs[1]) inputs[1].value = b.length; // L
-            if(inputs[2]) inputs[2].value = b.breath; // W
-            if(inputs[3]) inputs[3].value = b.height; // H
+            // Standard Form Order: [0]=Weight, [1]=Length, [2]=Width, [3]=Height
+            if(inputs[0]) inputs[0].value = b.weight || 0;
+            if(inputs[1]) inputs[1].value = b.length || 0;
+            if(inputs[2]) inputs[2].value = b.breath || 0;
+            if(inputs[3]) inputs[3].value = b.height || 0;
 
-            // Trigger calculation for this row
+            // Trigger calculation for this row to update volumetric and chargeable
             cBox(inputs[0]);
         }
     });
-
-    // cBox updates individual row and total sum, but let's ensure total is correct
-    // (cBox is triggered on input, calling it manually works)
 
     toast("Data Pre-filled from Temp Entry");
 
