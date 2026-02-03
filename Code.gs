@@ -471,6 +471,9 @@ function getAllData(username) {
   // ⚡ Bolt Helper: Format raw numbers to fixed decimals (simulate getDisplayValues)
   const num = (v) => { const n = parseFloat(v); return isNaN(n) ? v : n.toFixed(2); };
 
+  // ⚡ Bolt Optimization: Pre-calculate allowed staff set for O(1) lookup
+  const allowedStaffSet = new Set((staticData.staff || []).map(s => String(s).trim().toLowerCase()));
+
   // ⚡ Bolt Optimization: Filter data processing
   // Only process rows that are ACTIVE or RECENT.
   // Criteria:
@@ -504,15 +507,13 @@ function getAllData(username) {
              if (branch) branchMap[branch] = (branchMap[branch] || 0) + 1;
 
              // Staff Performance (With Whitelist Filter)
-             const allowedStaff = (staticData.staff || []).map(s => String(s).trim().toLowerCase());
-
              const autoDoer = String(r[15]).trim();
-             if (autoDoer && allowedStaff.includes(autoDoer.toLowerCase())) {
+             if (autoDoer && allowedStaffSet.has(autoDoer.toLowerCase())) {
                  staffMap[autoDoer] = (staffMap[autoDoer] || 0) + 1;
              }
 
              const assignee = String(r[17]).trim();
-             if (assignee && allowedStaff.includes(assignee.toLowerCase())) {
+             if (assignee && allowedStaffSet.has(assignee.toLowerCase())) {
                  staffMap[assignee] = (staffMap[assignee] || 0) + 1;
              }
         }
