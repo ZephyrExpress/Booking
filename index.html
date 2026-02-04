@@ -1377,13 +1377,23 @@ function updateNavVisibility() {
 }
 
 function renderUI(){
+  const checkVis = (id) => { const el = document.getElementById(id); return el && el.style.display !== 'none'; };
+  if(checkVis('overview-tab')) renderOverview();
+  if(checkVis('taskhub-tab')) renderTaskHub();
+  if(checkVis('manifest-tab')) renderManifest();
+  if(checkVis('holdings-tab')) renderHoldings();
+  if(checkVis('receivers-tab')) renderReceivers();
+  if(checkVis('admin-tab')) renderAdminPanel();
+  if(checkVis('advance-tab')) renderAdvance();
+}
+
+function renderOverview() {
   const d=window.APP_DATA.overview, s=window.APP_DATA.stats;
   document.getElementById('ovInbound').textContent=s.inbound;
   document.getElementById('ovAuto').textContent=d.auto.length;
   document.getElementById('ovPaper').textContent=d.paper.length;
   document.getElementById('badgeAuto').textContent=d.auto.length;
   document.getElementById('badgePaper').textContent=d.paper.length;
-  document.getElementById('totalHoldings').textContent=s.holdings;
   document.getElementById('ovHoldings').textContent=s.holdings;
 
   const la=document.getElementById('listAuto');
@@ -1431,14 +1441,6 @@ function renderUI(){
            </div>
         </div>`).join('');
   }
-
-  renderTaskHub();
-  const checkVis = (id) => { const el = document.getElementById(id); return el && el.style.display !== 'none'; };
-  if(checkVis('manifest-tab')) renderManifest();
-  if(checkVis('holdings-tab')) renderHoldings();
-  if(checkVis('receivers-tab')) renderReceivers();
-  if(checkVis('admin-tab')) renderAdminPanel();
-  if(checkVis('advance-tab')) renderAdvance();
 }
 
 window.renderAdvance = function() {
@@ -1587,6 +1589,12 @@ window.markSelectedDone = async function() {
 window.renderHoldings = function() {
     const list = document.getElementById('holdingsList');
     const items = window.APP_DATA.holdings || [];
+
+    // Update stats
+    if (window.APP_DATA.stats && document.getElementById('totalHoldings')) {
+        document.getElementById('totalHoldings').textContent = window.APP_DATA.stats.holdings;
+    }
+
     if(!items.length) list.innerHTML='<tr><td colspan="7" class="text-center p-5 text-muted"><h5>No Active Holdings</h5><p class="small">Shipments placed on hold will appear here.</p></td></tr>';
     else {
     const getReasonDesc = (code) => {
@@ -2075,6 +2083,8 @@ window.switchTab=function(t){
    // Auto-close sidebar on mobile/small screens when an item is selected
    closeSidebar();
    
+   if(t==='overview') renderOverview();
+   if(t==='taskhub') renderTaskHub();
    if(t==='manifest') renderManifest();
    if(t==='manifest') renderDailyManifest(); // Render Daily too just in case
    if(t==='admin') renderAdminPanel();
