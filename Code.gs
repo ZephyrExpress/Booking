@@ -481,6 +481,9 @@ function getAllData(username) {
   // 5. Automated by user (ToAssign)
   // Skip old completed shipments to reduce payload size.
 
+  // ⚡ Bolt Optimization: Pre-calculate Allowed Staff Set for O(1) Lookup
+  const allowedStaffSet = new Set((staticData.staff || []).map(s => String(s).trim().toLowerCase()));
+
   data.forEach(r => {
     try {
         const rId = String(r[0]).replace(/'/g, "").trim();
@@ -504,15 +507,13 @@ function getAllData(username) {
              if (branch) branchMap[branch] = (branchMap[branch] || 0) + 1;
 
              // Staff Performance (With Whitelist Filter)
-             const allowedStaff = (staticData.staff || []).map(s => String(s).trim().toLowerCase());
-
              const autoDoer = String(r[15]).trim();
-             if (autoDoer && allowedStaff.includes(autoDoer.toLowerCase())) {
+             if (autoDoer && allowedStaffSet.has(autoDoer.toLowerCase())) {
                  staffMap[autoDoer] = (staffMap[autoDoer] || 0) + 1;
              }
 
              const assignee = String(r[17]).trim();
-             if (assignee && allowedStaff.includes(assignee.toLowerCase())) {
+             if (assignee && allowedStaffSet.has(assignee.toLowerCase())) {
                  staffMap[assignee] = (staffMap[assignee] || 0) + 1;
              }
         }
