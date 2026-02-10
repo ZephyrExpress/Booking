@@ -1176,7 +1176,6 @@ function isUserBusy() {
 
 // Debounced wrappers
 window.d_renderManifest = debounce(() => renderManifest(), 300);
-window.d_renderDailyManifest = debounce(() => renderDailyManifest(), 300);
 window.d_renderReceivers = debounce(() => renderReceivers(), 300);
 window.d_searchHoldings = debounce(() => searchHoldings(), 300);
 
@@ -1434,7 +1433,10 @@ function renderUI(){
 
   renderTaskHub();
   const checkVis = (id) => { const el = document.getElementById(id); return el && el.style.display !== 'none'; };
-  if(checkVis('manifest-tab')) renderManifest();
+  if(checkVis('manifest-tab')) {
+      if(document.getElementById('man-history-view').style.display !== 'none') renderManifestHistory();
+      else renderManifest();
+  }
   if(checkVis('holdings-tab')) renderHoldings();
   if(checkVis('receivers-tab')) renderReceivers();
   if(checkVis('admin-tab')) renderAdminPanel();
@@ -2075,8 +2077,10 @@ window.switchTab=function(t){
    // Auto-close sidebar on mobile/small screens when an item is selected
    closeSidebar();
    
-   if(t==='manifest') renderManifest();
-   if(t==='manifest') renderDailyManifest(); // Render Daily too just in case
+   if(t==='manifest') {
+       if(document.getElementById('man-history-view').style.display !== 'none') renderManifestHistory();
+       else renderManifest();
+   }
    if(t==='admin') renderAdminPanel();
    if(t==='holdings') renderHoldings();
    if(t==='receivers') renderReceivers();
