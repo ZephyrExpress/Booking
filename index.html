@@ -325,6 +325,17 @@
                <li class="nav-item"><button class="nav-link fw-bold" onclick="switchInboundMode('Temporary')">Temporary Entry</button></li>
            </ul>
 
+           <!-- Temporary Sub-Navigation -->
+           <div id="temp_sub_nav" style="display:none;" class="text-center mb-3">
+               <div class="btn-group" role="group">
+                   <input type="radio" class="btn-check" name="tempModeRadio" id="tmr_single" autocomplete="off" checked onclick="toggleTempMode('single')">
+                   <label class="btn btn-outline-primary fw-bold" for="tmr_single">Single Temporary</label>
+
+                   <input type="radio" class="btn-check" name="tempModeRadio" id="tmr_bulk" autocomplete="off" onclick="toggleTempMode('bulk')">
+                   <label class="btn btn-outline-primary fw-bold" for="tmr_bulk">Bulk Temporary</label>
+               </div>
+           </div>
+
            <div class="fun-header">
               <h5 class="fw-bold m-0"><i class="bi bi-plus-circle-fill me-2"></i><span id="inboundTitle">Normal Inbound</span></h5>
               <div class="small opacity-75">Please fill details below</div>
@@ -417,57 +428,114 @@
                    </div>
                </div>
 
-               <!-- Temporary Entry View (Merged) -->
-               <div id="view_temporary" style="display:none;" class="p-2">
+               <!-- Temp Inbound View -->
+               <div id="view_temp_inbound" style="display:none;" class="row justify-content-center g-4">
+                   <!-- Center Column: Entry Form -->
+                   <div class="col-md-8">
+                       <div class="card shadow-sm border-0 bg-light">
+                           <div class="card-header bg-primary text-white fw-bold"><i class="bi bi-box-seam me-2"></i>Temporary Entry</div>
+                           <div class="card-body p-4">
+                               <div class="mb-3">
+                                   <label class="fun-label">Branch *</label>
+                                   <select id="temp_branch" class="form-select">
+                                       <option value="Naraina Vihar">Naraina Vihar</option>
+                                       <option value="Mahipalpur">Mahipalpur</option>
+                                       <option value="Santnagar">Santnagar</option>
+                                   </select>
+                               </div>
+                               <div class="mb-3">
+                                   <label class="fun-label">Client *</label>
+                                   <select id="temp_client" class="form-select" placeholder="Select Client..."></select>
+                               </div>
+
+                               <div class="fun-section border bg-white mb-3 p-3">
+                                   <div class="d-flex justify-content-between align-items-center mb-2">
+                                       <h6 class="fw-bold text-muted m-0 small text-uppercase">Box Manager</h6>
+                                       <button type="button" class="btn btn-sm btn-success fw-bold py-0" onclick="addTempBoxRow()">
+                                           <i class="bi bi-plus-lg"></i>
+                                       </button>
+                                   </div>
+                                   <div class="table-responsive border rounded bg-light" style="max-height: 200px;">
+                                       <table class="table table-sm table-bordered align-middle mb-0 small text-center" style="font-size:0.8rem;">
+                                           <thead class="bg-white"><tr><th style="width:30px">#</th><th>Length (cm)</th><th>Breadth (cm)</th><th>Height (cm)</th><th>Act Wgt (kg)</th><th style="width:30px"></th></tr></thead>
+                                           <tbody id="tempBoxTable"></tbody>
+                                       </table>
+                                   </div>
+                               </div>
+
+                               <div class="mb-3">
+                                   <label class="fun-label">Total Chargeable Weight (Kg)</label>
+                                   <input type="number" step="any" id="temp_weight" class="form-control fun-input fw-bold fs-5 bg-light" readonly placeholder="0.00">
+                               </div>
+
+                               <div class="mb-3">
+                                   <label class="fun-label">Temp AWB (Generated)</label>
+                                   <input id="temp_awb_display" class="form-control fun-input bg-light text-muted fst-italic" readonly placeholder="Generated on Submit">
+                               </div>
+
+                               <button type="button" class="btn btn-primary w-100 fw-bold py-2 shadow-sm" onclick="submitTempEntry()">
+                                   <i class="bi bi-save-fill me-2"></i>Save as Temp
+                               </button>
+                           </div>
+                       </div>
+                   </div>
+               </div>
+
+               <!-- Bulk Temp View -->
+               <div id="view_bulk_temp" style="display:none;" class="p-2">
+                   <div class="fun-header mb-3" style="background: linear-gradient(135deg, #6610f2 0%, #520dc2 100%);">
+                        <h5 class="fw-bold m-0"><i class="bi bi-stack me-2"></i>Bulk Temporary Entry</h5>
+                   </div>
+                   <!-- Master Data Card -->
                    <div class="card shadow-sm border-0 mb-3 bg-light">
                        <div class="card-body p-3">
-                           <div class="d-flex justify-content-center gap-4 mb-4 border-bottom pb-3">
-                               <div class="form-check form-check-inline">
-                                   <input class="form-check-input" type="radio" name="tempModeToggle" id="tmt_single" value="single" checked onchange="toggleTempMode('single')">
-                                   <label class="form-check-label fw-bold text-primary" for="tmt_single">Single Temporary</label>
+                           <div class="row g-3 align-items-end">
+                               <div class="col-md-4">
+                                   <label class="small fw-bold text-muted text-uppercase">Client</label>
+                                   <select id="bulk_temp_client" class="form-select form-select-sm border-secondary" placeholder="Select Client..."></select>
                                </div>
-                               <div class="form-check form-check-inline">
-                                   <input class="form-check-input" type="radio" name="tempModeToggle" id="tmt_bulk" value="bulk" onchange="toggleTempMode('bulk')">
-                                   <label class="form-check-label fw-bold text-primary" for="tmt_bulk">Bulk Temporary</label>
+                               <div class="col-md-4">
+                                   <label class="small fw-bold text-muted text-uppercase">Branch</label>
+                                   <select id="bulk_temp_branch" class="form-select form-select-sm border-secondary">
+                                       <option value="Naraina Vihar">Naraina Vihar</option>
+                                       <option value="Mahipalpur">Mahipalpur</option>
+                                       <option value="Santnagar">Santnagar</option>
+                                   </select>
                                </div>
-                           </div>
-
-                           <div class="row justify-content-center mb-3">
-                                <div class="col-md-4">
-                                    <label class="small fw-bold text-muted text-uppercase">Branch</label>
-                                    <select id="temp_new_branch" class="form-select form-select-sm border-secondary">
-                                        <option value="Naraina Vihar">Naraina Vihar</option>
-                                        <option value="Mahipalpur">Mahipalpur</option>
-                                        <option value="Santnagar">Santnagar</option>
-                                    </select>
-                                </div>
-                           </div>
-
-                           <!-- Single Mode Sub-View -->
-                           <div id="temp_sub_single">
-                               <div class="row justify-content-center g-3 align-items-end">
-                                   <div class="col-md-4">
-                                       <label class="fun-label">Client</label>
-                                       <select id="temp_single_client" class="form-select" placeholder="Select Client..."></select>
-                                   </div>
-                                   <div class="col-md-3">
-                                       <label class="fun-label">Box Count</label>
-                                       <input type="number" id="temp_single_boxes" class="form-control fun-input" placeholder="1">
-                                   </div>
+                               <div class="col-md-4">
+                                   <label class="small fw-bold text-muted text-uppercase">Total Rows</label>
+                                   <input type="number" id="bulk_temp_count" class="form-control form-control-sm border-secondary fw-bold bg-white" readonly value="0">
                                </div>
                            </div>
+                       </div>
+                   </div>
 
-                           <!-- Bulk Mode Sub-View -->
-                           <div id="temp_sub_bulk" style="display:none;">
-                               <div class="row justify-content-center">
-                                   <div class="col-md-8">
-                                       <label class="fun-label">Bulk Data Input</label>
-                                       <textarea id="temp_bulk_input" class="form-control fun-input font-monospace" rows="10" placeholder="Paste data here..."></textarea>
-                                       <div class="form-text small text-muted"><i class="bi bi-info-circle me-1"></i> Paste Excel columns or CSV data.</div>
-                                   </div>
-                               </div>
-                           </div>
+                   <!-- Grid Table -->
+                   <div class="table-responsive border rounded bg-white mb-3" style="max-height: 60vh;">
+                       <table class="table table-sm table-bordered align-middle mb-0" id="bulkTempTable">
+                           <thead class="bg-light sticky-top" style="z-index: 5;">
+                               <tr class="text-center small text-muted text-uppercase">
+                                   <th style="width: 40px;">#</th>
+                                   <th style="width: 100px;">Weight (kg)</th>
+                                   <th style="width: 80px;">L (cm)</th>
+                                   <th style="width: 80px;">W (cm)</th>
+                                   <th style="width: 80px;">H (cm)</th>
+                                   <th style="width: 100px;">Vol Wgt</th>
+                                   <th style="width: 50px;"><i class="bi bi-trash"></i></th>
+                               </tr>
+                           </thead>
+                           <tbody id="bulkTempBody"></tbody>
+                       </table>
+                   </div>
 
+                   <!-- Footer Actions -->
+                   <div class="d-flex justify-content-between align-items-center bg-white p-3 border rounded shadow-sm">
+                       <button type="button" class="btn btn-outline-secondary fw-bold" onclick="addBulkTempRows(5)"><i class="bi bi-plus-lg me-2"></i>Add 5 Rows</button>
+                       <div class="d-flex align-items-center gap-3">
+                           <div id="bulkTempStatus" class="small fw-bold text-muted"></div>
+                           <button type="button" class="btn btn-primary fw-bold px-5" onclick="submitBulkTempBatch()">
+                               <i class="bi bi-cloud-upload-fill me-2"></i>Submit Bulk Batch
+                           </button>
                        </div>
                    </div>
                </div>
@@ -2320,7 +2388,11 @@ window.switchInboundMode = function(mode) {
     safeDisplay('form_main_fields', 'none');
     safeDisplay('view_auto_inbound', 'none');
     safeDisplay('view_multi_inbound', 'none');
-    safeDisplay('view_temporary', 'none');
+    safeDisplay('view_temp_inbound', 'none');
+    safeDisplay('view_bulk_temp', 'none');
+
+    // Reset Sub-Nav
+    safeDisplay('temp_sub_nav', 'none');
 
     // Reset Form
     document.getElementById('shipForm').reset();
@@ -2351,27 +2423,31 @@ window.switchInboundMode = function(mode) {
         initMultiTable();
     }
     else if(mode === 'Temporary') {
-        safeDisplay('view_temporary', 'block');
+        safeDisplay('temp_sub_nav', 'block');
         document.getElementById('inboundTitle').textContent = "Temporary Entry";
-        initTemporaryView();
+
+        // Default to Single
+        document.getElementById('tmr_single').checked = true;
+        toggleTempMode('single');
     }
 }
 
-// New Helper Functions for Temporary Mode
+// --- TEMP ENTRY LOGIC ---
 window.toggleTempMode = function(mode) {
     if(mode === 'single') {
-        safeDisplay('temp_sub_single', 'block');
-        safeDisplay('temp_sub_bulk', 'none');
-    } else {
-        safeDisplay('temp_sub_single', 'none');
-        safeDisplay('temp_sub_bulk', 'block');
+        safeDisplay('view_temp_inbound', 'flex');
+        safeDisplay('view_bulk_temp', 'none');
+        initTempView();
+    } else if(mode === 'bulk') {
+        safeDisplay('view_temp_inbound', 'none');
+        safeDisplay('view_bulk_temp', 'block');
+        initBulkTempView();
     }
 }
 
-window.initTemporaryView = function() {
-    // Init Single Client Select
-    if (!window.tomInstances.tempSingleClient) {
-        window.tomInstances.tempSingleClient = new TomSelect("#temp_single_client", {
+window.initTempView = function() {
+    if (!window.tomInstances.tempClient) {
+        window.tomInstances.tempClient = new TomSelect("#temp_client", {
             create: false,
             maxOptions: null,
             dropdownParent: 'body',
@@ -2379,28 +2455,59 @@ window.initTemporaryView = function() {
         });
         const dd = window.APP_DATA.static.dropdowns;
         if (dd && dd.clients) {
-            dd.clients.forEach(x => window.tomInstances.tempSingleClient.addOption({value: x, text: x}));
-            window.tomInstances.tempSingleClient.sync();
+            dd.clients.forEach(x => window.tomInstances.tempClient.addOption({value: x, text: x}));
+            window.tomInstances.tempClient.sync();
         }
     }
-
-    // Set Branch
-    const br = document.getElementById('temp_new_branch');
+    const br = document.getElementById('temp_branch');
     if(br && !br.value) br.value = curBranch || "Naraina Vihar";
 
-    // Reset inputs
-    document.getElementById('temp_single_boxes').value = "1";
-    document.getElementById('temp_bulk_input').value = "";
-
-    // Default to Single
-    const tmtSingle = document.getElementById('tmt_single');
-    if(tmtSingle) tmtSingle.checked = true;
-    toggleTempMode('single');
-
+    // Init Box Table if empty
+    if(document.getElementById('tempBoxTable').children.length === 0) {
+        addTempBoxRow();
+    }
     refreshTempList();
-}
+};
 
-// --- TEMP ENTRY LOGIC ---
+window.addTempBoxRow = function() {
+    const tbody = document.getElementById('tempBoxTable');
+    const idx = tbody.children.length + 1;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td class="text-muted">${idx}</td>
+        <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 t-l" placeholder="0" oninput="updateTempTotal()"></td>
+        <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 t-w" placeholder="0" oninput="updateTempTotal()"></td>
+        <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 t-h" placeholder="0" oninput="updateTempTotal()"></td>
+        <td class="p-0"><input type="number" step="any" class="form-control form-control-sm border-0 text-center p-1 fw-bold t-wgt" placeholder="0.0" oninput="updateTempTotal()"></td>
+        <td class="p-0"><button type="button" class="btn btn-link text-danger p-0" onclick="removeTempBoxRow(this)"><i class="bi bi-x"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+};
+
+window.removeTempBoxRow = function(btn) {
+    btn.closest('tr').remove();
+    // Re-index
+    document.querySelectorAll('#tempBoxTable tr').forEach((tr, i) => {
+        tr.querySelector('td').textContent = i + 1;
+    });
+    updateTempTotal();
+};
+
+window.updateTempTotal = function() {
+    let totChg = 0;
+    document.querySelectorAll('#tempBoxTable tr').forEach(tr => {
+        const l = parseFloat(tr.querySelector('.t-l').value) || 0;
+        const b = parseFloat(tr.querySelector('.t-w').value) || 0;
+        const h = parseFloat(tr.querySelector('.t-h').value) || 0;
+        const act = parseFloat(tr.querySelector('.t-wgt').value) || 0;
+
+        const vol = (l * b * h) / 5000;
+        const chg = Math.max(act, vol);
+        totChg += chg;
+    });
+    document.getElementById('temp_weight').value = totChg.toFixed(2);
+};
+
 window.refreshTempList = async function() {
     const list = document.getElementById('tempListBody');
     const empty = document.getElementById('tempListEmpty');
@@ -2436,6 +2543,194 @@ window.refreshTempList = async function() {
         }
     } else {
         console.error(r.message);
+    }
+};
+
+// --- BULK TEMP LOGIC ---
+window.initBulkTempView = function() {
+    if (!window.tomInstances.bulkTempClient) {
+        window.tomInstances.bulkTempClient = new TomSelect("#bulk_temp_client", {
+            create: false,
+            maxOptions: null,
+            dropdownParent: 'body',
+            placeholder: "Select Client..."
+        });
+        const dd = window.APP_DATA.static.dropdowns;
+        if (dd && dd.clients) {
+            dd.clients.forEach(x => window.tomInstances.bulkTempClient.addOption({value: x, text: x}));
+            window.tomInstances.bulkTempClient.sync();
+        }
+    }
+    const br = document.getElementById('bulk_temp_branch');
+    if(br && !br.value) br.value = curBranch || "Naraina Vihar";
+
+    if(document.getElementById('bulkTempBody').children.length === 0) {
+        addBulkTempRows(10);
+    }
+};
+
+window.addBulkTempRows = function(count) {
+    const tbody = document.getElementById('bulkTempBody');
+    const startIdx = tbody.children.length;
+    for(let i=0; i<count; i++) {
+        const idx = startIdx + i + 1;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="text-muted text-center">${idx}</td>
+            <td class="p-0"><input type="number" step="any" class="form-control form-control-sm border-0 text-center p-1 fw-bold bt-wgt" placeholder="0.0"></td>
+            <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 bt-l" placeholder="0" oninput="calculateBulkTempVol(this)"></td>
+            <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 bt-w" placeholder="0" oninput="calculateBulkTempVol(this)"></td>
+            <td class="p-0"><input type="number" class="form-control form-control-sm border-0 text-center p-1 bt-h" placeholder="0" oninput="calculateBulkTempVol(this)"></td>
+            <td class="p-0"><input type="text" class="form-control form-control-sm border-0 text-center p-1 text-muted bt-vol" readonly placeholder="0.0"></td>
+            <td class="p-0 text-center"><button type="button" class="btn btn-link text-danger p-0" onclick="removeBulkTempRow(this)"><i class="bi bi-x"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+    }
+    updateBulkTempCount();
+};
+
+window.removeBulkTempRow = function(btn) {
+    btn.closest('tr').remove();
+    updateBulkTempCount();
+    // Re-index
+    document.querySelectorAll('#bulkTempBody tr').forEach((tr, i) => {
+        tr.querySelector('td').textContent = i + 1;
+    });
+};
+
+window.updateBulkTempCount = function() {
+    const count = document.getElementById('bulkTempBody').children.length;
+    document.getElementById('bulk_temp_count').value = count;
+};
+
+window.calculateBulkTempVol = function(el) {
+    const tr = el.closest('tr');
+    const l = parseFloat(tr.querySelector('.bt-l').value) || 0;
+    const w = parseFloat(tr.querySelector('.bt-w').value) || 0;
+    const h = parseFloat(tr.querySelector('.bt-h').value) || 0;
+    const vol = (l * w * h) / 5000;
+    tr.querySelector('.bt-vol').value = vol.toFixed(2);
+};
+
+window.submitBulkTempBatch = async function() {
+    const client = document.getElementById('bulk_temp_client').value;
+    const branch = document.getElementById('bulk_temp_branch').value;
+    if(!client) return alert("Select Client");
+
+    const rows = [];
+    document.querySelectorAll('#bulkTempBody tr').forEach((tr, i) => {
+        const wgt = parseFloat(tr.querySelector('.bt-wgt').value) || 0;
+        if(wgt > 0) {
+            rows.push({
+                wgt: wgt,
+                l: parseFloat(tr.querySelector('.bt-l').value) || 0,
+                w: parseFloat(tr.querySelector('.bt-w').value) || 0,
+                h: parseFloat(tr.querySelector('.bt-h').value) || 0,
+                vol: parseFloat(tr.querySelector('.bt-vol').value) || 0
+            });
+        }
+    });
+
+    if(rows.length === 0) return alert("No rows with weight entered.");
+    if(!confirm(`Submit ${rows.length} temp shipments for ${client}?`)) return;
+
+    // Generate Batch ID (HHMMSS)
+    const now = new Date();
+    const batchId = now.toTimeString().split(' ')[0].replace(/:/g, "");
+    const dateStr = now.toISOString().slice(0,10).replace(/-/g,"");
+    const safeClient = (client || "UKNW").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    const clientSuffix = safeClient.length > 4 ? safeClient.slice(-4) : safeClient.padEnd(4, 'X');
+
+    const payload = rows.map((r, i) => {
+        const seq = String(i + 1).padStart(3, '0');
+        const awb = `TEMP-${dateStr}-${clientSuffix}-${batchId}-${seq}`;
+        return {
+            awb: awb,
+            date: now.toISOString(),
+            client: client,
+            weight: r.wgt, // Use weight directly
+            // For Bulk Temp, it's 1 box per shipment.
+            // Backend expects 'boxes' as array of objects.
+            boxes: [{no: 1, weight: r.wgt, length: r.l, breath: r.w, height: r.h}],
+            user: curUser,
+            branch: branch
+        };
+    });
+
+    showSpin(true);
+    const r = await callApi({
+        action: 'saveTempEntryBatch',
+        shipments: payload
+    });
+    showSpin(false);
+
+    if(r.result === 'success') {
+        toast(`Submitted ${rows.length} Temp Shipments`);
+        // Reset
+        document.getElementById('bulkTempBody').innerHTML = '';
+        addBulkTempRows(10);
+        if(window.tomInstances.bulkTempClient) window.tomInstances.bulkTempClient.clear();
+        refreshTempList();
+    } else {
+        alert("Error: " + r.message);
+    }
+};
+
+window.generateTempAwb = function(clientName) {
+    const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,"");
+    const safeClient = (clientName || "UKNW").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    const clientSuffix = safeClient.length > 4 ? safeClient.slice(-4) : safeClient.padEnd(4, 'X');
+    const randomSeq = Math.floor(Math.random() * 1000).toString().padStart(3, '0'); // Random 000-999
+    return `TEMP-${dateStr}-${clientSuffix}-${randomSeq}`;
+};
+
+window.submitTempEntry = async function() {
+    const client = document.getElementById('temp_client').value;
+    const weight = document.getElementById('temp_weight').value;
+    const branch = document.getElementById('temp_branch').value;
+
+    if (!client) return alert("Please select a Client.");
+    if (!weight || parseFloat(weight) <= 0) return alert("Please add boxes with weight.");
+
+    const boxes = [];
+    document.querySelectorAll('#tempBoxTable tr').forEach((tr, i) => {
+        const l = tr.querySelector('.t-l').value;
+        const w = tr.querySelector('.t-w').value;
+        const h = tr.querySelector('.t-h').value;
+        const wgt = tr.querySelector('.t-wgt').value;
+        boxes.push({ no: i+1, length: l||0, breath: w||0, height: h||0, weight: wgt||0 });
+    });
+
+    const tempAwb = generateTempAwb(client);
+    document.getElementById('temp_awb_display').value = tempAwb;
+
+    if(!confirm(`Save Temp Entry?\nAWB: ${tempAwb}`)) return;
+
+    showSpin(true);
+    const r = await callApi({
+        action: 'saveTempEntry',
+        awb: tempAwb,
+        date: new Date().toISOString(),
+        client: client,
+        weight: weight,
+        boxes: boxes,
+        user: curUser,
+        branch: branch
+    });
+    showSpin(false);
+
+    if(r.result === 'success') {
+        toast("Temp Entry Saved");
+        // Reset Inputs
+        if(window.tomInstances.tempClient) window.tomInstances.tempClient.clear();
+        document.getElementById('temp_weight').value = '';
+        document.getElementById('tempBoxTable').innerHTML = '';
+        addTempBoxRow(); // Reset to 1 row
+        document.getElementById('temp_awb_display').value = '';
+
+        refreshTempList();
+    } else {
+        alert("Error: " + r.message);
     }
 };
 
