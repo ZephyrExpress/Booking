@@ -1284,16 +1284,27 @@ window.doLogin=async function(){
   if(r.result==="success"){
      curUser=r.username; curRole=r.role; curBranch=r.branch||"Naraina Vihar";
      document.getElementById('userDisplay').textContent=r.name;
+     // Get permissions from login response if available, else empty array
+     curPerms = r.perms || [];
      safeDisplay('loginSection', 'none');
      safeDisplay('appSection', 'flex');
      showSpin(false);
      toast("Loading data...", "info");
+
+     // Build UI immediately
+     updateNavVisibility();
+     if (curRole.toLowerCase() === 'staff') {
+         switchTab('inbound');
+     } else {
+         switchTab('overview');
+     }
+
+     // Fetch data in background
      syncData(true);
-     if (curRole.toLowerCase() === 'staff') { switchTab('inbound'); }
   } else { showSpin(false); document.getElementById('loginError').textContent=r.message; safeDisplay('loginError', 'block'); }
 }
 window.logout=function(){location.reload();}
-window.refreshApp=async function(){ showSpin(true); await syncData(false); showSpin(false); toast("Data Refreshed"); }
+window.refreshApp=async function(){ toast("Refreshing...", "info"); await syncData(false); toast("Data Refreshed", "success"); }
 
 async function syncData(init=false){
   try {
