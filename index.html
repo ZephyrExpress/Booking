@@ -1286,6 +1286,8 @@ window.doLogin=async function(){
      document.getElementById('userDisplay').textContent=r.name;
      safeDisplay('loginSection', 'none');
      safeDisplay('appSection', 'flex');
+     showSpin(false);
+     toast("Loading data...", "info");
      syncData(true);
      if (curRole.toLowerCase() === 'staff') { switchTab('inbound'); }
   } else { showSpin(false); document.getElementById('loginError').textContent=r.message; safeDisplay('loginError', 'block'); }
