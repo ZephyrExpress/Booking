@@ -410,14 +410,17 @@ function getAllData(username) {
               const statusRange = fms.getRange(7, 14, numRows, 1);
               const statusData = statusRange.getValues();
 
-              const ids = fms.getRange(7, 2, numRows, 1).getValues().flat().map(x=>String(x).replace(/'/g,"").trim().toLowerCase());
+              // ⚡ Bolt Optimization: Use Map for O(1) lookup
+              const ids = fms.getRange(7, 2, numRows, 1).getValues().flat();
+              const fmsIdMap = new Map();
+              ids.forEach((val, i) => fmsIdMap.set(String(val).replace(/'/g,"").trim().toLowerCase(), i));
 
               let changed = false;
               let statusChanged = false;
 
               fmsUpdates.forEach(u => {
-                  const idx = ids.indexOf(u.awb);
-                  if(idx > -1) {
+                  if (fmsIdMap.has(u.awb)) {
+                      const idx = fmsIdMap.get(u.awb);
                       if(doerData[idx][0] !== u.autoDoer) {
                           doerData[idx][0] = u.autoDoer;
                           changed = true;
@@ -481,6 +484,9 @@ function getAllData(username) {
   // 5. Automated by user (ToAssign)
   // Skip old completed shipments to reduce payload size.
 
+  // ⚡ Bolt Optimization: Pre-calculate Allowed Staff Set (O(1) lookup) outside loop
+  const allowedStaffSet = new Set((staticData.staff || []).map(s => String(s).trim().toLowerCase()));
+
   data.forEach(r => {
     try {
         const rId = String(r[0]).replace(/'/g, "").trim();
@@ -504,15 +510,13 @@ function getAllData(username) {
              if (branch) branchMap[branch] = (branchMap[branch] || 0) + 1;
 
              // Staff Performance (With Whitelist Filter)
-             const allowedStaff = (staticData.staff || []).map(s => String(s).trim().toLowerCase());
-
              const autoDoer = String(r[15]).trim();
-             if (autoDoer && allowedStaff.includes(autoDoer.toLowerCase())) {
+             if (autoDoer && allowedStaffSet.has(autoDoer.toLowerCase())) {
                  staffMap[autoDoer] = (staffMap[autoDoer] || 0) + 1;
              }
 
              const assignee = String(r[17]).trim();
-             if (assignee && allowedStaff.includes(assignee.toLowerCase())) {
+             if (assignee && allowedStaffSet.has(assignee.toLowerCase())) {
                  staffMap[assignee] = (staffMap[assignee] || 0) + 1;
              }
         }
@@ -1117,23 +1121,35 @@ function handleBulkAssign(b) {
     ids.forEach((id, i) => { idMap[String(id).replace(/'/g, "").trim().toLowerCase()] = i + 2; });
 
     // ⚡ Bolt Fix: Explicitly EXCLUDE 'user' column (9) from updates
-    // We can't use RangeList easily for different values, so we iterate
-    // But we can optimize by reading existing data if needed, though here we just write.
-    // For max speed in GAS, fewer calls is better. But random access writes are slow.
-    // Since users usually assign 10-20 at a time, loop is acceptable IF we don't open SS every time.
-    // We already have 'ss'.
-
+    // ⚡ Bolt Optimization: Use RangeList to batch updates instead of loop
     const fmsData = [];
+    const rangesStatus = []; // Q (17)
+    const rangesAssigner = []; // S (19)
+    const staffMap = {}; // Staff -> [R (18)]
 
     assignments.forEach(a => {
         const key = String(a.id).replace(/'/g, "").trim().toLowerCase();
         if (idMap[key]) {
             const r = idMap[key];
-            // Write: Status (17), Assignee (18), Assigner (19) -> Cols Q, R, S
-            ss.getRange(r, 17, 1, 3).setValues([["Assigned", a.staff, b.assigner]]);
+
+            rangesStatus.push(`Q${r}`);
+            rangesAssigner.push(`S${r}`);
+
+            if(!staffMap[a.staff]) staffMap[a.staff] = [];
+            staffMap[a.staff].push(`R${r}`);
+
             fmsData.push({ id: a.id, assignee: a.staff, assigner: b.assigner });
         }
     });
+
+    // Batch Writes
+    if(rangesStatus.length) ss.getRangeList(rangesStatus).setValue("Assigned");
+    if(rangesAssigner.length) ss.getRangeList(rangesAssigner).setValue(b.assigner);
+
+    // Grouped Staff Writes
+    for(const s in staffMap) {
+        if(staffMap[s].length) ss.getRangeList(staffMap[s]).setValue(s);
+    }
 
     // Sync FMS (Batched lookup)
     if (fmsData.length > 0) {
